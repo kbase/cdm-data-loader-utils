@@ -96,8 +96,6 @@ class GenomeDataFileCreator:
             protein_hash_dict[f.id] = ch.HashSeq(f.seq).hash_value
         protein_id_map = protein_hash_dict
 
-        print (len(protein_id_map))
-
         return contigset_hash, contig_id_map, protein_id_map
 
 
@@ -158,6 +156,7 @@ class GenomeDataFileCreator:
 
     def run_checkm2(self, contigset_path, output_dir):
         # Run CheckM2 'predict' command on the specified contigset file
+        print ("Running checkm2\n")
         try:
             result = subprocess.run(
                 ["checkm2", "predict", "--threads", str(NUM_THREADS_CHECKM2_RUN),  "--input", contigset_path,  "--output_directory", output_dir],
@@ -374,6 +373,7 @@ class MultiGenomeDataFileCreator:
 
 
     def process_files(self, contigset_file, gff_file, protein_file):
+        print (f"\n==Processing contigset {contigset_file}==\n")
         parser = GenomeDataFileCreator(contigset_file, gff_file, protein_file, self.output_dir, self.run_checkm2_option)
         parser.calculate_sha256_checksums()
         parser.prepare_gff3_data()
@@ -422,7 +422,7 @@ class MultiGenomeDataFileCreator:
                     writer.writeheader()
                     headers_written['contig'] = True
                 writer.writerows(contigs)
-            print(f"Structural annotation appended to {contig_file}")
+            print(f"Contig appended to {contig_file}")
 
             # Structural annotation
             sa_file = os.path.join(self.output_dir, 'structural_annotation.tsv')

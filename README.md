@@ -15,8 +15,9 @@ conda activate genome_loader_env
 ```
 
 
-
-
-
+**For running tests with checkm2 (Time taking so disabled by default)**
+```bash
+   conda activate genome_loader_env
+   checkm2 database --download
 ```
 
