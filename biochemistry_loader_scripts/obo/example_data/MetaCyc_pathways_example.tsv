@@ -1,0 +1,4 @@
+id	name	reactions	parent
+OXIDATIVEPENT-PWY	pentose phosphate pathway (oxidative branch) I	GLU6PDEHYDROG-RXN|RXN-9952|6PGLUCONOLACT-RXN	Pentose-Phosphate-Cycle
+Pentose-Phosphate-Cycle			Energy-Metabolism
+Energy-Metabolism			
