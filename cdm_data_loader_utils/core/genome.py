@@ -25,6 +25,41 @@ class CDMContig:
         return f'len: {self.length}, gc: {self.gc}, base_count: {self.base_count}, names: {self.names}'
 
 
+class CDMProtein:
+
+    def __init__(self, seq: str):
+        self.stop_codon = False
+        _seq = seq
+        if _seq[-1] == '*':
+            _seq = _seq[:-1]
+            self.stop_codon = True
+
+        self.seq = _seq
+        self.hash = HashSeq(self.seq).hash_value
+        self.length = len(self.seq)
+
+        self.names = []
+
+    def __repr__(self):
+        return f'len: {self.length}, hash: {self.hash}'
+
+
+class CDMFeature:
+
+    def __init__(self, feature_id: str, contig_hash, start, end, strand, attributes=None):
+        self.id = feature_id
+        self.contig_hash = contig_hash
+        self.start = start
+        self.end = end
+        self.strand = strand
+        self.type = None
+        self.source = None
+        self.cds_phase = None
+        self.attributes = {} if attributes is None else attributes
+
+        self.names = []
+
+
 class GffRecord:
 
     def __init__(self, contig_id: str, source: str,

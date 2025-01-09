@@ -8,14 +8,9 @@ import subprocess
 import uuid
 import shutil
 import sys
-
 from Bio import SeqIO
 
-
 from . import calculate_hash as ch
-
-
-
 
 NUM_THREADS_CHECKM2_RUN = 10
 
@@ -49,15 +44,13 @@ so_terms = {
 
 
 class GenomeDataFileCreator:
+
     def __init__(self, contigset_file, gff_file, protein_file, output_dir, run_checkm2_option):
         self.contigset_file = contigset_file
         self.gff_file = gff_file
         self.protein_file = protein_file
         self.run_checkm2_option = run_checkm2_option
         self.output_dir = output_dir
-
-
-
         self.features = []
         self.feature_associations = []
         self.feature_protein_associations = []
@@ -156,7 +149,7 @@ class GenomeDataFileCreator:
 
     def run_checkm2(self, contigset_path, output_dir):
         # Run CheckM2 'predict' command on the specified contigset file
-        print ("Running checkm2\n")
+        print("Running checkm2\n")
         try:
             result = subprocess.run(
                 ["checkm2", "predict", "--threads", str(NUM_THREADS_CHECKM2_RUN),  "--input", contigset_path,  "--output_directory", output_dir],
@@ -185,7 +178,6 @@ class GenomeDataFileCreator:
             print("CheckM2 failed with the following error:")
             print(e.stderr)
             return None
-
 
 
     #TODO: make it static method
@@ -365,12 +357,11 @@ class GenomeDataFileCreator:
 
 
 class MultiGenomeDataFileCreator:
+
     def __init__(self, genome_paths_file, output_dir, run_checkm2_option ):
         self.genome_paths_file = genome_paths_file
         self.output_dir = output_dir
         self.run_checkm2_option = run_checkm2_option
-
-
 
     def process_files(self, contigset_file, gff_file, protein_file):
         print (f"\n==Processing contigset {contigset_file}==\n")
@@ -387,13 +378,10 @@ class MultiGenomeDataFileCreator:
             parser.feature_associations, 
             parser.structural_annotation)
 
-
     def write_to_tsv(self, contigset, contigs, features, associations, structural_annotation, headers_written):
         """Write data to TSV files incrementally."""
         try:
-            
-
-            # Contigset
+            #  Contigset
             contigset_out_file = os.path.join(self.output_dir, 'contigset.tsv')
             write_header = not headers_written['contigset']
 
@@ -411,8 +399,7 @@ class MultiGenomeDataFileCreator:
                 writer.writerow(contigset)
             print(f"Contigset appended to {contigset_out_file}")
 
-
-            # Contig
+            #  Contig
             contig_file = os.path.join(self.output_dir, 'contig.tsv')
             write_header = not headers_written['contigs']
             with open(contig_file, 'a', newline='') as f_out:
@@ -464,8 +451,6 @@ class MultiGenomeDataFileCreator:
         except Exception as e:
             print(f"Error writing to TSV files: {e}")
 
- 
-
     def create_all_tables(self):
 
         try:
@@ -513,8 +498,6 @@ class MultiGenomeDataFileCreator:
                     print(f"Missing file paths for genome ID: {gid}")
             else:
                 print(f"No paths found for genome ID: {gid}")
-
-
 
     @classmethod
     def from_args(cls):
