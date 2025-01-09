@@ -125,6 +125,12 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 	return terms
 
 if __name__ == "__main__":
+	# import argparse
+	# parser = argparse.ArgumentParser()
+	# parser.add_argument('file')
+	# args = parser.parse_args()
+	# print(args['file'])
+
 	ontology = get_obo()
 	with open('kegg.obo','w') as fh:
 		for line in ontology.iterate_obo_lines():
