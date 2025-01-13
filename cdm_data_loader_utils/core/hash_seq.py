@@ -6,7 +6,6 @@ def _hash_string(s):
 
 
 class HashSeq(str):
-
     def __new__(cls, v):
         # print('validate!!', v)
         instance = super().__new__(cls, v.upper())
@@ -19,14 +18,13 @@ class HashSeq(str):
 
 
 class HashSeqList(list):
-
     def append(self, o, /):
         if type(o) is str:
             super().append(HashSeq(o))
         elif type(o) is HashSeq:
             super().append(o)
         else:
-            raise ValueError('bad type')
+            raise ValueError("bad type")
 
     @property
     def hash_value(self):
