@@ -19,7 +19,7 @@ class HashSeq(str):
 
 
 class HashSeqList(list):
-    def append(self, o):
+    def append(self: "HashSeqList", o: str|HashSeq) -> None:
         if isinstance(o, str):
             super().append(HashSeq(o))
         elif isinstance(o, HashSeq):
@@ -29,13 +29,28 @@ class HashSeqList(list):
             raise TypeError(err_msg)
 
     @property
-    def hash_value(self):
+    def hash_value(self: "HashSeqList") -> str:
         h_list = [x.hash_value for x in self]
         hash_seq = "_".join(sorted(h_list))
         return _hash_string(hash_seq)
 
 
-def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None):
+class Feature:
+    def __init__(self: "Feature", feature_id, sequence, description=None, aliases=None) -> None:
+        self.id = feature_id
+        self.seq = sequence
+        self.description = description
+        self.ontology_terms = {}
+        self.aliases = aliases
+
+    def add_ontology_term(self: "Feature", ontology_term, value) -> None:
+        if ontology_term not in self.ontology_terms:
+            self.ontology_terms[ontology_term] = []
+        if value not in self.ontology_terms[ontology_term]:
+            self.ontology_terms[ontology_term].append(value)
+
+
+def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None) -> list[Feature]:
     features = []
     active_seq = None
     seq_lines = []
@@ -63,7 +78,7 @@ def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None):
     return features
 
 
-def read_fasta2(f: str, split: str = DEFAULT_SPLIT, h_func=None):
+def read_fasta2(f: str, split: str = DEFAULT_SPLIT, h_func=None) -> list[Feature]:
     if f.endswith(".gz"):
         import gzip
 
@@ -74,22 +89,7 @@ def read_fasta2(f: str, split: str = DEFAULT_SPLIT, h_func=None):
             return extract_features(fh.read(), split, h_func)
 
 
-class Feature:
-    def __init__(self, feature_id, sequence, description=None, aliases=None) -> None:
-        self.id = feature_id
-        self.seq = sequence
-        self.description = description
-        self.ontology_terms = {}
-        self.aliases = aliases
-
-    def add_ontology_term(self, ontology_term, value) -> None:
-        if ontology_term not in self.ontology_terms:
-            self.ontology_terms[ontology_term] = []
-        if value not in self.ontology_terms[ontology_term]:
-            self.ontology_terms[ontology_term].append(value)
-
-
-def contig_set_hash(features):
+def contig_set_hash(features) -> str:
     hl = HashSeqList()
     for contig in features:
         seq = HashSeq(contig.seq)

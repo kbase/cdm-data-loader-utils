@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import uuid
+from pathlib import Path
 
 from Bio import SeqIO
 
@@ -77,14 +78,14 @@ class GenomeDataFileCreator:
         """
         Compute the hash of the entire contigset and contigs
         """
-        contig_hash_dict = dict()
+        contig_hash_dict = {}
         contigs = ch.read_fasta2(contigset_file)
         contigset_hash = ch.contig_set_hash(contigs)
         for f in contigs:
             contig_hash_dict[f.id] = ch.HashSeq(f.seq).hash_value
         contig_id_map = contig_hash_dict
 
-        protein_hash_dict = dict()
+        protein_hash_dict = {}
         proteins = ch.read_fasta2(protein_file)
         for f in proteins:
             protein_hash_dict[f.id] = ch.HashSeq(f.seq).hash_value
@@ -148,27 +149,28 @@ class GenomeDataFileCreator:
     def run_checkm2(self, contigset_path, output_dir):
         # Run CheckM2 'predict' command on the specified contigset file
         print("Running checkm2\n")
+        checkm2_command = [
+            "checkm2",
+            "predict",
+            "--threads",
+            str(NUM_THREADS_CHECKM2_RUN),
+            "--input",
+            contigset_path,
+            "--output_directory",
+            str(output_dir),
+        ]
         try:
-            result = subprocess.run(
-                [
-                    "checkm2",
-                    "predict",
-                    "--threads",
-                    str(NUM_THREADS_CHECKM2_RUN),
-                    "--input",
-                    contigset_path,
-                    "--output_directory",
-                    output_dir,
-                ],
-                check=True,
+            subprocess.run(
+                checkm2_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                check=True,
                 text=True,
             )
 
             # Open and read the TSV file
-            tsv_file_path = os.path.join(output_dir, "quality_report.tsv")
-            with open(tsv_file_path, "r") as file:
+            tsv_file_path = output_dir / "quality_report.tsv"
+            with tsv_file_path.open() as file:
                 reader = csv.DictReader(file, delimiter="\t")
                 # Ensure required columns are present
                 if (
@@ -347,7 +349,7 @@ class GenomeDataFileCreator:
 
             if self.run_checkm2_option is not None:
                 unique_id = str(uuid.uuid4())
-                temp_dir = os.path.join(self.output_dir, unique_id)
+                temp_dir = self.output_dir / unique_id
                 checkm2_info = self.run_checkm2(self.contigset_file, temp_dir)
 
                 # Note: You can keep this directory for checkm debugging
@@ -371,12 +373,29 @@ class GenomeDataFileCreator:
 
 
 class MultiGenomeDataFileCreator:
-    def __init__(self, genome_paths_file, output_dir, run_checkm2_option):
-        self.genome_paths_file = genome_paths_file
-        self.output_dir = output_dir
+    """Parser that takes in GFF, FAA, and FNA files and generates CDM table data."""
+
+    def __init__(
+        self: "MultiGenomeDataFileCreator",
+        genome_paths_file: Path | str,
+        output_dir: Path | str,
+        run_checkm2_option: int,
+    ) -> None:
+        if isinstance(genome_paths_file, Path):
+            self.genome_paths_file = genome_paths_file
+        else:
+            self.genome_paths_file = Path(genome_paths_file)
+
+        if isinstance(Path, output_dir):
+            self.output_dir = output_dir
+        else:
+            self.output_dir = Path(output_dir)
+
         self.run_checkm2_option = run_checkm2_option
 
-    def process_files(self, contigset_file, gff_file, protein_file):
+    def process_files(
+        self: "MultiGenomeDataFileCreator", contigset_file: str, gff_file: str, protein_file: str
+    ):
         print(f"\n==Processing contigset {contigset_file}==\n")
         parser = GenomeDataFileCreator(
             contigset_file, gff_file, protein_file, self.output_dir, self.run_checkm2_option
@@ -396,12 +415,18 @@ class MultiGenomeDataFileCreator:
         )
 
     def write_to_tsv(
-        self, contigset, contigs, features, associations, structural_annotation, headers_written
+        self: "MultiGenomeDataFileCreator",
+        contigset,
+        contigs,
+        features,
+        associations,
+        structural_annotation,
+        headers_written,
     ):
         """Write data to TSV files incrementally."""
         try:
             # Contigset
-            contigset_out_file = os.path.join(self.output_dir, "contigset.tsv")
+            contigset_out_file = self.output_dir / "contigset.tsv"
             write_header = not headers_written["contigset"]
 
             contigset_fields = [
@@ -436,7 +461,7 @@ class MultiGenomeDataFileCreator:
                 "filename",
             ]
 
-            with open(contigset_out_file, "a", newline="") as f_out:
+            with contigset_out_file.open("a", newline="") as f_out:
                 writer = csv.DictWriter(f_out, fieldnames=contigset_fields, delimiter="\t")
                 if write_header:
                     writer.writeheader()
@@ -445,9 +470,9 @@ class MultiGenomeDataFileCreator:
             print(f"Contigset appended to {contigset_out_file}")
 
             # Contig
-            contig_file = os.path.join(self.output_dir, "contig.tsv")
+            contig_file = self.output_dir / "contig.tsv"
             write_header = not headers_written["contigs"]
-            with open(contig_file, "a", newline="") as f_out:
+            with contig_file.open("a", newline="") as f_out:
                 writer = csv.DictWriter(
                     f_out,
                     fieldnames=[
@@ -467,9 +492,9 @@ class MultiGenomeDataFileCreator:
             print(f"Contig appended to {contig_file}")
 
             # Structural annotation
-            sa_file = os.path.join(self.output_dir, "structural_annotation.tsv")
+            sa_file = self.output_dir / "structural_annotation.tsv"
             write_header = not headers_written["structural_annotation"]
-            with open(sa_file, "a", newline="") as f_out:
+            with sa_file.open("a", newline="") as f_out:
                 writer = csv.DictWriter(
                     f_out,
                     fieldnames=["contigset_hash", "gff_hash", "contigset_file", "gff_file"],
@@ -482,9 +507,9 @@ class MultiGenomeDataFileCreator:
             print(f"Structural annotation appended to {sa_file}")
 
             # Features
-            features_file = os.path.join(self.output_dir, "feature.tsv")
+            features_file = self.output_dir / "feature.tsv"
             write_header = not headers_written["features"]
-            with open(features_file, "a", newline="") as f_out:
+            with features_file.open("a", newline="") as f_out:
                 contig_fieldnames = [
                     "contigset_hash",
                     "contig_hash",
@@ -505,11 +530,9 @@ class MultiGenomeDataFileCreator:
             print(f"Features appended to {features_file}")
 
             # Feature associations
-            associations_file = os.path.join(
-                self.output_dir, "feature_association.tsv"
-            )  # Renamed file
+            associations_file = self.output_dir / "feature_association.tsv"  # Renamed file
             write_header = not headers_written["associations"]
-            with open(associations_file, "a", newline="") as f_out:
+            with associations_file.open("a", newline="") as f_out:
                 fieldnames = ["feature_hash", "gff_hash", "feature_attributes"]
                 writer = csv.DictWriter(f_out, fieldnames=fieldnames, delimiter="\t")
                 if write_header:
@@ -521,18 +544,16 @@ class MultiGenomeDataFileCreator:
         except Exception as e:
             print(f"Error writing to TSV files: {e}")
 
-    def create_all_tables(self):
-        try:
-            os.makedirs(self.output_dir, exist_ok=False)
-        except FileExistsError:
+    def create_all_tables(self: "MultiGenomeDataFileCreator"):
+        if self.output_dir.exists():
             print(f"Error: The directory {self.output_dir} already exists.")
             print(f"Error: Remove directory {self.output_dir} to continue")
             sys.exit(1)  # Exit with a non-zero code to indicate an error
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            sys.exit(1)  # Exit with a non-zero code to indicate an error
 
-        with open(self.genome_paths_file, "r") as json_file:
+        # create the output directory
+        self.output_dir.mkdir(parents=True)
+
+        with self.genome_paths_file.open() as json_file:
             genome_paths = json.load(json_file)
 
         genome_ids = list(genome_paths.keys())
@@ -547,8 +568,11 @@ class MultiGenomeDataFileCreator:
         for gid in genome_ids:
             paths = genome_paths.get(gid)
             if paths:
+                # _scaffolds.fna
                 contigset_file = paths.get("fna")
+                # _genes.gff
                 gff_file = paths.get("gff")
+                # _genes.faa
                 protein_file = paths.get("protein")
                 if contigset_file and gff_file and protein_file:
                     contigset, contigs, features, associations, structural_annotation = (
@@ -597,7 +621,7 @@ class MultiGenomeDataFileCreator:
             run_checkm2_option=args.run_checkm2_option,
         )
 
-    def run(self):
+    def run(self: "MultiGenomeDataFileCreator"):
         """Main method to execute the creation of all the  table."""
         self.create_all_tables()
 

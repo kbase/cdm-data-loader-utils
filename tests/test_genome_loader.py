@@ -1,97 +1,69 @@
-import os
-import unittest
-import shutil
+"""Tests for the MultiGenomeDataFileCreator."""
+
 import csv
+import unittest
+from pathlib import Path
+
+import pytest
 
 from genome_loader_scripts.genome_loader import MultiGenomeDataFileCreator
 
 
-class TestGenomeDataFileCreation(unittest.TestCase):
-    def setUp(self):
-        # Define paths for the input and output files
-        self.genome_paths_file = "tests/data/genome_paths.json"
-        self.output_dir = "tests/output"
+def test_file_creation(genome_paths_file: str, tmp_path: Path) -> None:
+    """Check files are created."""
+    # Initialize the creators for each test case
+    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, tmp_path, None)
+    feature_protein_creator.create_all_tables()
 
-        # Remove the output directory if it exists
-        if os.path.exists(self.output_dir):
-            shutil.rmtree(self.output_dir)
+    # Define file paths and expected line counts
+    files_and_expected_lines = {
+        tmp_path / "contig.tsv": 89,
+        tmp_path / "contigset.tsv": 3,
+        tmp_path / "feature.tsv": 12028,
+        tmp_path / "feature_association.tsv": 12028,
+        tmp_path / "structural_annotation.tsv": 3,
+    }
 
-    def test_file_creation(self):
-        # check file creation
-        # Initialize the creators for each test case
-        self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, self.output_dir, None
-        )
-        self.feature_protein_creator.create_all_tables()
-        # Define file paths and expected line counts
-        self.files_and_expected_lines = {
-            "tests/output/contig.tsv": 89,
-            "tests/output/contigset.tsv": 3,
-            "tests/output/feature.tsv": 12028,
-            "tests/output/feature_association.tsv": 12028,
-            "tests/output/structural_annotation.tsv": 3,
-        }
+    for file, n_lines in files_and_expected_lines.items():
+        assert file.exists()
+        parsed_file = file.read_text()
+        # parse file, check number of lines
+        assert len(parsed_file) == n_lines
 
-        print("\nTest: Check file creation")
-        for file in self.files_and_expected_lines:
-            expected_lines = self.files_and_expected_lines[file]
-            print(f"checking if number of file lines in {file} is equal to  {expected_lines}")
-            self.assertTrue(os.path.exists(file), f"{file} was not created.")
 
-    @unittest.skip("Skipping checkm2 test")
-    def test_checkm2(self):
-        # check file creation
-        # Initialize the creators for each test case
+# @pytest.skip("Skipping checkm2 test")
+def test_checkm2(genome_paths_file: str, tmp_path: Path) -> None:
+    # check file creation
+    # Initialize the creators for each test case
 
-        print("\nTest: Includes Checkm2 run")
-        self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, self.output_dir, 1
-        )
-        self.feature_protein_creator.create_all_tables()
+    print("\nTest: Includes Checkm2 run")
+    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, tmp_path, 1)
+    feature_protein_creator.create_all_tables()
 
-        self.expected_scores = {
-            "423e40e5b4056069f9b0bfb71a3c682b41a8b68200b617a6e19902fa5dac7e94": {
-                "contamination": 1.09,
-                "completeness": 99.99,
-            },
-            "b32625f62ae333d2290a989cef9b3db75f462aeee8543aa11190af7f41c1d931": {
-                "contamination": 2.27,
-                "completeness": 99.97,
-            },
-        }
-        self.contigset_file = os.path.join(self.output_dir, "contigset.tsv")
+    expected_scores = {
+        "423e40e5b4056069f9b0bfb71a3c682b41a8b68200b617a6e19902fa5dac7e94": {
+            "contamination": 1.09,
+            "completeness": 99.99,
+        },
+        "b32625f62ae333d2290a989cef9b3db75f462aeee8543aa11190af7f41c1d931": {
+            "contamination": 2.27,
+            "completeness": 99.97,
+        },
+    }
+    contigset_file = tmp_path / "contigset.tsv"
 
-        with open(self.contigset_file, "r") as tsvfile:
-            reader = csv.DictReader(tsvfile, delimiter="\t")
+    with contigset_file.open() as tsvfile:
+        reader = csv.DictReader(tsvfile, delimiter="\t")
 
-            for row in reader:
-                contigset_hash = row["contigset_hash"]
-
-                contamination = float(row["checkm2_contamination"])
-                completeness = float(row["checkm2_completeness"])
-
-                print(f"contamination for {contigset_hash} is {contamination}")
-                print(f"completenessfor {contigset_hash} is {completeness}")
-
-                if contigset_hash in self.expected_scores:
-                    expected_contamination = self.expected_scores[contigset_hash]["contamination"]
-                    expected_completeness = self.expected_scores[contigset_hash]["completeness"]
-
+        for row in reader:
+            contigset_hash = row["contigset_hash"]
+            if contigset_hash in expected_scores:
+                for c in ["contamination", "completeness"]:
+                    c_value = float(row[f"checkm2_{c}"])
                     # Assert contamination and completeness match the expected values
-                    self.assertAlmostEqual(
-                        contamination,
-                        expected_contamination,
-                        places=2,
-                        msg=f"Contamination score mismatch for contigset hash {contigset_hash}",
-                    )
-                    self.assertAlmostEqual(
-                        completeness,
-                        expected_completeness,
-                        places=2,
-                        msg=f"Completeness score mismatch for contigset hash {contigset_hash}",
-                    )
-                else:
-                    self.fail(f"Unexpected contig_hash found in TSV file: {contig_hash}")
+                    assert c_value == pytest.approx(expected_scores[contigset_hash][c], rel=1e-3)
+            else:
+                pytest.fail(f"Unexpected contigset_hash found in TSV file: {contigset_hash}")
 
 
 if __name__ == "__main__":
