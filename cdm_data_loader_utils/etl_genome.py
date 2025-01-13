@@ -65,18 +65,22 @@ class EtlAssemblyAndGenome:
                 self.data_features[cdm_feature.id] = cdm_feature
             else:
                 raise ValueError('dup feature id !~!')
-            # if cdm_protein.hash not in data_proteins:
-            #    data_proteins[cdm_protein.hash] = cdm_protein
+            if cdm_protein.hash not in self.data_proteins:
+                self.data_proteins[cdm_protein.hash] = cdm_protein
 
     def export_protein(self):
-        names = ['feature_id', 'protein_hash']
+        names = ['hash', 'description', 'length', 'sequence', 'evidence_for_existence']
         _data = {k: [] for k in names}
-        for feature_id, protein_hash in tqdm(self.data_feature_to_protein.items()):
-            _data['feature_id'].append(feature_id)
-            _data['protein_hash'].append(protein_hash)
+        for i in tqdm(self.data_proteins):
+            o = self.data_proteins[i]
+            _data['hash'].append(o.hash)
+            _data['length'].append(len(o.seq))
+            _data['sequence'].append(o.seq)
+            _data['description'].append(None)
+            _data['evidence_for_existence'].append("Protein predicted (Prodigal)")
 
-        table = pa.Table.from_arrays([pa.array(_data[k]) for k in names], names=names)
-        return table
+        pa_table = pa.Table.from_arrays([pa.array(_data[k]) for k in names], names=names)
+        return pa_table
 
     def export_names(self):
         _label_names = ['entity_id', 'type', 'name']
