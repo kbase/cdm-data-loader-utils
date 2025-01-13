@@ -386,7 +386,7 @@ class MultiGenomeDataFileCreator:
         else:
             self.genome_paths_file = Path(genome_paths_file)
 
-        if isinstance(Path, output_dir):
+        if isinstance(output_dir, Path):
             self.output_dir = output_dir
         else:
             self.output_dir = Path(output_dir)
