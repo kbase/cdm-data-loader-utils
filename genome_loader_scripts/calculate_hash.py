@@ -19,7 +19,7 @@ class HashSeq(str):
 
 
 class HashSeqList(list):
-    def append(self: "HashSeqList", o: str|HashSeq) -> None:
+    def append(self: "HashSeqList", o) -> None:
         if isinstance(o, str):
             super().append(HashSeq(o))
         elif isinstance(o, HashSeq):
