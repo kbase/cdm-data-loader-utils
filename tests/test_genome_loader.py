@@ -11,17 +11,19 @@ from genome_loader_scripts.genome_loader import MultiGenomeDataFileCreator
 
 def test_file_creation(genome_paths_file: str, tmp_path: Path) -> None:
     """Check files are created."""
+
+    test_dir = Path("tests") / "test_file_creation"
     # Initialize the creators for each test case
-    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, tmp_path, None)
+    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, test_dir, None)
     feature_protein_creator.create_all_tables()
 
     # Define file paths and expected line counts
     files_and_expected_lines = {
-        tmp_path / "contig.tsv": 89,
-        tmp_path / "contigset.tsv": 3,
-        tmp_path / "feature.tsv": 12028,
-        tmp_path / "feature_association.tsv": 12028,
-        tmp_path / "structural_annotation.tsv": 3,
+        test_dir / "contig.tsv": 89,
+        test_dir / "contigset.tsv": 3,
+        test_dir / "feature.tsv": 12028,
+        test_dir / "feature_association.tsv": 12028,
+        test_dir / "structural_annotation.tsv": 3,
     }
 
     for file, n_lines in files_and_expected_lines.items():
@@ -36,8 +38,10 @@ def test_checkm2(genome_paths_file: str, tmp_path: Path) -> None:
     # check file creation
     # Initialize the creators for each test case
 
+    test_dir = Path("tests") / "test_checkm2"
+
     print("\nTest: Includes Checkm2 run")
-    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, tmp_path, 1)
+    feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, test_dir, 1)
     feature_protein_creator.create_all_tables()
 
     expected_scores = {
@@ -50,7 +54,7 @@ def test_checkm2(genome_paths_file: str, tmp_path: Path) -> None:
             "completeness": 99.97,
         },
     }
-    contigset_file = tmp_path / "contigset.tsv"
+    contigset_file = test_dir / "contigset.tsv"
 
     with contigset_file.open() as tsvfile:
         reader = csv.DictReader(tsvfile, delimiter="\t")

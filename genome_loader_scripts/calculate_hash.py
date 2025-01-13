@@ -19,7 +19,7 @@ class HashSeq(str):
 
 
 class HashSeqList(list):
-    def append(self: "HashSeqList", o: str|HashSeq) -> None:
+    def append(self: "HashSeqList", o) -> None:
         if isinstance(o, str):
             super().append(HashSeq(o))
         elif isinstance(o, HashSeq):
@@ -50,7 +50,7 @@ class Feature:
             self.ontology_terms[ontology_term].append(value)
 
 
-def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None) -> list[Feature]:
+def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None):  # -> list[Feature]:
     features = []
     active_seq = None
     seq_lines = []
@@ -78,7 +78,7 @@ def extract_features(faa_str: str, split: str = DEFAULT_SPLIT, h_func=None) -> l
     return features
 
 
-def read_fasta2(f: str, split: str = DEFAULT_SPLIT, h_func=None) -> list[Feature]:
+def read_fasta2(f: str, split: str = DEFAULT_SPLIT, h_func=None):  # -> list[Feature]:
     if f.endswith(".gz"):
         import gzip
 
