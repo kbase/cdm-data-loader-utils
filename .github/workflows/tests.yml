@@ -1,0 +1,84 @@
+# This file configures the continuous integration (CI) system on GitHub.
+# Introductory materials can be found here: https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions.
+# Documentation for editing this file can be found here: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
+name: Tests
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  # lint:
+  #   name: Code Quality
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [ "3.12", "3.10" ]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: "Install python"
+  #       uses: "astral-sh/setup-uv@v3"
+  #       with:
+  #         enable-cache: true
+  #         cache-dependency-glob: "pyproject.toml"
+  #     - name: "Run command"
+  #       run: |
+  #         uvx -p ${{ matrix.python-version }} --with tox-uv tox -e ${{ matrix.tox-command }}
+
+  tests:
+    name: Run tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: ["ubuntu-22.02", "ubuntu-24.04"]
+        # python-version: ["3.10", "3.11", "3.12"]
+        os: ["ubuntu-24.04"]
+        python-version: ["3.8"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: list
+        shell: bash -el {0}
+        run: |
+          pwd
+          ls -al
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          activate-environment: genome_loader_env
+          environment-file: env.yml
+          auto-activate-base: false
+
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+
+      - name: install prerequisites
+        shell: bash -l {0}
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+            python -m unittest discover -s tests -p test_genome_loader.py
+
+      - name: Send to Codecov
+        id: send_to_codecov
+        uses: codecov/codecov-action@main
+        continue-on-error: true
+        with:
+            files: coverage.xml
+            fail_ci_if_error: true
+            token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v4
+        if: success()
+        with:
+          file: coverage.xml
