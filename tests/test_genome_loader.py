@@ -12,7 +12,7 @@ from genome_loader_scripts.genome_loader import MultiGenomeDataFileCreator
 def test_file_creation(genome_paths_file: str, tmp_path: Path) -> None:
     """Check files are created."""
 
-    test_dir = tmp_path / "test_file_creation"
+    test_dir = "tests" / "test_file_creation"
     # Initialize the creators for each test case
     feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, test_dir, None)
     feature_protein_creator.create_all_tables()
@@ -38,7 +38,7 @@ def test_checkm2(genome_paths_file: str, tmp_path: Path) -> None:
     # check file creation
     # Initialize the creators for each test case
 
-    test_dir = tmp_path / "test_checkm2"
+    test_dir = "tests" / "test_checkm2"
 
     print("\nTest: Includes Checkm2 run")
     feature_protein_creator = MultiGenomeDataFileCreator(genome_paths_file, test_dir, 1)
