@@ -71,6 +71,9 @@ jobs:
             pytest tests/
             # python -m unittest discover -s tests -p test_genome_loader.py
 
+      - name: tmate sesh
+        uses: mxschmitt/action-tmate@v3
+
       - name: download artefacts
         uses: actions/download-artifact@v4
         with:
