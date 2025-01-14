@@ -78,19 +78,19 @@ jobs:
             # fail_ci_if_error: true
             token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Run tests
-        shell: bash -l {0}
-        continue-on-error: true
-        run: |
-            stats.sh --format=8 in=tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna > tests/data/FW305-C-112.1/fna-stats.json
-            stats.sh --format=8 in=tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna > tests/data/FW305-3-2-15-C-TSA1/fna-stats.json
-            checkm2 database --download
-            # checkm2 predict --threads 10 --input tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna -o tests/data/checkm2
-            mkdir tests/data/FW305-C-112.1/checkm2
-            mkdir tests/data/FW305-3-2-15-C-TSA1/checkm2
-            checkm2 predict --threads 10 --input tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna -o tests/data/FW305-3-2-15-C-TSA1/checkm2
+      # - name: Run tests
+      #   shell: bash -l {0}
+      #   continue-on-error: true
+      #   run: |
+      #       stats.sh --format=8 in=tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna > tests/data/FW305-C-112.1/fna-stats.json
+      #       stats.sh --format=8 in=tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna > tests/data/FW305-3-2-15-C-TSA1/fna-stats.json
+      #       checkm2 database --download
+      #       # checkm2 predict --threads 10 --input tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna -o tests/data/checkm2
+      #       mkdir tests/data/FW305-C-112.1/checkm2
+      #       mkdir tests/data/FW305-3-2-15-C-TSA1/checkm2
+      #       checkm2 predict --threads 10 --input tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna -o tests/data/FW305-3-2-15-C-TSA1/checkm2
 
-      - name: upload artefacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: tests/
+      # - name: upload artefacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     path: tests/
