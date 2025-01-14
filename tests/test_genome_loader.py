@@ -28,7 +28,7 @@ def test_file_creation(genome_paths_file: str, tmp_path: Path) -> None:
 
     for file, n_lines in files_and_expected_lines.items():
         assert file.exists()
-        parsed_file = file.read_text()
+        parsed_file = file.read_text().split("\n")
         # parse file, check number of lines
         assert len(parsed_file) == n_lines
 
