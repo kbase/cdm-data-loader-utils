@@ -74,9 +74,6 @@ jobs:
             checkm2 predict --threads 10 --input tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna -o tests/data/checkm2
             pytest tests/
 
-      - name: tmate sesh
-        uses: mxschmitt/action-tmate@v3
-
       - name: upload artefacts
         uses: actions/upload-artifact@v4
         with:
@@ -86,6 +83,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: tests/
+
+      # - name: tmate sesh
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Send to Codecov
         id: send_to_codecov
