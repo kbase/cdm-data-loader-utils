@@ -74,7 +74,7 @@ jobs:
       - name: download artefacts
         uses: actions/download-artifact@v4
         with:
-          path: tests/
+          path: $GITHUB_WORKSPACE
 
       - name: Send to Codecov
         id: send_to_codecov
