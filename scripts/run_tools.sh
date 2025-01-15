@@ -9,6 +9,7 @@ fi
 INPUT_JSON=$1       # Path to the input JSON file
 OUTPUT_DIR=$2       # Directory where the results will be stored
 PYTHON_SCRIPT="scripts/parse_index.py"  # Python script to parse the JSON file
+NUM_THREADS_CHECKM2_RUN=20
 
 # Ensure the output directory exists
 mkdir -p "$OUTPUT_DIR"
@@ -37,7 +38,7 @@ if [ -z "$PATHS_COMMA" ]; then
 fi
 
 # ensure conda environment is active and checkm2 db is downloaded
-conda env create -f $BASE_DIR/env.yml
+conda env create -f env.yml
 conda activate genome_loader_env
 checkm2 database --download
 
