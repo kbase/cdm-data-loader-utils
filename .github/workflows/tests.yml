@@ -61,12 +61,20 @@ jobs:
 
       - name: install prerequisites
         shell: bash -l {0}
-        run: pip install -r requirements.txt
+        run: |
+            pip install -r requirements.txt
+            checkm2 database --download
 
       - name: Run tests
         shell: bash -l {0}
         run: |
             python -m unittest discover -s tests -p test_genome_loader.py
+
+      - name: upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: test_results/
+          name: a_load_of_crap
 
       - name: Send to Codecov
         id: send_to_codecov

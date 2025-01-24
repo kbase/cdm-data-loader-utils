@@ -20,7 +20,7 @@ class TestGenomeDataFileCreation(unittest.TestCase):
         # check file creation
         # Initialize the creators for each test case
         self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, self.output_dir, None
+            self.genome_paths_file, "tests/test_file_creation", None
         )
         self.feature_protein_creator.create_all_tables()
         # Define file paths and expected line counts
@@ -38,14 +38,14 @@ class TestGenomeDataFileCreation(unittest.TestCase):
             print(f"checking if number of file lines in {file} is equal to  {expected_lines}")
             self.assertTrue(os.path.exists(file), f"{file} was not created.")
 
-    @unittest.skip("Skipping checkm2 test")
+    # @unittest.skip("Skipping checkm2 test")
     def test_checkm2(self):
         # check file creation
         # Initialize the creators for each test case
 
         print("\nTest: Includes Checkm2 run")
         self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, self.output_dir, 1
+            self.genome_paths_file, "tests/test_checkm2", 1
         )
         self.feature_protein_creator.create_all_tables()
 
@@ -91,7 +91,7 @@ class TestGenomeDataFileCreation(unittest.TestCase):
                         msg=f"Completeness score mismatch for contigset hash {contigset_hash}",
                     )
                 else:
-                    self.fail(f"Unexpected contig_hash found in TSV file: {contig_hash}")
+                    self.fail(f"Unexpected contig_hash found in TSV file: {contigset_hash}")
 
 
 if __name__ == "__main__":
