@@ -5,36 +5,30 @@ import csv
 
 from genome_loader_scripts.genome_loader import MultiGenomeDataFileCreator
 
+# Define paths for the input and output files
+genome_paths_file = "tests/data/genome_paths.json"
+
 
 class TestGenomeDataFileCreation(unittest.TestCase):
-    def setUp(self):
-        # Define paths for the input and output files
-        self.genome_paths_file = "tests/data/genome_paths.json"
-        self.output_dir = "tests/output"
-
-        # Remove the output directory if it exists
-        if os.path.exists(self.output_dir):
-            shutil.rmtree(self.output_dir)
-
     def test_file_creation(self):
         # check file creation
         # Initialize the creators for each test case
-        self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, "tests/test_file_creation", None
+        feature_protein_creator = MultiGenomeDataFileCreator(
+            genome_paths_file, "tests/test_file_creation", None
         )
-        self.feature_protein_creator.create_all_tables()
+        feature_protein_creator.create_all_tables()
         # Define file paths and expected line counts
-        self.files_and_expected_lines = {
-            "tests/output/contig.tsv": 89,
-            "tests/output/contigset.tsv": 3,
-            "tests/output/feature.tsv": 12028,
-            "tests/output/feature_association.tsv": 12028,
-            "tests/output/structural_annotation.tsv": 3,
+        files_and_expected_lines = {
+            "tests/test_file_creation/contig.tsv": 89,
+            "tests/test_file_creation/contigset.tsv": 3,
+            "tests/test_file_creation/feature.tsv": 12028,
+            "tests/test_file_creation/feature_association.tsv": 12028,
+            "tests/test_file_creation/structural_annotation.tsv": 3,
         }
 
         print("\nTest: Check file creation")
-        for file in self.files_and_expected_lines:
-            expected_lines = self.files_and_expected_lines[file]
+        for file in files_and_expected_lines:
+            expected_lines = files_and_expected_lines[file]
             print(f"checking if number of file lines in {file} is equal to  {expected_lines}")
             self.assertTrue(os.path.exists(file), f"{file} was not created.")
 
@@ -44,12 +38,12 @@ class TestGenomeDataFileCreation(unittest.TestCase):
         # Initialize the creators for each test case
 
         print("\nTest: Includes Checkm2 run")
-        self.feature_protein_creator = MultiGenomeDataFileCreator(
-            self.genome_paths_file, "tests/test_checkm2", 1
+        feature_protein_creator = MultiGenomeDataFileCreator(
+            genome_paths_file, "tests/test_checkm2", 1
         )
-        self.feature_protein_creator.create_all_tables()
+        feature_protein_creator.create_all_tables()
 
-        self.expected_scores = {
+        expected_scores = {
             "423e40e5b4056069f9b0bfb71a3c682b41a8b68200b617a6e19902fa5dac7e94": {
                 "contamination": 1.09,
                 "completeness": 99.99,
@@ -59,9 +53,9 @@ class TestGenomeDataFileCreation(unittest.TestCase):
                 "completeness": 99.97,
             },
         }
-        self.contigset_file = os.path.join(self.output_dir, "contigset.tsv")
+        contigset_file = os.path.join("tests/test_checkm2", "contigset.tsv")
 
-        with open(self.contigset_file, "r") as tsvfile:
+        with open(contigset_file) as tsvfile:
             reader = csv.DictReader(tsvfile, delimiter="\t")
 
             for row in reader:
@@ -73,9 +67,9 @@ class TestGenomeDataFileCreation(unittest.TestCase):
                 print(f"contamination for {contigset_hash} is {contamination}")
                 print(f"completenessfor {contigset_hash} is {completeness}")
 
-                if contigset_hash in self.expected_scores:
-                    expected_contamination = self.expected_scores[contigset_hash]["contamination"]
-                    expected_completeness = self.expected_scores[contigset_hash]["completeness"]
+                if contigset_hash in expected_scores:
+                    expected_contamination = expected_scores[contigset_hash]["contamination"]
+                    expected_completeness = expected_scores[contigset_hash]["completeness"]
 
                     # Assert contamination and completeness match the expected values
                     self.assertAlmostEqual(
