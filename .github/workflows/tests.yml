@@ -74,8 +74,14 @@ jobs:
       - name: upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          path: test_results/
+          path: .
           name: a_load_of_crap
+
+      - name: upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: tests/
+          name: test_dir
 
       - name: Send to Codecov
         id: send_to_codecov
