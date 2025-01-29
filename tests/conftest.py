@@ -31,14 +31,6 @@ checkm2_output = {
 }
 
 RESULTS = {
-    "no_file": {
-        "stats": {},
-        "checkm2": {},
-    },
-    "empty": {
-        "stats": {},
-        "checkm2": {},
-    },
     "single": {
         "stats": {
             "FW305-3-2-15-C-TSA1_scaffolds.fna": stats_output["FW305-3-2-15-C-TSA1_scaffolds.fna"]
@@ -67,3 +59,28 @@ def test_data_dir() -> Path:
 def genome_paths_file() -> str:
     """Input file for tests."""
     return "tests/data/genome_paths.json"
+
+
+@pytest.fixture(scope="session")
+def json_test_strings() -> dict[str, Any]:
+    """A selection of JSON strings for testing."""
+    return {
+        "null": "null",
+        "empty": "",
+        "empty_str": '""',
+        "str": "some random string",
+        "quoted_str": '"some random string"',
+        "ws": "\n\n\t\n\t   ",
+        "quoted_ws": '"\n\n\t\n\t   "',
+        "empty_object": "{}",
+        "empty_array": "[]",
+        "null_key": '{"key": {null: "value"}}',
+        "empty_key": '{"key": {"": "value"}}',
+        "unclosed_str": '{"key": "value}',
+        "array_null": "[null]",
+        "array_mixed": '[null, "", 0, 1, 1.2345, "string", ["that", "this"], {"this": "that"}]',
+        "array_of_str": '["this", "that", "the", "other"]',
+        "array_of_arrays": '[[1,2,3],["this","that"],["what?"]]',
+        "array_of_objects": '[{"key": "value"}]',
+        "object": '{"key": "value"}',
+    }

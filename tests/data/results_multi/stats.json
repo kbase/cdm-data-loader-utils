@@ -1,0 +1,14 @@
+{
+   "scaffolds": 59,
+   "contigs": 61,
+   "gc_avg": 0.65985,
+   "gc_std": 0.02052,
+   "filename": "/home/runner/work/cdm-data-loader-utils/cdm-data-loader-utils/tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna"
+}
+{
+   "scaffolds": 28,
+   "contigs": 31,
+   "gc_avg": 0.69368,
+   "gc_std": 0.03501,
+   "filename": "/home/runner/work/cdm-data-loader-utils/cdm-data-loader-utils/tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna"
+}

@@ -1,0 +1,3 @@
+Name	Completeness	Contamination	Completeness_Model_Used	Translation_Table_Used	Coding_Density	Contig_N50	Average_Gene_Length	Genome_Size	GC_Content	Total_Coding_Sequences	Total_Contigs	Max_Contig_Length	Additional_Notes
+FW305-3-2-15-C-TSA1_scaffolds	99.99	1.09	Neural Network (Specific Model)	11	0.88	210727	320.43803056027167	7710289	0.66	7068	59	1020367	None
+FW305-C-112.1_scaffolds	99.97	2.27	Neural Network (Specific Model)	11	0.923	342135	317.0054461667365	4910299	0.69	4774	28	1438979	None
