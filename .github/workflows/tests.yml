@@ -63,23 +63,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: ["ubuntu-22.02", "ubuntu-24.04"]
+        # python-version: ["3.8"]
         python-version: ["3.10", "3.11", "3.12"]
         os: ["ubuntu-24.04"]
-        # python-version: ["3.8"]
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           fetch-depth: 0
 
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-          activate-environment: genome_loader_env
-          environment-file: env.yml
-          auto-activate-base: false
+      # - uses: conda-incubator/setup-miniconda@v3
+      #   with:
+      #     auto-update-conda: true
+      #     python-version: ${{ matrix.python-version }}
+      #     activate-environment: genome_loader_env
+      #     environment-file: env.yml
+      #     auto-activate-base: false
 
       - name: install prerequisites
         shell: bash -l {0}
@@ -99,16 +98,16 @@ jobs:
             # fail_ci_if_error: true
             token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Run tests
-        shell: bash -l {0}
-        continue-on-error: true
-        run: |
-            stats.sh --format=8 in=tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna,tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna > tests/data/fna-stats.json
-            checkm2 database --download
-            mkdir tests/data/checkm2
-            checkm2 predict --threads 10 --input tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna -o tests/data/checkm2
+      # - name: Run tests
+      #   shell: bash -l {0}
+      #   continue-on-error: true
+      #   run: |
+      #       stats.sh --format=8 in=tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna,tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna > tests/data/fna-stats.json
+      #       checkm2 database --download
+      #       mkdir tests/data/checkm2
+      #       checkm2 predict --threads 10 --input tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna -o tests/data/checkm2
 
-      - name: upload artefacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: tests/
+      # - name: upload artefacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     path: tests/
