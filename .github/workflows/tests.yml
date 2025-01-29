@@ -72,22 +72,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - uses: conda-incubator/setup-miniconda@v3
-      #   with:
-      #     auto-update-conda: true
-      #     python-version: ${{ matrix.python-version }}
-      #     activate-environment: genome_loader_env
-      #     environment-file: env.yml
-      #     auto-activate-base: false
-
       - name: install prerequisites
         shell: bash -l {0}
         run: pip install -r requirements.txt
 
       - name: Run tests
         shell: bash -l {0}
-        continue-on-error: true
-        run: pytest --cov=genome_loader_scripts --cov-report=xml tests/
+        continue-on-error: false
+        run: pytest --cov=src --cov-report=xml tests/
 
       - name: Send to Codecov
         id: send_to_codecov
