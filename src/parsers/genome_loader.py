@@ -5,22 +5,15 @@ import csv
 import gzip
 import hashlib
 import json
-import os
-import shutil
 import sys
-import uuid
 from pathlib import Path
-from typing import Any
-from Bio import SeqIO
 
-import pydantic
-from scipy import stats
+from Bio import SeqIO
 
 from src import calculate_hash as ch
 from src.parsers.bbmap_stats import get_bbmap_stats
 from src.parsers.checkm2 import get_checkm2_data
 from src.parsers.genome_paths import get_genome_paths
-
 
 # Define SO terms mapping
 so_terms = {
