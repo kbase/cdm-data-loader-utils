@@ -48,7 +48,7 @@ jobs:
       shell: bash -l {0}
       continue-on-error: true
       run: |
-          bash scripts/run_tools.sh tests/data/genome_paths.json test_results
+          bash scripts/run_tools.sh tests/data/genome_paths_file/valid.json test_results
 
     - name: upload artefacts
       uses: actions/upload-artifact@v4
@@ -64,9 +64,9 @@ jobs:
       fail-fast: false
       matrix:
         # os: ["ubuntu-22.02", "ubuntu-24.04"]
-        # python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         os: ["ubuntu-24.04"]
-        python-version: ["3.8"]
+        # python-version: ["3.8"]
     steps:
       - name: Checkout
         uses: actions/checkout@main
