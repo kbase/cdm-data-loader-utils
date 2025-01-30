@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.parsers.genome_loader import MultiGenomeDataFileCreator
+from src.genome_loader import MultiGenomeDataFileCreator
 
 
 @pytest.mark.parametrize(

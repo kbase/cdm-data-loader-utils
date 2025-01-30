@@ -3,17 +3,17 @@
 import argparse
 import csv
 import gzip
-import hashlib
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from Bio import SeqIO
 
-from src import calculate_hash as ch
 from src.parsers.bbmap_stats import get_bbmap_stats
 from src.parsers.checkm2 import get_checkm2_data
 from src.parsers.genome_paths import get_genome_paths
+from src.utils import calculate_hash as ch
 
 # Define SO terms mapping
 so_terms = {
@@ -62,50 +62,9 @@ class GenomeDataFileCreator:
         self.contigs = []
         self.structural_annotation = {}
 
-        self.contigset_hash, self.contig_id_map, self.protein_id_map = self.compute_hash(
+        self.contigset_hash, self.contig_id_map, self.protein_id_map = ch.compute_hash(
             self.contigset_file, self.protein_file
         )
-
-    # TODO: check protein_id_map issue
-    @staticmethod
-    def compute_hash(contigset_file, protein_file):
-        """
-        Compute the hash of the entire contigset and contigs.
-        """
-        contig_hash_dict = {}
-        contigs = ch.read_fasta2(contigset_file)
-        contigset_hash = ch.contig_set_hash(contigs)
-        for f in contigs:
-            contig_hash_dict[f.id] = ch.HashSeq(f.seq).hash_value
-        contig_id_map = contig_hash_dict
-
-        protein_hash_dict = {}
-        proteins = ch.read_fasta2(protein_file)
-        for f in proteins:
-            protein_hash_dict[f.id] = ch.HashSeq(f.seq).hash_value
-        protein_id_map = protein_hash_dict
-
-        return contigset_hash, contig_id_map, protein_id_map
-
-    @staticmethod
-    def generate_file_sha256(filepath, blocksize=65536):
-        """Generate the SHA-256 checksum of a file's decompressed content."""
-        sha256 = hashlib.sha256()
-        open_func = gzip.open if filepath.endswith(".gz") else open
-        try:
-            with open_func(filepath, "rt", encoding="utf-8", errors="ignore") as f:
-                for block in iter(lambda: f.read(blocksize), ""):
-                    sha256.update(block.encode("utf-8"))
-            return sha256.hexdigest()
-        except Exception as e:
-            print(f"Error generating SHA-256 for {filepath}: {e}")
-            return None
-
-    @staticmethod
-    def generate_hash_id(*args):
-        """Generate a hash-based ID from the given arguments."""
-        unique_string = "".join(map(str, args))
-        return hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
 
     @staticmethod
     def parse_attributes(attributes_str):
@@ -118,16 +77,6 @@ class GenomeDataFileCreator:
                 value = value.strip('"')
                 attributes[key] = value
         return attributes
-
-    # TODO: make it static method
-    def calculate_sha256_checksums(self):
-        """Calculate  checksums for the contigset and its contigs."""
-
-        print(f"Calculating sha256 for GFF: {self.gff_file}")
-        self.gff_hash = self.generate_file_sha256(self.gff_file)
-        if not self.gff_hash:
-            print(f"Error calculating sha256 for GFF file {self.gff_file}")
-            return
 
     # TODO: Update to use prepare_feature_data
     def prepare_gff3_data(self):
@@ -187,7 +136,7 @@ class GenomeDataFileCreator:
                     # Including contigset_hash ensures that features
                     #  are uniquely identified across different contigsets.
 
-                    feature_hash = self.generate_hash_id(
+                    feature_hash = ch.generate_hash_id(
                         contigset_hash, contig_hash, start, end, feature_type
                     )
 
@@ -226,7 +175,7 @@ class GenomeDataFileCreator:
         Handles both compressed (.gz) and uncompressed files.
         """
         if not self.contigset_hash:
-            self.contigset_hash, self.contig_id_map, self.protein_id_map = self.compute_hash(
+            self.contigset_hash, self.contig_id_map, self.protein_id_map = ch.compute_hash(
                 self.contigset_file, self.protein_file
             )
 
@@ -259,32 +208,15 @@ class GenomeDataFileCreator:
         Handles both compressed (.gz) and uncompressed files.
         """
         if not self.contigset_hash:
-            self.contigset_hash, self.contig_id_map, self.protein_id_map = self.compute_hash(
+            self.contigset_hash, self.contig_id_map, self.protein_id_map = ch.compute_hash(
                 self.contigset_file, self.protein_file
             )
 
         print(self.contigset_file)
 
         if self.contigset_hash:
-            # # Get bbmap data if available
-            # bbmap_info = self.run_bbmap(self.contigset_file)
-
-            # checkm2_info = {"checkm2_contamination": "", "checkm2_completeness": ""}
-
-            # if self.run_checkm2_option is not None:
-            #     unique_id = str(uuid.uuid4())
-            #     temp_dir = self.output_dir / unique_id
-            #     checkm2_info = self.run_checkm2(self.contigset_file, temp_dir)
-
-            #     # Note: You can keep this directory for checkm debugging
-            #     if os.path.exists(temp_dir):
-            #         shutil.rmtree(temp_dir)
-
-            # Create a QC entry hash bbmap data
             self.contigset = {
                 "contigset_hash": self.contigset_hash,
-                # **(bbmap_info or {}),
-                # **(checkm2_info or {}),
             }
 
     def prepare_structural_annotation(self):
@@ -294,6 +226,22 @@ class GenomeDataFileCreator:
             "contigset_file": self.contigset_file,
             "gff_file": self.gff_file,
         }
+
+    def run(self) -> tuple[Any]:
+        """Import the genomic, feature, and protein data from a set of files."""
+        self.gff_hash = ch.calculate_sha256_checksums(self.gff_file)
+        self.prepare_gff3_data()
+        self.prepare_contig_data()
+        self.prepare_contigset_data()
+        self.prepare_structural_annotation()
+
+        return (
+            self.contigset,
+            self.contigs,
+            self.features,
+            self.feature_associations,
+            self.structural_annotation,
+        )
 
 
 class MultiGenomeDataFileCreator:
@@ -330,25 +278,6 @@ class MultiGenomeDataFileCreator:
             self.checkm2_file = Path(checkm2_file.strip())
         if stats_file and stats_file.strip():
             self.stats_file = Path(stats_file.strip())
-
-    def process_files(
-        self: "MultiGenomeDataFileCreator", contigset_file: str, gff_file: str, protein_file: str
-    ):
-        print(f"\n==Processing contigset {contigset_file}==\n")
-        parser = GenomeDataFileCreator(contigset_file, gff_file, protein_file, self.output_dir)
-        parser.calculate_sha256_checksums()
-        parser.prepare_gff3_data()
-        parser.prepare_contig_data()
-        parser.prepare_contigset_data()
-        parser.prepare_structural_annotation()
-
-        return (
-            parser.contigset,
-            parser.contigs,
-            parser.features,
-            parser.feature_associations,
-            parser.structural_annotation,
-        )
 
     def write_to_tsv(
         self: "MultiGenomeDataFileCreator",
@@ -509,47 +438,48 @@ class MultiGenomeDataFileCreator:
 
         for gid in genome_ids:
             paths = genome_paths.get(gid)
-            if paths:
-                # _scaffolds.fna
-                contigset_file = paths.get("fna")
-                # _genes.gff
-                gff_file = paths.get("gff")
-                # _genes.faa
-                protein_file = paths.get("protein")
-                if contigset_file and gff_file and protein_file:
-                    contigset, contigs, features, associations, structural_annotation = (
-                        self.process_files(contigset_file, gff_file, protein_file)
-                    )
-
-                    if checkm2_data:
-                        # get the stem of the file name and check the checkm2 data for it
-                        abbrev_file_name = Path(contigset_file).stem
-                        if abbrev_file_name in checkm2_data:
-                            contigset.update(checkm2_data[abbrev_file_name])
-                    # check for the file name
-                    if stats_data and Path(contigset_file).name in stats_data:
-                        contigset.update(stats_data[Path(contigset_file).name])
-                        del contigset["filename"]
-
-                    # Write data to TSV files incrementally
-                    self.write_to_tsv(
-                        contigset,
-                        contigs,
-                        features,
-                        associations,
-                        structural_annotation,
-                        headers_written,
-                    )
-
-                    # Clear data to free memory
-                    contigset.clear()
-                    contigs.clear()
-                    features.clear()
-                    associations.clear()
-                else:
-                    print(f"Missing file paths for genome ID: {gid}")
-            else:
+            # this should not happen
+            if not paths:
                 print(f"No paths found for genome ID: {gid}")
+                continue
+
+            # _scaffolds.fna
+            contigset_file = paths.get("fna")
+            # _genes.gff
+            gff_file = paths.get("gff")
+            # _genes.faa
+            protein_file = paths.get("protein")
+            if not contigset_file or not gff_file or not protein_file:
+                print(f"Missing file paths for genome ID: {gid}")
+                continue
+
+            print(f"\n==Processing contigset {contigset_file}==\n")
+            parser = GenomeDataFileCreator(contigset_file, gff_file, protein_file, self.output_dir)
+            contigset, contigs, features, associations, structural_annotation = parser.run()
+
+            # get the stem of the contigset file name and check the checkm2 data for it
+            if checkm2_data and Path(contigset_file).stem in checkm2_data:
+                contigset.update(checkm2_data[Path(contigset_file).stem])
+            # check for the contigset file name
+            if stats_data and Path(contigset_file).name in stats_data:
+                contigset.update(stats_data[Path(contigset_file).name])
+                del contigset["filename"]
+
+            # Write data to TSV files incrementally
+            self.write_to_tsv(
+                contigset,
+                contigs,
+                features,
+                associations,
+                structural_annotation,
+                headers_written,
+            )
+
+            # Clear data to free memory
+            contigset.clear()
+            contigs.clear()
+            features.clear()
+            associations.clear()
 
     @classmethod
     def from_args(cls: type["MultiGenomeDataFileCreator"]) -> "MultiGenomeDataFileCreator":
