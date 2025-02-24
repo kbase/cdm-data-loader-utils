@@ -4,16 +4,31 @@ from collections import Counter
 
 
 class CDMContigSet:
-    def __init__(self, sha256):
-        self.sha256 = sha256
+    def __init__(self, hash_contigset):
+        self.hash_contigset = hash_contigset
         self.contigs = []
+
+    @property
+    def size(self):
+        size = 0
+        for contig in self.contigs:
+            size += len(contig.seq)
+        return size
+
+    @staticmethod
+    def from_contigs(contigs: list):
+        h_list_contigs = HashSeqList()
+        for v in contigs:
+            h_list_contigs.append(HashSeq(str(v.seq)))
+        cdm_contigset = CDMContigSet(h_list_contigs.hash_value)
+        cdm_contigset.contigs.extend(contigs)
+        return cdm_contigset
 
 
 class CDMContig:
-    def __init__(self, contig_set_id: str, seq: str):
+    def __init__(self, seq: str):
         self.seq = seq
-        self.contig_set_id = contig_set_id
-        self.hash = HashSeq(self.seq).hash_value
+        self.hash_contig = HashSeq(self.seq).hash_value
         self.base_count = dict(Counter(list(self.seq.upper())))
         self.length = len(self.seq)
         self.gc = (
@@ -46,16 +61,18 @@ class CDMProtein:
 
 class CDMFeature:
     def __init__(
-        self, feature_id: str, contig_hash, start, end, strand, attributes=None
+        self, feature_id: str, contigset_x_contig_id: str, start: int, end: int, strand: str,
+        feature_type: str, source=None, phase=None, protocol=None, attributes=None
     ):
         self.id = feature_id
-        self.contig_hash = contig_hash
+        self.contigset_x_contig_id = contigset_x_contig_id
         self.start = start
         self.end = end
         self.strand = strand
-        self.type = None
-        self.source = None
-        self.cds_phase = None
+        self.type = feature_type
+        self.source = source
+        self.cds_phase = phase
+        self.protocol = protocol
         self.attributes = {} if attributes is None else attributes
 
         self.names = []
