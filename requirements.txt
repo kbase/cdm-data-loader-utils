@@ -1,4 +1,5 @@
 biopython
+modelseedpy==0.4.1
 pandas
 pytest
 coverage
