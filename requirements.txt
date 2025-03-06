@@ -1,6 +1,8 @@
 biopython
 modelseedpy==0.4.2
+pyarrow
 pandas
+polars
 pytest
 coverage
 pytest-coverage
