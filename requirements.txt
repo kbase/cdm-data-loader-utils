@@ -1,5 +1,7 @@
+tqdm
 biopython
 modelseedpy==0.4.2
+aqlalchemy
 pyarrow
 pandas
 polars
