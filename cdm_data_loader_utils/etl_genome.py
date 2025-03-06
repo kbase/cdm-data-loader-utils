@@ -46,17 +46,42 @@ def _get_start_end_strand_s_attr(feature):
 
 
 def _get_start_end_strand_s_attr_kbase(feature):
-    for l in feature.location:
-        # print(l)
-        contig, start, strand, end = l
+    for location in feature.location:
+        contig, p1, strand, p2 = location
+        start = p1
+        end = p2
+        if strand == '+':
+            start = p1
+            end = p1 + p2 - 1
+        elif strand == '-':
+            start = p1 - p2 + 1
+            end = p1
         return start, end, strand, {}
 
-    # start, end, strand_s, attr = f.description.split(" # ")
     return
 
 
 def _get_feature_id(feature):
     return feature.id
+
+
+class GbffAssemblyAndGenome:
+
+    def __init__(self, gbff_records: list):
+        if gbff_records is None or len(gbff_records) == 0:
+            raise ValueError('empty gbff features')
+
+        self.gbff_records = gbff_records
+
+    @property
+    def contigs(self):
+        for contig in self.gbff_records:
+            yield contig
+
+    @staticmethod
+    def from_file(filename):
+        from cdm_data_loader_utils.io.genome import read_gbff_records_from_file
+        return GbffAssemblyAndGenome(read_gbff_records_from_file(filename))
 
 
 class ETLGbffGenome:
@@ -68,56 +93,86 @@ class ETLGbffGenome:
         self._data_cdm_protein = {}
         self._data_cdm_feature = {}
         self._data_cdm_feature_x_protein = set()
+        self._data_feature_qualifiers = {}
+        self.feature_source = 'gbff'
+        self.qualifier_translation = 'translation'
+        self.feature_id_max_len = 62
 
-    def etl(self, genome_id, protocol_id, gbff_records):
-        contigs = []
+    def etl(self, genome_id, protocol_id, contig_feature_pairs):
+        self.etl_assembly([x[0] for x in contig_feature_pairs])
+        self.etl_features(genome_id, protocol_id, contig_feature_pairs)
+
+    def etl_assembly(self, contigs):
+        l_contig = []
         h_to_gbff_record = {}
-        for contig in gbff_records:
-            cdm_contig = CDMContig(str(contig.seq))
+        for contig in contigs:
+            cdm_contig = contig if type(contig) == CDMContig else CDMContig(str(contig.seq))
             if cdm_contig.hash_contig not in self._data_cdm_contig:
                 self._data_cdm_contig[cdm_contig.hash_contig] = cdm_contig
             if cdm_contig.hash_contig not in h_to_gbff_record:
                 h_to_gbff_record[cdm_contig.hash_contig] = []
             h_to_gbff_record[cdm_contig.hash_contig].append(contig)
-            contigs.append(cdm_contig)
-        self._cdm_contigset = CDMContigSet.from_contigs(contigs)
+            l_contig.append(cdm_contig)
+        self._cdm_contigset = CDMContigSet.from_contigs(l_contig)
+
+        return h_to_gbff_record
+
+    def register_contigset_x_contig(self, cdm_contigset, cdm_contig, index_contig):
+        contigset_x_contig_id = ETLGbffGenome.get_contigset_x_contig_id(cdm_contigset,
+                                                                        cdm_contig,
+                                                                        index_contig)
+
+        self._data_cdm_contigset_x_contig.add((
+            contigset_x_contig_id,
+            cdm_contigset.hash_contigset,
+            cdm_contig.hash_contig,
+            index_contig
+        ))
+
+        return contigset_x_contig_id
+
+    def etl_features(self, genome_id, protocol_id, contig_feature_pairs):
+        h_to_contig_to_features = {}
+        for cdm_contig, features in contig_feature_pairs:
+            if cdm_contig.hash_contig not in h_to_contig_to_features:
+                h_to_contig_to_features[cdm_contig.hash_contig] = []
+            h_to_contig_to_features[cdm_contig.hash_contig].append((cdm_contig, features))
+
+        # h_to_gbff_record = self.etl_assembly(contigs)
 
         repeat_counter = {}
-        for hash_contig in h_to_gbff_record:
+        for hash_contig in h_to_contig_to_features:
             cdm_contig = self._data_cdm_contig[hash_contig]
             index_contig = 0
-            contigset_x_contig_id = ETLGbffGenome.get_contigset_x_contig_id(self._cdm_contigset, cdm_contig,
-                                                                            index_contig)
+            contigset_x_contig_id = self.register_contigset_x_contig(self._cdm_contigset, cdm_contig, index_contig)
 
-            self._data_cdm_contigset_x_contig.add((
-                contigset_x_contig_id,
-                self._cdm_contigset.hash_contigset,
-                cdm_contig.hash_contig,
-                index_contig
-            ))
-
-            for gbff_record in h_to_gbff_record[hash_contig]:
-                for gbff_feature in list(gbff_record.features)[:]:
+            for _cdm_contig, features in h_to_contig_to_features[hash_contig]:
+                for gbff_feature in features:
                     feature_id = ETLGbffGenome._get_feature_id(genome_id, gbff_feature)
                     if feature_id in self._data_cdm_feature:
                         counter = repeat_counter.get(feature_id, 1)
                         repeat_counter[feature_id] = counter + 1
                         feature_id = f'{feature_id}_{counter}'
-                    cdm_feature = ETLGbffGenome.convert_to_cdm_feature(feature_id, contigset_x_contig_id, gbff_feature)
+                    cdm_feature = ETLGbffGenome.convert_to_cdm_feature(feature_id,
+                                                                       contigset_x_contig_id,
+                                                                       gbff_feature,
+                                                                       gbff_feature.type)
                     # set protocol
                     cdm_feature.protocol = protocol_id
                     # set source
-                    cdm_feature.source = 'gbff'
-                    if len(cdm_feature.id) < 62 and cdm_feature.id not in self._data_cdm_feature:
+                    cdm_feature.source = self.feature_source
+                    self._data_feature_qualifiers[cdm_feature.id] = self.get_other_qualifiers(gbff_feature)
+
+                    if len(cdm_feature.id) < self.feature_id_max_len and cdm_feature.id not in self._data_cdm_feature:
                         self._data_cdm_feature[cdm_feature.id] = cdm_feature
                     else:
-                        if len(cdm_feature.id) >= 62:
+                        if len(cdm_feature.id) >= self.feature_id_max_len:
                             raise ValueError(f'x feature id {cdm_feature.id}')
                         else:
                             raise ValueError(f'duplicate feature id {cdm_feature.id}')
                     if gbff_feature.type == 'CDS':
-                        cdm_protein = ETLGbffGenome.get_protein(gbff_feature)
-                        if cdm_protein.hash not in self._data_cdm_protein:
+                        cdm_protein = self.get_protein(gbff_feature)
+                        if cdm_protein and cdm_protein.hash not in self._data_cdm_protein:
                             self._data_cdm_protein[cdm_protein.hash] = cdm_protein
                             self._data_cdm_feature_x_protein.add((cdm_feature.id, cdm_protein.hash))
                 index_contig += 1
@@ -137,12 +192,21 @@ class ETLGbffGenome:
         contigset_x_contig_str = f'{cdm_contigset.hash_contigset}_{cdm_contig.hash_contig}_{index_contig}'
         return ETLGbffGenome._hash_string(contigset_x_contig_str)
 
-    @staticmethod
-    def get_protein(f):
-        translation = f.qualifiers.get('translation')
-        if translation and type(translation) == list and len(translation) == 1:
+
+    def get_other_qualifiers(self, f):
+        qualifiers = {}
+        for k in f.qualifiers:
+            if k not in {self.qualifier_translation}:
+                qualifiers[k] = f.qualifiers[k]
+        return qualifiers
+
+    def get_protein(self, f):
+        translation = f.qualifiers.get(self.qualifier_translation)
+        if translation is None:
+            return None
+        if type(translation) == list and len(translation) == 1:
             return CDMProtein(translation[0])
-        raise ValueError('unable to get translation')
+        raise ValueError(f'unable to get translation: {f.qualifiers}')
 
     @staticmethod
     def get_strand(f_strand):
@@ -153,20 +217,90 @@ class ETLGbffGenome:
         raise ValueError('strand error')
 
     @staticmethod
-    def convert_to_cdm_feature(feature_id, contigset_x_contig_id, f):
+    def convert_to_cdm_feature(feature_id, contigset_x_contig_id, f, feature_type):
         start = int(f.location.start)
         end = int(f.location.end)
         strand = ETLGbffGenome.get_strand(f.location.strand)
-        feature_type = f.type
-        cdm_feature = CDMFeature(feature_id, contigset_x_contig_id, None,
-                                 start, end, strand,
-                                 feature_type)
+        cdm_feature = CDMFeature(feature_id, contigset_x_contig_id, start, end, strand, feature_type)
         return cdm_feature
 
     @staticmethod
     def _hash_string(s):
         import hashlib
         return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+class ETLAssemblyAndGenome(ETLGbffGenome):
+
+    def __init__(self):
+        super().__init__()
+        self.feature_source = 'kbase'
+
+    @staticmethod
+    def convert_to_cdm_feature(feature_id, contigset_x_contig_id, f, feature_type):
+        start, end, strand, attr = _get_start_end_strand_s_attr_kbase(f)
+        cdm_feature = CDMFeature(feature_id, contigset_x_contig_id, start, end, strand, feature_type)
+        return cdm_feature
+
+    def register_contigset_x_contig(self, cdm_contigset, cdm_contig, index_contig):
+        contigset_x_contig_id = ETLGbffGenome.get_contigset_x_contig_id(cdm_contigset,
+                                                                        cdm_contig,
+                                                                        index_contig)
+
+        self._data_cdm_contigset_x_contig.add((
+            contigset_x_contig_id,
+            cdm_contigset.hash_contigset,
+            cdm_contig.hash_contig,
+            index_contig
+        ))
+
+        return contigset_x_contig_id
+
+    def get_protein(self, f):
+        seq = f.seq
+        if seq:
+            return CDMProtein(seq)
+        else:
+            return None
+
+    def etl_features(self, genome_id, protocol_id, contig_feature_pairs):
+        h_to_contig_to_features = {}
+        for cdm_contig, features in contig_feature_pairs:
+            if cdm_contig.hash_contig not in h_to_contig_to_features:
+                h_to_contig_to_features[cdm_contig.hash_contig] = []
+            h_to_contig_to_features[cdm_contig.hash_contig].append((cdm_contig, features))
+
+        for hash_contig in h_to_contig_to_features:
+            index_contig = 0
+            cdm_contig = self._data_cdm_contig[hash_contig]
+
+            contigset_x_contig_id = self.register_contigset_x_contig(self._cdm_contigset, cdm_contig, index_contig)
+
+            for _cdm_contig, features in h_to_contig_to_features[hash_contig]:
+                for feature in features:
+                    feature_id = f'{genome_id}_{feature.id}'
+                    cdm_feature = ETLAssemblyAndGenome.convert_to_cdm_feature(feature_id,
+                                                                              contigset_x_contig_id,
+                                                                              feature,
+                                                                              'CDS')
+                    # set protocol
+                    cdm_feature.protocol = protocol_id
+                    # set source
+                    cdm_feature.source = self.feature_source
+
+                    if len(cdm_feature.id) < self.feature_id_max_len and cdm_feature.id not in self._data_cdm_feature:
+                        self._data_cdm_feature[cdm_feature.id] = cdm_feature
+                    else:
+                        if len(cdm_feature.id) >= self.feature_id_max_len:
+                            raise ValueError(f'x feature id {cdm_feature.id}')
+                        else:
+                            raise ValueError(f'duplicate feature id {cdm_feature.id}')
+
+                    cdm_protein = self.get_protein(feature)
+                    if cdm_protein and cdm_protein.hash not in self._data_cdm_protein:
+                        self._data_cdm_protein[cdm_protein.hash] = cdm_protein
+                        self._data_cdm_feature_x_protein.add((cdm_feature.id, cdm_protein.hash))
+            index_contig += 1
 
 
 class MapAssemblyToGff:
