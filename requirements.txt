@@ -1,5 +1,10 @@
+tqdm
 biopython
+modelseedpy==0.4.2
+sqlalchemy
+pyarrow
 pandas
+polars
 pytest
 coverage
 pytest-coverage
