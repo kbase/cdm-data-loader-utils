@@ -3,6 +3,19 @@ from cdm_data_loader_utils.core.hash_seq import HashSeq, HashSeqList
 from collections import Counter
 
 
+class CDMProtocol:
+
+    def __init__(self, protocol_id, parent_id, name, version, identifier, sim_t, inputs, outputs):
+        self.id = protocol_id
+        self.parent_id = parent_id
+        self.name = name
+        self.version = version
+        self.identifier = identifier
+        self.sim_t = sim_t
+        self.inputs = inputs
+        self.outputs = outputs
+
+
 class CDMContigSet:
     def __init__(self, hash_contigset):
         self.hash_contigset = hash_contigset

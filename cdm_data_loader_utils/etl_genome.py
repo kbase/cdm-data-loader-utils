@@ -97,6 +97,7 @@ class ETLGbffGenome:
         self.feature_source = 'gbff'
         self.qualifier_translation = 'translation'
         self.feature_id_max_len = 62
+        self.fn_feature_metadata = None
 
     def etl(self, genome_id, protocol_id, contig_feature_pairs):
         self.etl_assembly([x[0] for x in contig_feature_pairs])
@@ -287,6 +288,9 @@ class ETLAssemblyAndGenome(ETLGbffGenome):
                     cdm_feature.protocol = protocol_id
                     # set source
                     cdm_feature.source = self.feature_source
+
+                    if self.fn_feature_metadata:
+                        self._data_feature_qualifiers[cdm_feature.id] = self.fn_feature_metadata(feature)
 
                     if len(cdm_feature.id) < self.feature_id_max_len and cdm_feature.id not in self._data_cdm_feature:
                         self._data_cdm_feature[cdm_feature.id] = cdm_feature
@@ -895,3 +899,156 @@ class EtlAssemblyAndGenome:
         table = pa.Table.from_arrays([pa.array(_data[k]) for k in names], names=names)
         return table
 
+
+class TransformToParquet:
+
+    def __init__(self):
+        self.data_contigsets = {}
+        self.data_contigs = {}
+        self.data_contigset_x_contig = set()
+        self.data_features = {}
+        self.data_proteins = {}
+        self.data_feature_x_protein = set()
+
+    def transform(self, list_etl: list):
+
+        for etl in list_etl:
+            cdm_contigset = etl._cdm_contigset
+            if cdm_contigset.hash_contigset not in self.data_contigsets:
+                self.data_contigsets[cdm_contigset.hash_contigset] = cdm_contigset
+            else:
+                print('!')
+            for h in etl._data_cdm_contig:
+                cdm_contig = etl._data_cdm_contig[h]
+                if cdm_contig.hash_contig not in self.data_contigs:
+                    self.data_contigs[cdm_contig.hash_contig] = cdm_contig
+                else:
+                    print('!')
+            for t in etl._data_cdm_contigset_x_contig:
+                if t not in self.data_contigset_x_contig:
+                    self.data_contigset_x_contig.add(t)
+                else:
+                    print('!')
+
+            for f_id in etl._data_cdm_feature:
+                cdm_feature = etl._data_cdm_feature[f_id]
+                if f_id not in self.data_features:
+                    self.data_features[f_id] = cdm_feature
+                else:
+                    raise ValueError('feature')
+
+            for p_id in etl._data_cdm_protein:
+                cdm_protein = etl._data_cdm_protein[p_id]
+                if p_id not in self.data_features:
+                    self.data_proteins[p_id] = cdm_protein
+                else:
+                    raise ValueError('protein')
+
+            for t in etl._data_cdm_feature_x_protein:
+                if t not in self.data_feature_x_protein:
+                    self.data_feature_x_protein.add(t)
+
+    @staticmethod
+    def export_contigs(list_contig: list):
+        names = ["hash_contig", "length", "gc_content", "base_count"]
+        data = {k: [] for k in names}
+
+        for o in tqdm(list_contig):
+            data["hash_contig"].append(o.hash_contig)
+            data["length"].append(o.length)
+            data["gc_content"].append(o.gc)
+            data["base_count"].append(o.base_count)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
+
+    @staticmethod
+    def export_contigsets(list_contigset: list):
+        names = ["hash_contigset", "n_contigs", "size"]
+        data = {k: [] for k in names}
+
+        for o in tqdm(list_contigset):
+            data["hash_contigset"].append(o.hash_contigset)
+            data["n_contigs"].append(len(o.contigs))
+            data["size"].append(o.size)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
+
+    @staticmethod
+    def export_contigset_x_contigs(list_contigset: list):
+        names = ["hash_contigset_x_contig", "hash_contigset", "hash_contig", "contig_index"]
+        data = {k: [] for k in names}
+
+        for hash_contigset_x_contig, hash_contigset, hash_contig, contig_index in tqdm(list_contigset):
+            data["hash_contigset_x_contig"].append(hash_contigset_x_contig)
+            data["hash_contigset"].append(hash_contigset)
+            data["hash_contig"].append(hash_contig)
+            data["contig_index"].append(contig_index)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
+
+    def export_features(self, list_feature):
+        names = ["feature_id", "hash_contigset_x_contig",
+                 "source", "protocol_id", "type",
+                 "start", "end", "strand", "cds_phase"]
+        data = {k: [] for k in names}
+
+        for o in tqdm(list_feature):
+            data["feature_id"].append(o.id)
+            data["hash_contigset_x_contig"].append(o.contigset_x_contig_id)
+            data["source"].append(o.source)
+            data["protocol_id"].append(o.protocol)
+            data["type"].append(o.type)
+            data["start"].append(o.start)
+            data["end"].append(o.end)
+            data["strand"].append(o.strand)
+            data["cds_phase"].append(o.cds_phase)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
+
+    def export_proteins(self, list_protein):
+        names = ["hash_protein_sequence", "description",
+                 "length", "sequence"]
+        data = {k: [] for k in names}
+
+        for o in tqdm(list_protein):
+            data["hash_protein_sequence"].append(o.hash)
+            data["description"].append(None)
+            data["length"].append(len(o.seq))
+            data["sequence"].append(o.seq)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
+
+    def export_feature_x_proteins(self, list_feature_to_proteins):
+        names = ["feature_id", "hash_protein_sequence", "has_stop_codon"]
+        data = {k: [] for k in names}
+
+        for feature_id, hash_protein in tqdm(list_feature_to_proteins):
+            data["feature_id"].append(feature_id)
+            data["hash_protein_sequence"].append(hash_protein)
+            data["has_stop_codon"].append(True)
+
+        table = pa.Table.from_arrays(
+            [pa.array(data[k]) for k in names],
+            names=names)
+
+        return table
