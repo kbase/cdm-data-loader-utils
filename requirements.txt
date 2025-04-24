@@ -1,3 +1,4 @@
+click
 biopython
 pandas
 pytest
