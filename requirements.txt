@@ -3,3 +3,4 @@ pandas
 pytest
 coverage
 pytest-coverage
+click
