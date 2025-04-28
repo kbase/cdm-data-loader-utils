@@ -1,8 +1,15 @@
-name: Tests
+name: Run tests
 
 on:
-  pull_request:
   push:
+    branches: [ main ]
+
+  pull_request:
+      types:
+          - opened
+          - reopened
+          - synchronize
+          - ready_for_review
 
 jobs:
 
@@ -12,22 +19,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: ["ubuntu-24.04"]
+
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           fetch-depth: 0
 
-      - name: install prerequisites
-        shell: bash -l {0}
-        run: pip install -r requirements.txt
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
 
       - name: Run tests
         shell: bash -l {0}
         continue-on-error: false
-        run: pytest --cov=src --cov-report=xml tests/
+        run: uv run pytest --cov=src --cov-report=xml tests/
 
       - name: Send to Codecov
         id: send_to_codecov
@@ -50,7 +65,7 @@ jobs:
   #   - uses: conda-incubator/setup-miniconda@v3
   #     with:
   #       auto-update-conda: true
-  #       python-version: 3.8
+  #       python-version: 3.12
   #       activate-environment: genome_loader_env
   #       environment-file: env.yml
   #       auto-activate-base: false

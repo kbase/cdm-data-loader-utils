@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 
 
 def main() -> None:
@@ -19,7 +20,7 @@ def main() -> None:
     """
     # Check if the correct number of arguments is provided
     if len(sys.argv) < 3:
-        print("Usage: parse_json.py <input_json_file> <key>")
+        print("Usage: parse_json.py <input_json_file> <key>")  # noqa: T201
         sys.exit(1)
 
     input_file = sys.argv[1]  # Path to the JSON file
@@ -27,15 +28,15 @@ def main() -> None:
 
     try:
         # Attempt to open and read the JSON file
-        with open(input_file, "r") as file:
+        with Path(input_file).open() as file:
             data = json.load(file)
     except Exception as e:
-        print(f"Error reading JSON file: {e}")
+        print(f"Error reading JSON file: {e}")  # noqa: T201
         sys.exit(1)
 
     # throw error if top level data structure is incorrect
     if not isinstance(data, dict):
-        print("Error: expected JSON file to be a dictionary")
+        print("Error: expected JSON file to be a dictionary")  # noqa: T201
         sys.exit(1)
 
     # iterate over dictionary values and extract the values from dicts containing the target key
@@ -47,7 +48,7 @@ def main() -> None:
 
     # Print each extracted path on a new line
     for path in extracted_paths:
-        print(path)
+        print(path)  # noqa: T201
 
 
 if __name__ == "__main__":
