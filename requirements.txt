@@ -1,5 +1,0 @@
-biopython
-pandas
-pytest
-coverage
-pytest-coverage

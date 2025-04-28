@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Check if the correct number of arguments is provided
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <input_json_file> <output_directory>"

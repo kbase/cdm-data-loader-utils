@@ -1,32 +1,48 @@
 # cdm-data-loader-utils
+
 Repo for CDM input data loading and wrangling
 
+
+## Environment and python management
+
+The data loader utils package uses [uv](https://docs.astral.sh/uv/) for python environment and package management. See the [installation instructions](https://docs.astral.sh/uv/getting-started/installation/) to set up uv on your system.
 
 ## Installation
 
 The data loader utils run on python 3.12 and above.
 
-To install, run
+To install dependencies (including python), run
 
 ```sh
-> pip install -r requirements.txt
+> uv sync
 ```
+
+To activate a virtual environment with these dependencies installed, run
+
+```sh
+> uv venv
+# you will now be prompted to activate the virtual environment
+> source .venv/bin/activate
+```
+
+If you are using IDEs like VSCode, they should pick up the creation of the new environment and offer it for executing python code.
+
 
 ### Tests
 
 To run the tests, execute the command:
 
 ```sh
-> pytest tests/
+> uv run pytest tests/
 ```
 
 To generate coverage for the tests, run
 
 ```sh
-> pytest --cov=src --cov-report=xml tests/
+> uv run pytest --cov=src --cov-report=xml tests/
 ```
 
-The standard python `coverage` package is used and coverage can be generate as html or other formats by changing the parameters.
+The standard python `coverage` package is used and coverage can be generated as html or other formats by changing the parameters.
 
 
 ## Loading genomes, contigs, and features
