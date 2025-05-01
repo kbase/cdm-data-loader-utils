@@ -1,14 +1,13 @@
 import pandas as pd
 import pytest
 from parsers.gene_association_file import (
-    process_go_annotations, 
-    ASSOCIATION_COL_TYPES, 
-    ASSOCIATION_COL_HEADERS,
-    merge_evidence_mapping, )
-
+    process_go_annotations,
+    ASSOCIATION_COL_TYPES,
+    merge_evidence_mapping,
+    normalize_dates,
+    process_predicates,)
 
 # --- Fixtures ---
-
 @pytest.fixture
 def temp_csv_files(tmp_path):
     """Create temporary CSV files for input and output testing."""
@@ -27,15 +26,15 @@ def temp_csv_files(tmp_path):
     input_path.write_text(example_csv)
     return input_path, output_path
 
-
 @pytest.fixture
 def evidence_mapping_df():
     """Example evidence mapping DataFrame for testing."""
     return pd.DataFrame([
         {"Evidence_Code": "ISS", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000250"},
         {"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"},
-    ])
-
+        {"Evidence_Code": "IDA", "DB_Reference": "PMID:12345678", "evidence_type": "ECO:0000314"},
+        {"Evidence_Code": "EXP", "DB_Reference": "PMID:87654321", "evidence_type": "ECO:0000269"},
+        {"Evidence_Code": "IMP", "DB_Reference": "GO_REF:0000033", "evidence_type": "ECO:0000315"},])
 
 @pytest.fixture
 def annotation_df():
@@ -48,78 +47,90 @@ def annotation_df():
         {"Evidence_Code": "IMP", "publications": None}, # Null publications
     ])
 
-
 # --- Tests ---
-
 @pytest.mark.unit
-def test_go_annotation_processed(temp_csv_files):
+def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
-    process_go_annotations(str(input_path), str(output_path))
-
+    process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     assert output_path.exists(), "Output file not created."
     df = pd.read_csv(output_path)
-
-    assert set(df.columns) == set(ASSOCIATION_COL_HEADERS), (
-        f"Output DataFrame columns do not match expected columns.\nExpected: {ASSOCIATION_COL_HEADERS}\nGot: {list(df.columns)}"
+    expected_cols = set(ASSOCIATION_COL_TYPES.keys())
+    assert expected_cols.issubset(set(df.columns)), (
+        f"Output columns do not match expected.\nExpected: {expected_cols}\nGot: {set(df.columns)}"
     )
 
-
 @pytest.mark.integration
-def test_io_behavior(temp_csv_files):
+def test_io_behavior(temp_csv_files, evidence_mapping_df):
     """Integration test for I/O behavior of process_go_annotations."""
     input_path, output_path = temp_csv_files
-
-    # Before process_go_annotations runs, make sure that output_path does not exist # 
     assert not output_path.exists(), "Output file already exist before processing."
-    process_go_annotations(str(input_path), str(output_path))
-
+    process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     assert output_path.exists(), "Output file not created."
     df_out = pd.read_csv(output_path)
-
     assert not df_out.empty, "Output DataFrame is empty."
-
-    for col in ASSOCIATION_COL_HEADERS:
+    for col in ASSOCIATION_COL_TYPES.keys():
         assert col in df_out.columns, f"Column {col} missing in output."
 
-
 @pytest.mark.unit
-def test_column_types(temp_csv_files):
-    """Test the column data types of the processed annotations."""
+def test_column_types(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
-
-    process_go_annotations(str(input_path), str(output_path))
+    process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     df = pd.read_csv(output_path)
-
     for column, expected_type in ASSOCIATION_COL_TYPES.items():
-        invalid = df[column].dropna().apply(lambda x: not isinstance(x, expected_type))
-        assert not invalid.any(), f"Column {column} has invalid data types."
-
+        not_null = df[column].dropna()
+        if not not_null.empty:
+            mismatches = ~not_null.map(lambda x: isinstance(x, expected_type))
+            assert not mismatches.any(), f"Column {column} has incorrect types."
 
 @pytest.mark.unit
-def test_negated_logic(temp_csv_files):
-    """Test negation logic of predicate column."""
+def test_negated_logic(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
-
-    process_go_annotations(str(input_path), str(output_path))
+    process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     df = pd.read_csv(output_path)
-
-     # At least one negated == False (normal enables)
-    assert (df["negated"] == False).any(), "Expected at least one False negation not found."
-
-    # At least one negated == True (NOT| enables)
-    assert (df["negated"] == True).any(), "Expected at least one True negation not found."
-
+    assert df["negated"].any(), "Expected at least one negated is True row, it present NOT|enables"
+    assert (~df["negated"]).any(), "Expected at least one negated is False row, it present enables"
 
 # --- Helper function for evidence mapping test --- 
-
 @pytest.mark.unit
-def test_evidence_mapping_merge_and_fallback(annotation_df, evidence_mapping_df):
+def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     """Test the evidence mapping merge and fallback logic."""
     merged = merge_evidence_mapping(annotation_df, evidence_mapping_df)
-
     assert merged.loc[0, "evidence_type"] == "ECO:0000250", "Direct match failed."
     assert merged.loc[1, "evidence_type"] == "ECO:0000307", "Fallback match failed."
-    assert "DB_Reference" not in merged.columns, "Unnecessary column 'DB_Reference' present."
+    assert "DB_Reference" not in merged.columns, "'DB_Reference' should have been dropped after merge."
 
+@pytest.mark.unit
+def test_no_fallback():
+    annotation_df = pd.DataFrame([{"Evidence_Code": "IEA", "publications": "PMID:999999"}])
+    evidence_df = pd.DataFrame([{"Evidence_Code": "EXP", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000269"}])
+    merged = merge_evidence_mapping(annotation_df, evidence_df)
+    assert pd.isna(merged.loc[0, "evidence_type"]), ("Expected evidence_type to be NaN when no match and no fallback are available.")
 
-### PYTHONPATH=. pytest tests/test_gene_association_file.py ###
+@pytest.mark.unit
+def test_fallback_after_explode():
+    annotation_df = pd.DataFrame([{"Evidence_Code": "ND", "publications": ["PMID:111111", "PMID:222222"]}])
+    evidence_df = pd.DataFrame([{"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"}])
+    merged = merge_evidence_mapping(annotation_df, evidence_df)
+    assert len(merged) == 2, "Expected two rows after exploding publication list"
+    assert all(merged["evidence_type"] == "ECO:0000307"), "Fallback evidence_type not correctly applied after explode"
+
+@pytest.mark.unit
+def test_normalize_dates():
+    df = pd.DataFrame({"annotation_date": ["20200101", "20221301", "abcd1234", "20181231", None]})
+    result = normalize_dates(df.copy())
+    expected = ["2020-01-01", None, None, "2018-12-31", None]
+    actual = result["annotation_date"].tolist()
+    for a, e in zip(actual, expected):
+        if e is None:
+            assert pd.isna(a)
+        else:
+            assert a == e
+
+@pytest.mark.unit
+def test_process_predicates():
+    df = pd.DataFrame({"predicate": ["NOT|enables", "involved_in", "NOT|located_in", "part_of"]})
+    result = process_predicates(df.copy())
+    assert result["negated"].tolist() == [True, False, True, False], "Negation detection incorrect."
+    assert result["predicate"].tolist() == ["enables", "involved_in", "located_in", "part_of"], "Predicate cleaning incorrect."
+
+# ### PYTHONPATH=. pytest tests/test_gene_association_file.py ###
