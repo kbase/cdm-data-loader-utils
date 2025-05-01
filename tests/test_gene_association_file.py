@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from parsers.gene_association_file import (
+from src.parsers.gene_association_file import (
     process_go_annotations,
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,
