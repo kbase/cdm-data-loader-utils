@@ -116,7 +116,6 @@ DROP_COLUMNS = {
 # --- Load ECO Mapping ---
 # The file is a headerless plain text TSV file, so we have to specify the column names artificially.
 ECO_MAPPING_URL = "http://purl.obolibrary.org/obo/eco/gaf-eco-mapping.txt"
-#ECO_MAPPING_COLUMNS = ["Evidence_Code", "DB_Reference", "evidence_type"]
 ECO_MAPPING_COLUMNS = [EVIDENCE_CODE, DB_REF, EVIDENCE_TYPE]
 
 def load_eco_mapping():
