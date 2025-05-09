@@ -43,6 +43,16 @@ Merged file saved to: data/uniprot_merged.jsonl
 ```
 </pre>
 
+## Summary 
+1. Set the time range from 2024-04-01 to 2024-05-01 to simulate “incremental updates”.
+2. The most recent, reviewed human protein data (up to 100) was pulled from UniProt using the query parameters.
+3. Raw JSON data has been stored in data/uniprot_raw.json
+4. Successfully flattened and converted the nested JSON to JSON Lines format and saved it to this path.
+5. Locally, it determines which records are “recently updated”, and here all 100 meet the requirement.
+6. Because the base_jsonl file set up as old data doesn't exist, the system thinks it's the first time author imported the data.
+7. Get the merged file that contains all the new data. <br> 
+If you run incremental mode again, it will automatically de-duplicate and update based on this merged.jsonl
+
 ## Note 
 1. The current UniProt API does not support direct filtering by date.
 ```python
