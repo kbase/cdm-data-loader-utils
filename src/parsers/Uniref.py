@@ -1,9 +1,3 @@
-## wget ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.xml.gz is too big 
-
-## partial cluster of XML file. Link shows as below: 
-## curl "https://rest.uniprot.org/uniref/search?query=identity:1.0&format=tsv&fields=id" -o uniref100_ids.tsv
-
-
 import requests
 import os
 import xml.etree.ElementTree as ET
@@ -166,71 +160,96 @@ For each UniRef cluster <entry>, the core information falls into three main cate
 def parse_representative(entry, ns):
     """
 
-    It is specifically responsible for extracting all the details under <representativeMember> (all properties, sequences, etc.), and eventually forming a dict that can be easily organized by the main function into a CDM.
+    Accurately extracts all information in <representativeMember> with clear field mapping and robust exception handling.
+
+    entry:
+        entry: the currently parsed <entry> element
+        ns: namespace dictionary (typically {“u”: “http://uniprot.org/uniref”})
+
+    output:
+        rep_info: dict with all normalized fields representing members
 
     """
 
+    # Initialization returns a dictionary, all target fields are filled with None by default
     rep_info = {
-        "type": None, "id": None, "source_organism": None, 
-        "taxon": None,"protein_name": None, "uniparc_id": None, 
-        "uniref90_id": None,"uniref50_id": None, "uniprotkb_accession": None, 
-        "length": None, "is_seed": None, "sequence": None, 
-        "seq_length": None, "checksum": None
+        "type": None, "id": None, "source_organism": None, "taxon": None,
+        "protein_name": None, "uniparc_id": None, "uniref90_id": None,
+        "uniref50_id": None, "uniprotkb_accession": None, "length": None,
+        "is_seed": None, "sequence": None, "seq_length": None, "checksum": None
     }
 
-    rep = entry.find("u:representativeMember/u:dbReference", ns)
+    # Mapping table of UniRef property names to CDM standard fields
+    field_map = {
+        "source organism": "source_organism",
+        "NCBI taxonomy": "taxon",
+        "protein name": "protein_name",
+        "UniParc ID": "uniparc_id",
+        "UniRef90 ID": "uniref90_id",
+        "UniRef50 ID": "uniref50_id",
+        "UniProtKB accession": "uniprotkb_accession",
+        "length": "length",
+        "isSeed": "is_seed"
+    }
 
+    # Locate the <dbReference> node under <representativeMember>
+    rep = entry.find("u:representativeMember/u:dbReference", ns)
     if rep is not None:
+        # 1. Populate type and id (directly from attributes)
         rep_info["type"] = rep.attrib.get("type")
         rep_info["id"] = rep.attrib.get("id")
 
+        # 2. Iterate over all <property>, use field_map for field alignment
         for prop in rep.findall("u:property", ns):
-            prop_type = prop.attrib.get("type")
+            ptype = prop.attrib.get("type")
             value = prop.attrib.get("value")
+            if ptype in field_map:
+                key = field_map[ptype]
 
-            if prop_type == "source organism":
-                rep_info["source_organism"] = value
-            elif prop_type == "NCBI taxonomy":
-                try:
-                    rep_info["taxon"] = int(value)
-                except Exception:
-                    rep_info["taxon"] = value
-            elif prop_type == "protein name":
-                rep_info["protein_name"] = value
-            elif prop_type == "UniParc ID":
-                rep_info["uniparc_id"] = value
-            elif prop_type == "UniRef90 ID":
-                rep_info["uniref90_id"] = value
-            elif prop_type == "UniRef50 ID":
-                rep_info["uniref50_id"] = value
-            elif prop_type == "UniProtKB accession":
-                rep_info["uniprotkb_accession"] = value
-            elif prop_type == "length":
-                try:
-                    rep_info["length"] = int(value)
-                except Exception:
-                    rep_info["length"] = value
-            elif prop_type == "isSeed":
-                rep_info["is_seed"] = value == "true"
+                # Doing conversions based on field types
+                if key == "taxon" or key == "length":
+                    try:
+                        rep_info[key] = int(value)     
+                    except Exception:
+                        rep_info[key] = value          
+                elif key == "is_seed":
+                    rep_info[key] = value.lower() == "true"   
+                else:
+                    rep_info[key] = value                    
 
-        rep_seq_elem = entry.find("u:representativeMember/u:sequence", ns)
-
-        if rep_seq_elem is not None:
-            rep_info["sequence"] = rep_seq_elem.text
-            rep_info["seq_length"] = int(rep_seq_elem.attrib.get("length", 0))
-            rep_info["checksum"] = rep_seq_elem.attrib.get("checksum")
+        # 3. Parses <sequence> information on behalf of member
+        seq_elem = entry.find("u:representativeMember/u:sequence", ns)
+        if seq_elem is not None:
+            rep_info["sequence"] = seq_elem.text                             
+            try:
+                rep_info["seq_length"] = int(seq_elem.attrib.get("length", 0))  
+            except Exception:
+                rep_info["seq_length"] = seq_elem.attrib.get("length")          
+            rep_info["checksum"] = seq_elem.attrib.get("checksum")          
 
     return rep_info
 
 
 def parse_members(entry, ns):
-    """
-
-    Dedicated to turning all member entries under <member> into a set of dicts (one dict per member, all forming a list) for direct loading into the CDM.
-
-    """
+    # Initialize Return List
     members = []
+
+    # Defining the mapping of XML attribute names to CDM field names
+    field_map = {
+        "source organism": "source_organism",
+        "NCBI taxonomy": "taxon",
+        "protein name": "protein_name",
+        "UniParc ID": "uniparc_id",
+        "UniRef90 ID": "uniref90_id",
+        "UniRef50 ID": "uniref50_id",
+        "UniProtKB accession": "uniprotkb_accession",
+        "length": "length",
+        "isSeed": "is_seed"
+    }
+
+    # Iterate through all <member><dbReference> nodes
     for member in entry.findall("u:member/u:dbReference", ns):
+        # Initialize the information structure of a single member
         mem_info = {
             "type": member.attrib.get("type"),
             "id": member.attrib.get("id"),
@@ -238,43 +257,38 @@ def parse_members(entry, ns):
             "uniparc_id": None, "uniref90_id": None, "uniref50_id": None,
             "uniprotkb_accession": None, "length": None, "is_seed": None
         }
+
+        # Iterate over <property> tags to extract field information
         for prop in member.findall("u:property", ns):
-            prop_type = prop.attrib.get("type")
+            ptype = prop.attrib.get("type")
             value = prop.attrib.get("value")
-            if prop_type == "source organism":
-                mem_info["source_organism"] = value
-            elif prop_type == "NCBI taxonomy":
-                try:
-                    mem_info["taxon"] = int(value)
-                except Exception:
-                    mem_info["taxon"] = value
-            elif prop_type == "protein name":
-                mem_info["protein_name"] = value
-            elif prop_type == "UniParc ID":
-                mem_info["uniparc_id"] = value
-            elif prop_type == "UniRef90 ID":
-                mem_info["uniref90_id"] = value
-            elif prop_type == "UniRef50 ID":
-                mem_info["uniref50_id"] = value
-            elif prop_type == "UniProtKB accession":
-                mem_info["uniprotkb_accession"] = value
-            elif prop_type == "length":
-                try:
-                    mem_info["length"] = int(value)
-                except Exception:
-                    mem_info["length"] = value
-            elif prop_type == "isSeed":
-                mem_info["is_seed"] = value == "true"
+            if ptype in field_map:
+                key = field_map[ptype]
+
+                if key in ("taxon", "length"):
+                    try:
+                        mem_info[key] = int(value)
+                    except ValueError:
+                        mem_info[key] = value
+                elif key == "is_seed":
+                    mem_info[key] = value.lower() == "true"
+                else:
+                    mem_info[key] = value
             else:
-                print(f"property type: {prop_type} = {value}")
+                # If an unexpected field appears, print a debug message
+                print(f"Unexpected property: {ptype} = {value}")
+
         members.append(mem_info)
     return members
 
 
 def get_entry_property(entry, ns, property_name, as_int=False):
+    # Iterate over all <property> tags under the entry node
     for prop in entry.findall("u:property", ns):
+        # If the type attribute of property is equal to property_name
         if prop.attrib.get("type") == property_name:
             value = prop.attrib.get("value")
+            # If as_int=True, convert the string value to int
             if as_int:
                 try:
                     return int(value)
