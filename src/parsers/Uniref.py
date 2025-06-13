@@ -300,12 +300,15 @@ def get_entry_property(entry, ns, property_name, as_int=False):
 
 def parse_uniref_xml_to_cdm(xml_file):
     ns = {"u": "http://uniprot.org/uniref"}
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-    cdm_results = []
+    try:
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+    except Exception as e:
+        print(f"Error parsing {xml_file}: {e}")
+        return []
 
+    cdm_results = []
     for entry in root.findall("u:entry", ns):
-        ## Extracting cluster-level attributes
         cluster_id = entry.attrib.get("id")
         updated = entry.attrib.get("updated")
         uniref_level = cluster_id.split("_")[0].replace("UniRef", "") if cluster_id else None
@@ -318,7 +321,6 @@ def parse_uniref_xml_to_cdm(xml_file):
         members = parse_members(entry, ns)
         now = datetime.now(timezone.utc).isoformat()
 
-        ## Constructing the CDM entry
         cdm = {
             "entity_id": f"CDM:{uuid.uuid4()}",
             "entity_type": "protein_cluster",
@@ -333,11 +335,9 @@ def parse_uniref_xml_to_cdm(xml_file):
             "representative": rep_info,
             "members": members,
             "created": now,
-            "cdm_version": "1.0"
+            "cdm_version": "1.0",  # 可以考虑作为常量
         }
-
         cdm_results.append(cdm)
-
     return cdm_results
     
 
