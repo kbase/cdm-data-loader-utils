@@ -335,7 +335,7 @@ def parse_uniref_xml_to_cdm(xml_file):
             "representative": rep_info,
             "members": members,
             "created": now,
-            "cdm_version": "1.0",  # 可以考虑作为常量
+            "cdm_version": "1.0",  
         }
         cdm_results.append(cdm)
     return cdm_results
