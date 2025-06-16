@@ -456,11 +456,11 @@ def main():
     if all_cdm_entries:
         with open("uniref100_cdm_example.json", "w") as fout:
             json.dump(all_cdm_entries[0], fout, indent=2, ensure_ascii=False)
-        print("example cluster save as uniref100_cdm_example.json")
+        print("Example cluster save as uniref100_cdm_example.json")
 
         with open("all_uniref100_cdm_array.json", "w") as fout:
             json.dump(all_cdm_entries, fout, indent=2, ensure_ascii=False)
-        print("all clusters as JSON array save as all_uniref100_cdm_array.json")
+        print("All clusters as JSON array save as all_uniref100_cdm_array.json")
 
 
 if __name__ == "__main__":
