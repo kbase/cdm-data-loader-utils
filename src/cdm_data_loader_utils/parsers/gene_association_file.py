@@ -25,15 +25,23 @@ Resources:
 Usage:
 ------
 Run via CLI:
-    PYTHONPATH=src python -m parsers.gene_association_file \
+
+PYTHONPATH=src python -m parsers.gene_association_file \
   --input tests/data/annotations_data100.csv \
-  --output normalized_annotation.csv
+  --output output/normalized_annotation.delta \
+  --namespace go_annotations \
+  --table-name annotations
+
 """
 
 import pandas as pd
 import click
 import os
 import sys
+
+from pyspark.sql import SparkSession
+from delta import configure_spark_with_delta_pip
+
 
 # --- Constants ---
 SUBJECT = "subject"
@@ -156,7 +164,7 @@ def validate_annotation_schema(df: pd.DataFrame):
     for column, expected_type in ASSOCIATION_COL_TYPES.items():
         """
         Check all match the expected types
-        Throw an exception if any of the elements in a column are wrong type 
+        Throw an exception if any of the elements in a column are wrong type
         """
         if not df[column].map(type).eq(expected_type).all():
             raise ValueError(f"Invalid type in column '{column}': expected {expected_type}")
@@ -262,11 +270,19 @@ def transform_go_data(df):
     df[AGGREGATOR] = "UniProt"
     df[PROTOCOL_ID] = None
 
-    # Split '|' separated publication/supporting_objects into lists
-    df[PUBLICATIONS] = df[PUBLICATIONS].apply(lambda x: str(x).split("|") if pd.notna(x) and isinstance(x, str) else x)
-    df[SUPPORTING_OBJECTS] = df[SUPPORTING_OBJECTS].apply(
-        lambda x: str(x).split("|") if pd.notna(x) and isinstance(x, str) else x
-    )
+    # === Ensure publications/supporting_objects is a list ===
+    def safe_split_pipe(val):
+        if isinstance(val, list):
+            return val
+        if pd.isna(val):
+            return []
+        if isinstance(val, str):
+            return val.split("|")
+        return []
+
+    df[PUBLICATIONS] = df[PUBLICATIONS].apply(safe_split_pipe)
+    df[SUPPORTING_OBJECTS] = df[SUPPORTING_OBJECTS].apply(safe_split_pipe)
+
     df = process_predicates(df)
 
     ALLOWED_PREDICATES = [
@@ -353,32 +369,119 @@ def merge_evidence_mapping(df: pd.DataFrame, evidence_df: pd.DataFrame) -> pd.Da
     return merged.drop(columns=[DB_REF])
 
 
-def process_go_annotations(input_path, output_path, eco_mapping_df, debug=False):
+###### Spark Session ######
+
+
+def get_spark_session(namespace="go_annotations"):
     """
-    Full pipeline to process a GO annotation file and output a standardized, mapped result.
-    - Loads a raw GAF file from the specified input path.
-    - Transforms the data into a normalized format with semantic fields.
-    - Merges the data with an ECO evidence mapping DataFrame.
-    - Optionally prints debug information about intermediate steps.
-    - Converts the annotation date to 'YYYY-MM-DD' format.
-    - Writes the final result to the specified output CSV file.
+    Initialize SparkSession with Delta Lake support.
+    """
+    builder = (
+        SparkSession.builder.appName("GOAnnotationDelta")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        .config("spark.sql.warehouse.dir", os.path.abspath("./output/warehouse"))
+    )
+    spark = builder.getOrCreate()
+    spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
+    return spark
+
+
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, BooleanType
+
+GO_DELTA_SCHEMA = StructType(
+    [
+        StructField("subject", StringType(), True),
+        StructField("DB", StringType(), True),
+        StructField("DB_Object_ID", StringType(), True),
+        StructField("predicate", StringType(), True),
+        StructField("object", StringType(), True),
+        StructField("publications", ArrayType(StringType()), True),
+        StructField("Evidence_Code", StringType(), True),
+        StructField("supporting_objects", ArrayType(StringType()), True),
+        StructField("annotation_date", StringType(), True),
+        StructField("primary_knowledge_source", StringType(), True),
+        StructField("aggregator", StringType(), True),
+        StructField("protocol_id", StringType(), True),
+        StructField("negated", BooleanType(), True),
+        StructField("evidence_type", StringType(), True),
+    ]
+)
+
+
+def process_go_annotations(
+    input_path,
+    output_path,
+    eco_mapping_df,
+    namespace="go_annotations",
+    table_name="annotations",
+    debug=False,
+):
+    """
+    Output: Delta Table Only
     """
     try:
         raw_df = load_go_file(input_path)
-
         if debug:
             print("Raw data loaded:", raw_df.shape)
         transformed_df = transform_go_data(raw_df)
-
         if debug:
             print("Transformed data:", transformed_df.columns)
         merged = merge_evidence_mapping(transformed_df, eco_mapping_df)
 
         if merged.empty:
             print("Warning: Merging resulted in empty DataFrame.")
-        else:
-            merged[ANNOTATION_DATE] = pd.to_datetime(merged[ANNOTATION_DATE]).dt.strftime("%Y-%m-%d")
-            merged.to_csv(output_path, index=False)
+            return  # Directly return if empty
+
+        # === Ensure evidence_type column exists and is of string type ===
+        if "evidence_type" not in merged.columns:
+            merged["evidence_type"] = ""
+
+        # List all string columns in GO_DELTA_SCHEMA
+        str_columns = [
+            "subject",
+            "DB",
+            "DB_Object_ID",
+            "predicate",
+            "object",
+            "Evidence_Code",
+            "annotation_date",
+            "primary_knowledge_source",
+            "aggregator",
+            "protocol_id",
+            "evidence_type",
+        ]
+        for col in str_columns:
+            merged[col] = merged[col].astype(str).replace("nan", "").fillna("")
+
+        # ArrayType columns
+        for col in ["publications", "supporting_objects"]:
+            merged[col] = merged[col].apply(
+                lambda x: [str(i) for i in x] if isinstance(x, list) else ([str(x)] if pd.notna(x) and x != "" else [])
+            )
+
+        # BooleanType
+        merged["negated"] = merged["negated"].apply(lambda x: bool(x) if pd.notnull(x) else False)
+
+        # Keep only columns in GO_DELTA_SCHEMA, ensure order is correct
+        merged = merged[[f.name for f in GO_DELTA_SCHEMA.fields]]
+
+        # Write to Delta Table
+        spark = get_spark_session(namespace)
+        sdf = spark.createDataFrame(merged, schema=GO_DELTA_SCHEMA)
+        delta_path = os.path.abspath(output_path)
+        sdf.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(delta_path)
+
+        spark.sql(f"CREATE TABLE IF NOT EXISTS {namespace}.{table_name} USING DELTA LOCATION '{delta_path}'")
+        print(f"Delta table written to: {delta_path} as {namespace}.{table_name}")
+
+        # Check 10 rows to make sure there is no missing columns
+        print("\n==== Preview the first 10 rows in Delta table ====\n")
+        spark.sql(f"USE {namespace}")
+        spark.sql(f"SELECT * FROM {table_name} LIMIT 10").show(truncate=False)
+
+        spark.stop()
+
     except Exception as e:
         print(f"[ERROR] {e}")
 
@@ -386,8 +489,11 @@ def process_go_annotations(input_path, output_path, eco_mapping_df, debug=False)
 # --- CLI Interface ---
 @click.command()
 @click.option("--input", "-i", required=True, help="Path to input GO annotation CSV file.")
-@click.option("--output", "-o", required=True, help="Path to output normalized CSV file.")
-def main(input, output):
+@click.option("--output", "-o", required=True, help="Path to output Delta Table directory.")
+@click.option("--namespace", default="go_annotations", help="Delta Lake database name (for Delta output)")
+@click.option("--table-name", default="annotations", help="Delta Lake table name (for Delta output)")
+@click.option("--debug", is_flag=True, default=False, help="Print debug info")
+def main(input, output, namespace, table_name, debug):
     """CLI entry point to process GO annotations."""
     # Valid input file
     if not os.path.isfile(input):
@@ -408,7 +514,7 @@ def main(input, output):
         sys.exit(1)
 
     # If all checks passed, then process annotations
-    process_go_annotations(input, output, eco_mapping_df)
+    process_go_annotations(input, output, eco_mapping_df, namespace=namespace, table_name=table_name, debug=debug)
 
 
 if __name__ == "__main__":
