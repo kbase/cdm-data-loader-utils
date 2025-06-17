@@ -2,27 +2,14 @@ import re
 from datetime import date
 import pytest
 import xml.etree.ElementTree as ET
-
-from archaea_parsers import generate_unique_id
-from archaea_parsers import build_datasource_record
-from archaea_parsers import parse_identifiers
-from archaea_parsers import parse_names
-from archaea_parsers import parse_protein_info
-from archaea_parsers import parse_evidence_map
-from archaea_parsers import parse_associations
-from archaea_parsers import parse_publications
-from archaea_parsers import parse_uniprot_entry
-
+from archaea_parsers import generate_unique_id,build_datasource_record,parse_identifiers,parse_names,parse_protein_info,parse_evidence_map,parse_associations,parse_publications,parse_uniprot_entry
 
 """
-    
 @pytest.mark.parametrize is pytest's parameterization mechanism. 
 It can automatically call the same test function multiple times with a set of parameter data.
-
 """
 
-
-# Test generate id, ensure it is unqiue id
+# Test generate id, ensure it is unique id
 @pytest.mark.parametrize("run", range(10))
 def test_generate_unqiue_id(run):
     random_id = generate_unique_id()
@@ -31,7 +18,6 @@ def test_generate_unqiue_id(run):
     # Check if there is function uuid.uuid4
     check_uuid = random_id.split(":")[1]
     assert re.fullmatch(r"[0-9a-fA-F-]{36}", check_uuid)
-
 
 # Test build datasource record
 def test_build_datasource_record():
@@ -43,7 +29,6 @@ def test_build_datasource_record():
     # check the date time
     assert result["accessed"] == date.today().strftime("%Y-%m-%d")
     assert isinstance(result["version"], int)
-
 
 @pytest.mark.parametrize(
     ## Three parameters for test this function
@@ -104,7 +89,6 @@ def test_build_datasource_record():
     ],
 )
 
-
 def test_parse_identifiers(xml_str, cdm_id, expected):
     """
     This approach ensures that parse_identifiers correctly parses and structures identifier data.
@@ -120,7 +104,6 @@ def test_parse_identifiers(xml_str, cdm_id, expected):
     result = parse_identifiers(entry, cdm_id)
     assert result == expected
 
-
 """
     This parameterized pytest function tests the correctness of the parse_names function for various UniProt XML entry scenarios. 
 
@@ -135,9 +118,7 @@ def test_parse_identifiers(xml_str, cdm_id, expected):
 
     Output: 
     A list of name records with their metadata 
-
 """
-
 
 @pytest.mark.parametrize(
     "xml_str, cdm_id, expected",
@@ -273,7 +254,6 @@ def test_parse_names(xml_str, cdm_id, expected):
     sequence
 
 """
-
 
 @pytest.mark.parametrize(
     "xml_str, cdm_id, expected",
@@ -485,7 +465,6 @@ def test_parse_evidence_map(xml_str, expected):
 
 
 """
-
     xml_strings: models a UniProt entry with different types of possible associations
     cdm_id: uniquely identifies the protein being parsed
     evidence_map:  supplies external evidence metadata for associations
@@ -496,7 +475,6 @@ def test_parse_evidence_map(xml_str, expected):
 	Cross-references are properly included, evidence metadata is correctly merged.
 	Associations derived from catalytic activity and cofactor comments are correctly generated.
 	All combinations and edge cases are handled robustly.
-
 """
 
 
@@ -696,7 +674,6 @@ def test_parse_publications(xml_str, expected):
     by providing a minimal but representative UniProt XML entry.
 
     Ensure integration stability and correct results of your entire UniProt → CDM parsing process
-
 """
 
 def test_parse_uniprot_entry_basic(monkeypatch):
