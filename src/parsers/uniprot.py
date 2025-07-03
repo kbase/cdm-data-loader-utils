@@ -52,12 +52,12 @@ from pyspark.sql.types import ArrayType, StringType, StructType, StructField
 NS = {"u": "https://uniprot.org/uniprot"}
 
 
-def generate_cdm_id(accession:str) -> str:
-    """ 
+def generate_cdm_id(accession: str) -> str:
+    """
     Generate a deterministic CDM entity_id based on a UniProt accession.
     Uses MD5 hash to ensure fixed length and avoid exposing raw accession.
     """
-    if not accession or not isinstance(accession, str):
+    if not isinstance(accession, str) or not accession.strip():
         raise ValueError("accession must be non-empty string")
     normalized = accession.strip()
     md5_hash = hashlib.md5(normalized.encode("utf-8")).hexdigest()
@@ -73,7 +73,7 @@ def build_datasource_record(xml_url):
         "source": "UniProt",
         "url": xml_url,
         "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "version": 115  
+        "version": 115,
     }
 
 
@@ -86,7 +86,7 @@ def parse_identifiers(entry, cdm_id):
             "entity_id": cdm_id,
             "identifier": f"UniProt:{acc.text}",
             "source": "UniProt",
-            "description": "UniProt accession"
+            "description": "UniProt accession",
         }
         for acc in entry.findall("u:accession", NS)
     ]
@@ -100,15 +100,17 @@ def parse_names(entry, cdm_id):
     """
     names = []
 
-    # Extract all top-level <name> tags 
+    # Extract all top-level <name> tags
     for name_element in entry.findall("u:name", NS):
         if name_element.text:
-            names.append({
-                "entity_id": cdm_id,
-                "name": name_element.text,
-                "description": "UniProt protein name",
-                "source": "UniProt"
-            })
+            names.append(
+                {
+                    "entity_id": cdm_id,
+                    "name": name_element.text,
+                    "description": "UniProt protein name",
+                    "source": "UniProt",
+                }
+            )
 
     # Extract recommended and alternative names from <protein> block
     protein = entry.find("u:protein", NS)
@@ -122,14 +124,16 @@ def parse_names(entry, cdm_id):
                     if name_string is None or not name_string.text:
                         continue
 
-                    names.append({
-                        "entity_id": cdm_id,
-                        "name": name_string.text,
-                        "description": f"UniProt {name_type} {name_length} name",
-                        "source": "UniProt"
-                    })
+                    names.append(
+                        {
+                            "entity_id": cdm_id,
+                            "name": name_string.text,
+                            "description": f"UniProt {name_type} {name_length} name",
+                            "source": "UniProt",
+                        }
+                    )
     return names
-    
+
 
 def parse_protein_info(entry, cdm_id):
     """
@@ -156,7 +160,7 @@ def parse_protein_info(entry, cdm_id):
         if ec_numbers:
             protein_info["ec_numbers"] = ec_numbers
 
-    # Extract protein existence evidence type 
+    # Extract protein existence evidence type
     protein_existence = entry.find("u:proteinExistence", NS)
     if protein_existence is not None:
         protein_info["protein_id"] = cdm_id
@@ -223,23 +227,31 @@ def parse_evidence_map(entry):
 def parse_associations(entry, cdm_id, evidence_map):
     """
     Parse all relevant associations from a UniProt XML entry for the CDM model.
-    Includes taxonomy, database cross-references, catalytic activity, and cofactors.
+    Only include fields that are not None for each association.
     """
     associations = []
 
-    # Taxonomy association: protein -> NCBI Taxonomy
+    def clean(d):
+        """Remove None-value keys from a dict."""
+        return {k: v for k, v in d.items() if v is not None}
+
+    # Taxonomy association
     organism = entry.find("u:organism", NS)
     if organism is not None:
         taxon_ref = organism.find('u:dbReference[@type="NCBI Taxonomy"]', NS)
         if taxon_ref is not None:
-            associations.append({
-                "subject": cdm_id,
-                "object": f"NCBITaxon:{taxon_ref.get('id')}",
-                "predicate": None,
-                "evidence_type": None,
-                "supporting_objects": None,
-                "publications": None
-            })
+            associations.append(
+                clean(
+                    {
+                        "subject": cdm_id,
+                        "object": f"NCBITaxon:{taxon_ref.get('id')}",
+                        "predicate": None,
+                        "evidence_type": None,
+                        "supporting_objects": None,
+                        "publications": None,
+                    }
+                )
+            )
 
     # Database cross-references with evidence
     for dbref in entry.findall("u:dbReference", NS):
@@ -251,18 +263,17 @@ def parse_associations(entry, cdm_id, evidence_map):
             "predicate": None,
             "evidence_type": None,
             "supporting_objects": None,
-            "publications": None
+            "publications": None,
         }
         evidence_key = dbref.get("evidence")
         if evidence_key and evidence_key in evidence_map:
             association.update(evidence_map[evidence_key])
-        associations.append(association)
+        associations.append(clean(association))
 
-    # Special comments include catalytic activity, cofactor
+    # Catalytic/cofactor
     for comment in entry.findall("u:comment", NS):
         comment_type = comment.get("type")
         if comment_type == "catalytic activity":
-            # Each reaction may have dbReferences (Rhea or ChEBI IDs)
             for reaction in comment.findall("u:reaction", NS):
                 for dbref in reaction.findall("u:dbReference", NS):
                     db_type = dbref.get("type")
@@ -273,15 +284,14 @@ def parse_associations(entry, cdm_id, evidence_map):
                         "object": f"{db_type}:{db_id}",
                         "evidence_type": None,
                         "supporting_objects": None,
-                        "publications": None
+                        "publications": None,
                     }
                     evidence_key = reaction.get("evidence")
                     if evidence_key and evidence_key in evidence_map:
                         catalyze_assoc.update(evidence_map[evidence_key])
-                    associations.append(catalyze_assoc)
+                    associations.append(clean(catalyze_assoc))
 
         elif comment_type == "cofactor":
-            # Each cofactor may have dbReferences 
             for cofactor in comment.findall("u:cofactor", NS):
                 for dbref in cofactor.findall("u:dbReference", NS):
                     db_type = dbref.get("type")
@@ -292,9 +302,9 @@ def parse_associations(entry, cdm_id, evidence_map):
                         "object": f"{db_type}:{db_id}",
                         "evidence_type": None,
                         "supporting_objects": None,
-                        "publications": None
+                        "publications": None,
                     }
-                    associations.append(cofactor_assoc)
+                    associations.append(clean(cofactor_assoc))
     return associations
 
 
@@ -327,7 +337,7 @@ def parse_uniprot_entry(entry, datasource_name="UniProt import", prev_created=No
     Parse a single UniProt <entry> XML element into CDM-compatible records
     """
 
-    # Extract primary accession as CDM unique id 
+    # Extract primary accession as CDM unique id
     main_accession = entry.find("u:accession", NS)
     if main_accession is None or main_accession.text is None:
         raise ValueError("Cannot generate entity_id")
@@ -336,38 +346,42 @@ def parse_uniprot_entry(entry, datasource_name="UniProt import", prev_created=No
     # Handle the CDM created/updated timestamps
     desire_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
     if prev_created:
-        entity_created = prev_created          # Use previous created date if updating existing record
-        entity_updated = desire_date           # Update the 'updated' timestamp
+        entity_created = (
+            prev_created  # Use previous created date if updating existing record
+        )
+        entity_updated = desire_date  # Update the 'updated' timestamp
     else:
-        entity_created = desire_date          
+        entity_created = desire_date
         entity_updated = desire_date
 
-    # Extract UniProt native metadata for provenance 
+    # Extract UniProt native metadata for provenance
     uniprot_created = entry.attrib.get("created")
     uniprot_modified = entry.attrib.get("modified") or entry.attrib.get("updated")
     uniprot_version = entry.attrib.get("version")
 
-    # Build CDM entity record, includes metadata extension 
+    # Build CDM entity record, includes metadata extension
     entity = {
         "entity_id": cdm_id,
         "entity_type": "protein",
         "data_source": datasource_name,
-        "created": entity_created,                # CDM record created timestamp
-        "updated": entity_updated,                # CDM record last updated timestamp
-        "version": uniprot_version,               # UniProt version string
-        "uniprot_created": uniprot_created,       # UniProt record creation date
-        "uniprot_modified": uniprot_modified      # UniProt last modified date
+        "created": entity_created,  # CDM record created timestamp
+        "updated": entity_updated,  # CDM record last updated timestamp
+        "version": uniprot_version,  # UniProt version string
+        "uniprot_created": uniprot_created,  # UniProt record creation date
+        "uniprot_modified": uniprot_modified,  # UniProt last modified date
     }
 
-    # Parse and collect related records for each CDM table 
-    evidence_map = parse_evidence_map(entry)  
+    # Parse and collect related records for each CDM table
+    evidence_map = parse_evidence_map(entry)
     return {
         "entity": entity,
-        "identifiers": parse_identifiers(entry, cdm_id),                  # All UniProt accessions
-        "names": parse_names(entry, cdm_id),                              # Protein names
-        "protein": parse_protein_info(entry, cdm_id),                     # Sequence, EC, existence
-        "associations": parse_associations(entry, cdm_id, evidence_map),  # Cross-refs, taxonomy, evidence
-        "publications": parse_publications(entry)                         # Literature links
+        "identifiers": parse_identifiers(entry, cdm_id),  # All UniProt accessions
+        "names": parse_names(entry, cdm_id),  # Protein names
+        "protein": parse_protein_info(entry, cdm_id),  # Sequence, EC, existence
+        "associations": parse_associations(
+            entry, cdm_id, evidence_map
+        ),  # Cross-refs, taxonomy, evidence
+        "publications": parse_publications(entry),  # Literature links
     }
 
 
@@ -384,9 +398,9 @@ def download_file(url, output_path, chunk_size=8192, overwrite=False):
     try:
         with requests.get(url, stream=True, timeout=60) as response:
             response.raise_for_status()
-            with open(output_path, 'wb') as f:
+            with open(output_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=chunk_size):
-                    if chunk:  
+                    if chunk:
                         f.write(chunk)
         print(f"Downloaded '{url}' to '{output_path}'")
     except Exception as e:
@@ -403,7 +417,7 @@ def stream_uniprot_xml(filepath):
     Yields each <entry> element as soon as it is parsed to avoid loading the entire XML into memory.
     """
     # Open the gzipped XML file for reading in binary mode
-    with gzip.open(filepath, 'rb') as f:
+    with gzip.open(filepath, "rb") as f:
         # Use iterparse to process XML incrementally, triggering on element end events
         context = ET.iterparse(f, events=("end",))
         for event, element in context:
@@ -411,7 +425,7 @@ def stream_uniprot_xml(filepath):
             if element.tag.endswith("entry"):
                 yield element
                 element.clear()
-                
+
 
 ## ================================ SCHEMA =================================
 """
@@ -419,63 +433,75 @@ Defines the Spark schema for all major CDM tables derived from UniProt XML.
 Each schema is tailored for protein entities, identifiers, protein details, names, associations, and linked publications.
 """
 
-schema_entities = StructType([
-    StructField("entity_id", StringType(), False),
-    StructField("entity_type", StringType(), False),
-    StructField("data_source", StringType(), False),
-    StructField("created", StringType(), True),
-    StructField("updated", StringType(), True),
-    StructField("version", StringType(), True),
-    StructField("uniprot_created", StringType(), True),     
-    StructField("uniprot_modified", StringType(), True),   
-])
+schema_entities = StructType(
+    [
+        StructField("entity_id", StringType(), False),
+        StructField("entity_type", StringType(), False),
+        StructField("data_source", StringType(), False),
+        StructField("created", StringType(), True),
+        StructField("updated", StringType(), True),
+        StructField("version", StringType(), True),
+        StructField("uniprot_created", StringType(), True),
+        StructField("uniprot_modified", StringType(), True),
+    ]
+)
 
-schema_identifiers = StructType([
-    StructField("entity_id", StringType(), False),
-    StructField("identifier", StringType(), False),
-    StructField("source", StringType(), True),
-    StructField("description", StringType(), True)
-])
+schema_identifiers = StructType(
+    [
+        StructField("entity_id", StringType(), False),
+        StructField("identifier", StringType(), False),
+        StructField("source", StringType(), True),
+        StructField("description", StringType(), True),
+    ]
+)
 
-schema_proteins = StructType([
-    StructField("protein_id", StringType(), False),
-    StructField("ec_numbers", StringType(), True),
-    StructField("evidence_for_existence", StringType(), True),
-    StructField("length", StringType(), True),
-    StructField("mass", StringType(), True),
-    StructField("checksum", StringType(), True),
-    StructField("modified", StringType(), True),
-    StructField("sequence_version", StringType(), True),
-    StructField("sequence", StringType(), True),
-    StructField("entry_modified", StringType(), True)
-])
+schema_proteins = StructType(
+    [
+        StructField("protein_id", StringType(), False),
+        StructField("ec_numbers", StringType(), True),
+        StructField("evidence_for_existence", StringType(), True),
+        StructField("length", StringType(), True),
+        StructField("mass", StringType(), True),
+        StructField("checksum", StringType(), True),
+        StructField("modified", StringType(), True),
+        StructField("sequence_version", StringType(), True),
+        StructField("sequence", StringType(), True),
+        StructField("entry_modified", StringType(), True),
+    ]
+)
 
-schema_names = StructType([
-    StructField("entity_id", StringType(), False),
-    StructField("name", StringType(), False),
-    StructField("description", StringType(), True),
-    StructField("source", StringType(), True)
-])
+schema_names = StructType(
+    [
+        StructField("entity_id", StringType(), False),
+        StructField("name", StringType(), False),
+        StructField("description", StringType(), True),
+        StructField("source", StringType(), True),
+    ]
+)
 
-schema_associations = StructType([
-    StructField("subject", StringType(), True),
-    StructField("object", StringType(), True),
-    StructField("predicate", StringType(), True),
-    StructField("evidence_type", StringType(), True),
-    StructField("supporting_objects", ArrayType(StringType()), True),
-    StructField("publications", ArrayType(StringType()), True)
-])
+schema_associations = StructType(
+    [
+        StructField("subject", StringType(), True),
+        StructField("object", StringType(), True),
+        StructField("predicate", StringType(), True),
+        StructField("evidence_type", StringType(), True),
+        StructField("supporting_objects", ArrayType(StringType()), True),
+        StructField("publications", ArrayType(StringType()), True),
+    ]
+)
 
-schema_publications = StructType([
-    StructField("entity_id", StringType(), False),
-    StructField("publication", StringType(), True)
-])
+schema_publications = StructType(
+    [
+        StructField("entity_id", StringType(), False),
+        StructField("publication", StringType(), True),
+    ]
+)
 
 
 def save_batches_to_delta(spark, tables, output_dir, namespace):
     """
     Persist batches of parsed records for each CDM table into Delta Lake format.
-    
+
     - Each table is saved into a Delta directory named '{namespace}_{table}_delta' in the output folder.
     - If the Delta directory exists, append new records. Otherwise, overwrite it.
     - Registers the table in the Spark SQL for downstream query.
@@ -484,13 +510,17 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
         if not records:
             continue  # Skip all empty tables
 
-        delta_dir = os.path.abspath(os.path.join(output_dir, f"{namespace}_{table}_delta"))
+        delta_dir = os.path.abspath(
+            os.path.join(output_dir, f"{namespace}_{table}_delta")
+        )
         # Use "append" mode if the Delta directory already exists, otherwise "overwrite"
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
 
         try:
             df = spark.createDataFrame(records, schema)
-            df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir)
+            df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(
+                delta_dir
+            )
             spark.sql(f"""
                 CREATE TABLE IF NOT EXISTS {namespace}.{table}
                 USING DELTA
@@ -506,10 +536,10 @@ def prepare_local_xml(xml_url, output_dir):
     unless the file already exists locally. Returns the full local file path.
     """
     # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)  
+    os.makedirs(output_dir, exist_ok=True)
     local_xml_path = os.path.join(output_dir, os.path.basename(xml_url))
     # Download only if file does not exist
-    download_file(xml_url, local_xml_path)   
+    download_file(xml_url, local_xml_path)
     return local_xml_path
 
 
@@ -533,7 +563,10 @@ def get_spark_session(namespace):
     builder = (
         SparkSession.builder.appName("DeltaIngestion")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
     )
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
     # Ensure the target namespace (database) exists
@@ -547,14 +580,22 @@ def load_existing_entity(spark, output_dir, namespace):
     This mapping is used to support upserts and idempotent writes.
     """
     old_created_dict = {}
-    entities_table_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_entities_delta"))
+    entities_table_path = os.path.abspath(
+        os.path.join(output_dir, f"{namespace}_entities_delta")
+    )
     if os.path.exists(entities_table_path):
         try:
             # Read only the required columns for efficiency
-            old_df = spark.read.format("delta").load(entities_table_path).select("entity_id", "created")
+            old_df = (
+                spark.read.format("delta")
+                .load(entities_table_path)
+                .select("entity_id", "created")
+            )
             for row in old_df.collect():
                 old_created_dict[row["entity_id"]] = row["created"]
-            print(f"Loaded {len(old_created_dict)} existing entity_id records for upsert.")
+            print(
+                f"Loaded {len(old_created_dict)} existing entity_id records for upsert."
+            )
         except Exception as e:
             print(f"Couldn't load previous entities delta table: {e}")
     else:
@@ -562,7 +603,16 @@ def load_existing_entity(spark, output_dir, namespace):
     return old_created_dict
 
 
-def parse_entries(local_xml_path, old_created_dict, target_date, batch_size, spark, tables, output_dir, namespace):
+def parse_entries(
+    local_xml_path,
+    old_created_dict,
+    target_date,
+    batch_size,
+    spark,
+    tables,
+    output_dir,
+    namespace,
+):
     """
     Parses XML entry, writes to Delta in batches, returns entry_count, skipped_count
     """
@@ -577,10 +627,14 @@ def parse_entries(local_xml_path, old_created_dict, target_date, batch_size, spa
 
     for entry_elem in stream_uniprot_xml(local_xml_path):
         try:
-            mod_date = entry_elem.attrib.get("modified") or entry_elem.attrib.get("updated")
+            mod_date = entry_elem.attrib.get("modified") or entry_elem.attrib.get(
+                "updated"
+            )
             if target_date_dt and mod_date:
                 try:
-                    entry_date_dt = datetime.datetime.strptime(mod_date[:10], "%Y-%m-%d")
+                    entry_date_dt = datetime.datetime.strptime(
+                        mod_date[:10], "%Y-%m-%d"
+                    )
                     if entry_date_dt < target_date_dt:
                         skipped += 1
                         continue
@@ -622,7 +676,7 @@ def parse_entries(local_xml_path, old_created_dict, target_date, batch_size, spa
     return entry_count, skipped
 
 
-def ingest_uniprot(xml_url,output_dir,namespace,target_date=None,batch_size=5000):
+def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
     # Prepare local XML
     local_xml_path = prepare_local_xml(xml_url, output_dir)
 
@@ -634,34 +688,57 @@ def ingest_uniprot(xml_url,output_dir,namespace,target_date=None,batch_size=5000
     old_created_dict = load_existing_entity(spark, output_dir, namespace)
 
     # Define the table structure (batch storage)
-    entities, identifiers, names, proteins, associations, publications = [], [], [], [], [], []
+    entities, identifiers, names, proteins, associations, publications = (
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
     tables = {
         "entities": (entities, schema_entities),
         "identifiers": (identifiers, schema_identifiers),
         "names": (names, schema_names),
         "proteins": (proteins, schema_proteins),
         "associations": (associations, schema_associations),
-        "publications": (publications, schema_publications)
+        "publications": (publications, schema_publications),
     }
 
     # Main cycle processing
     entry_count, skipped = parse_entries(
-        local_xml_path, old_created_dict, target_date, batch_size, spark, tables, output_dir, namespace
+        local_xml_path,
+        old_created_dict,
+        target_date,
+        batch_size,
+        spark,
+        tables,
+        output_dir,
+        namespace,
     )
-    print(f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables.")
+    print(
+        f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables."
+    )
     spark.sql(f"SHOW TABLES IN {namespace}").show()
     spark.sql(f"SELECT COUNT(*) FROM {namespace}.entities").show()
     spark.stop()
-    print(f"All Delta tables are created and registered in Spark SQL under `{namespace}`.")
+    print(
+        f"All Delta tables are created and registered in Spark SQL under `{namespace}`."
+    )
 
 
 @click.command()
-@click.option('--xml-url', required=True, help='URL to UniProt XML (.xml.gz)')
-@click.option('--output-dir', default='output', help='Output directory for Delta tables')
-@click.option('--namespace', default='uniprot_db', help='Delta Lake database name')
-@click.option('--target-date', default=None, help='Only process entries modified/updated since this date (YYYY-MM-DD)')
-@click.option('--batch-size', default=5000, help='Batch size for writing Delta tables')
-
+@click.option("--xml-url", required=True, help="URL to UniProt XML (.xml.gz)")
+@click.option(
+    "--output-dir", default="output", help="Output directory for Delta tables"
+)
+@click.option("--namespace", default="uniprot_db", help="Delta Lake database name")
+@click.option(
+    "--target-date",
+    default=None,
+    help="Only process entries modified/updated since this date (YYYY-MM-DD)",
+)
+@click.option("--batch-size", default=5000, help="Batch size for writing Delta tables")
 def main(xml_url, output_dir, namespace, target_date, batch_size):
     ingest_uniprot(
         xml_url=xml_url,
@@ -671,6 +748,6 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
         batch_size=int(batch_size),
     )
 
+
 if __name__ == "__main__":
     main()
-
