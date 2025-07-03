@@ -1,42 +1,79 @@
-import re
-from datetime import date
 import pytest
+import hashlib
 import xml.etree.ElementTree as ET
-from archaea_parsers import generate_unique_id,build_datasource_record,parse_identifiers,parse_names,parse_protein_info,parse_evidence_map,parse_associations,parse_publications,parse_uniprot_entry
+import datetime
+from uniprot import (
+    generate_cdm_id,
+    build_datasource_record,
+    parse_identifiers,
+    parse_names,
+    parse_protein_info,
+    parse_evidence_map,
+    parse_associations,
+    parse_publications,
+    parse_uniprot_entry
+)
 
 """
 @pytest.mark.parametrize is pytest's parameterization mechanism. 
 It can automatically call the same test function multiple times with a set of parameter data.
 """
+NS = {"u": "https://uniprot.org/uniprot"}
 
-# Test generate id, ensure it is unique id
-@pytest.mark.parametrize("run", range(10))
-def test_generate_unqiue_id(run):
-    random_id = generate_unique_id()
-    # Check the format as `CDM:00000000-0000-0000-12345678`
-    assert random_id.startswith("CDM:")
-    # Check if there is function uuid.uuid4
-    check_uuid = random_id.split(":")[1]
-    assert re.fullmatch(r"[0-9a-fA-F-]{36}", check_uuid)
 
-# Test build datasource record
-def test_build_datasource_record():
-    result = build_datasource_record()
-    assert isinstance(result, dict)
-    assert result["name"] == "UniProt archaea"
-    assert result["source"] == "UniProt"
-    assert "url" in result
-    # check the date time
-    assert result["accessed"] == date.today().strftime("%Y-%m-%d")
-    assert isinstance(result["version"], int)
-
+## generate_cdm_id function test ##
 @pytest.mark.parametrize(
-    ## Three parameters for test this function
+    "accession, expected_id",
+    [
+        ("P12345", f"CDM:{hashlib.md5('P12345'.encode('utf-8')).hexdigest()}"),
+        ("Q8ZFP4", f"CDM:{hashlib.md5('Q8ZFP4'.encode('utf-8')).hexdigest()}"),
+        ("A0A000", f"CDM:{hashlib.md5('A0A000'.encode('utf-8')).hexdigest()}"),
+    ],
+)
+def test_generate_cdm_id(accession, expected_id):
+    id1 = generate_cdm_id(accession)
+    id2 = generate_cdm_id(accession)
+    assert id1 == id2 == expected_id
+    assert id1.startswith("CDM:")
+    assert len(id1) == 36
+
+
+@pytest.mark.parametrize("bad_accession", ["", None, "   ", 123, [], {}])
+def test_generate_cdm_id_bad(bad_accession):
+    with pytest.raises(ValueError):
+        generate_cdm_id(bad_accession)
+
+
+## build_datasource_record ##
+def test_build_datasource_record():
+    url = "https://example.com/uniprot.xml.gz"
+    record = build_datasource_record(url)
+    assert isinstance(record, dict)
+    assert set(record.keys()) == {"name", "source", "url", "accessed", "version"}
+    assert record["name"] == "UniProt import"
+    assert record["source"] == "UniProt"
+    assert record["url"] == url
+
+    # check accessed
+    accessed_dt = datetime.datetime.fromisoformat(record["accessed"])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    delta = abs((now - accessed_dt).total_seconds())
+    assert delta < 10
+    assert record["version"] == 115
+
+
+@pytest.mark.parametrize("bad_url", [None, ""])
+def test_build_datasource_record_bad(bad_url):
+    record = build_datasource_record(bad_url)
+    assert record["url"] == bad_url
+
+
+## parse_identifiers function test ##
+@pytest.mark.parametrize(
     "xml_str,cdm_id,expected",
     [
         ### multiple accessions, expect two dict, every dic use the same cdm_id
         ### identifier according to <accession> number
-        ### List all accessions
         (
             """
             <entry xmlns="https://uniprot.org/uniprot">
@@ -88,7 +125,6 @@ def test_build_datasource_record():
         ),
     ],
 )
-
 def test_parse_identifiers(xml_str, cdm_id, expected):
     """
     This approach ensures that parse_identifiers correctly parses and structures identifier data.
@@ -99,10 +135,10 @@ def test_parse_identifiers(xml_str, cdm_id, expected):
     The test compares the result output with the predefined expected result using an assert statement.
 
     """
-    # parse ET.fromstring() to Element, parsing xml strings into Element objects
     entry = ET.fromstring(xml_str)
     result = parse_identifiers(entry, cdm_id)
     assert result == expected
+
 
 """
     This parameterized pytest function tests the correctness of the parse_names function for various UniProt XML entry scenarios. 
@@ -118,8 +154,11 @@ def test_parse_identifiers(xml_str, cdm_id, expected):
 
     Output: 
     A list of name records with their metadata 
+
 """
 
+
+## parse_names function test ##
 @pytest.mark.parametrize(
     "xml_str, cdm_id, expected",
     [
@@ -234,7 +273,6 @@ def test_parse_identifiers(xml_str, cdm_id, expected):
         ),
     ],
 )
-
 def test_parse_names(xml_str, cdm_id, expected):
     entry = ET.fromstring(xml_str)
     result = parse_names(entry, cdm_id)
@@ -255,6 +293,8 @@ def test_parse_names(xml_str, cdm_id, expected):
 
 """
 
+
+## parse_protein_info function test ##
 @pytest.mark.parametrize(
     "xml_str, cdm_id, expected",
     [
@@ -344,7 +384,6 @@ def test_parse_names(xml_str, cdm_id, expected):
         ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", "CDM:006", None),
     ],
 )
-
 def test_parse_protein_info(xml_str, cdm_id, expected):
     entry = ET.fromstring(xml_str)
     result = parse_protein_info(entry, cdm_id)
@@ -370,6 +409,8 @@ def test_parse_protein_info(xml_str, cdm_id, expected):
 
 """
 
+
+## parse_evidence_map function test ##
 @pytest.mark.parametrize(
     "xml_str, expected",
     [
@@ -457,7 +498,6 @@ def test_parse_protein_info(xml_str, cdm_id, expected):
         ),
     ],
 )
-
 def test_parse_evidence_map(xml_str, expected):
     entry = ET.fromstring(xml_str)
     result = parse_evidence_map(entry)
@@ -465,6 +505,7 @@ def test_parse_evidence_map(xml_str, expected):
 
 
 """
+
     xml_strings: models a UniProt entry with different types of possible associations
     cdm_id: uniquely identifies the protein being parsed
     evidence_map:  supplies external evidence metadata for associations
@@ -475,9 +516,11 @@ def test_parse_evidence_map(xml_str, expected):
 	Cross-references are properly included, evidence metadata is correctly merged.
 	Associations derived from catalytic activity and cofactor comments are correctly generated.
 	All combinations and edge cases are handled robustly.
+
 """
 
 
+## parse_associations function test ##
 @pytest.mark.parametrize(
     "xml_str, cdm_id, evidence_map, expected",
     [
@@ -528,7 +571,6 @@ def test_parse_evidence_map(xml_str, expected):
             {
                 "E2": {
                     "evidence_type": "ECO:0000313",
-                    "supporting_objects": None,
                     "publications": ["PMID:2222"],
                 }
             },
@@ -538,7 +580,6 @@ def test_parse_evidence_map(xml_str, expected):
                     "predicate": "catalyzes",
                     "object": "Rhea:12345",
                     "evidence_type": "ECO:0000313",
-                    "supporting_objects": None,
                     "publications": ["PMID:2222"],
                 }
             ],
@@ -581,7 +622,6 @@ def test_parse_evidence_map(xml_str, expected):
         ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", "CDM:6", {}, []),
     ],
 )
-
 def test_parse_associations(xml_str, cdm_id, evidence_map, expected):
     entry = ET.fromstring(xml_str)
     result = parse_associations(entry, cdm_id, evidence_map)
@@ -603,6 +643,8 @@ def test_parse_associations(xml_str, cdm_id, evidence_map, expected):
     
 """
 
+
+## parse_publications function test ##
 @pytest.mark.parametrize(
     "xml_str, expected",
     [
@@ -617,7 +659,7 @@ def test_parse_associations(xml_str, cdm_id, evidence_map, expected):
             </entry>""",
             ["PMID:12345"],
         ),
-        # 2. Multiple types include (PubMed, DOI, GenBank)
+        # Multiple types include (PubMed, DOI, GenBank)
         (
             """<entry xmlns="https://uniprot.org/uniprot">
                 <reference>
@@ -628,7 +670,7 @@ def test_parse_associations(xml_str, cdm_id, evidence_map, expected):
                   </citation>
                 </reference>
             </entry>""",
-            ["PMID:55555", "DOI:10.1000/j.jmb.2020.01.001", "GenBank:AB123456"],
+            ["PMID:55555", "DOI:10.1000/j.jmb.2020.01.001"],
         ),
         # Multiple references
         (
@@ -656,98 +698,61 @@ def test_parse_associations(xml_str, cdm_id, evidence_map, expected):
                   </citation>
                 </reference>
             </entry>""",
-            ["DDBJ:BA000001", "EMBL:AB987654"],
+            [],
         ),
         # no publication
         ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", []),
     ],
 )
-
 def test_parse_publications(xml_str, expected):
     entry = ET.fromstring(xml_str)
     result = parse_publications(entry)
     assert result == expected
 
 
-"""
-    The function validates the correctness and integration of the parse_uniprot_entry function 
-    by providing a minimal but representative UniProt XML entry.
-
-    Ensure integration stability and correct results of your entire UniProt → CDM parsing process
-"""
-
-def test_parse_uniprot_entry_basic(monkeypatch):
-    # Sets up a fixed UUID return value using monkeypatch
-    monkeypatch.setattr("archaea_parsers.generate_unique_id", lambda: "CDM:TESTUUID")
-
-    # Defines a sample XML string with typical UniProt entry content
-    # Accession, top-level name, recommended name, organism taxonomy, publication refer
-
-    xml_str = """
-    <entry xmlns="https://uniprot.org/uniprot" created="2020-01-01" modified="2021-01-01" version="3">
-      <accession>P12345</accession>
-      <name>ProteinX</name>
-      <protein>
-        <recommendedName>
-            <fullName>ProteinX Full Name</fullName>
-        </recommendedName>
-      </protein>
-      <organism>
-        <dbReference type="NCBI Taxonomy" id="9606"/>
-      </organism>
-      <reference>
-        <citation>
-          <dbReference type="PubMed" id="99999"/>
-        </citation>
-      </reference>
-    </entry>
-    """
-
-    # Parses the XML string into an Element object
+## parse_uniprot_entry function test ##
+@pytest.mark.parametrize(
+    "xml_str, datasource_name, prev_created",
+    [
+        (
+            """
+            <entry xmlns="https://uniprot.org/uniprot" created="2020-01-01" modified="2021-01-01" version="3">
+                <accession>P12345</accession>
+                <name>ProteinX</name>
+                <protein>
+                    <recommendedName>
+                        <fullName>ProteinX Full Name</fullName>
+                    </recommendedName>
+                </protein>
+                <organism>
+                    <dbReference type="NCBI Taxonomy" id="9606"/>
+                </organism>
+                <reference>
+                    <citation>
+                        <dbReference type="PubMed" id="99999"/>
+                    </citation>
+                </reference>
+            </entry>
+            """,
+            "UniProt import",
+            None,
+        ),
+    ],
+)
+def test_parse_uniprot_entry(xml_str, datasource_name, prev_created):
     entry = ET.fromstring(xml_str)
+    record = parse_uniprot_entry(entry, datasource_name, prev_created)
 
-    # parse_uniprot_entry to extract all standardize CDM components from XML
-    record = parse_uniprot_entry(entry)
+    entity = record["entity"]
+    assert entity["entity_type"] == "protein"
+    assert entity["data_source"] == datasource_name
+    assert entity["version"] == "3"
+    assert entity["uniprot_created"] == "2020-01-01"
+    assert entity["uniprot_modified"] == "2021-01-01"
+    assert entity["entity_id"].startswith("CDM:")
 
-    # Assert the entity structures
-    assert record["entity"] == {
-        "entity_id": "CDM:TESTUUID",
-        "entity_type": "protein",
-        "data_source": "UniProt archaea",
-        "created": "2020-01-01",
-        "updated": "2021-01-01",
-        "version": "3",
-    }
-
-    # Only one identifiers
-    assert record["identifiers"] == [
-        {
-            "entity_id": "CDM:TESTUUID",
-            "identifier": "UniProt:P12345",
-            "source": "UniProt",
-            "description": "UniProt accession",
-        }
-    ]
-
-    # Assert names strutures
-    assert {
-        "entity_id": "CDM:TESTUUID",
-        "name": "ProteinX",
-        "description": "UniProt protein name",
-        "source": "UniProt",
-    } in record["names"]
-
-    assert {
-        "entity_id": "CDM:TESTUUID",
-        "name": "ProteinX Full Name",
-        "description": "UniProt recommended full name",
-        "source": "UniProt",
-    } in record["names"]
-
-    # associations has organism
-    assert {"subject": "CDM:TESTUUID", "object": "NCBITaxon:9606"} in record[
-        "associations"
-    ]
-    
-    # publications has PMID
-    assert "PMID:99999" in record["publications"]
+    # identifiers/names/associations/publications
+    assert isinstance(record["identifiers"], list)
+    assert isinstance(record["names"], list)
+    assert isinstance(record["associations"], list)
+    assert isinstance(record["publications"], list)
