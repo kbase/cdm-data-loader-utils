@@ -6,7 +6,7 @@ This script parses UniProt XML (.xml.gz) file and ingests the data into structur
 
 Typical usage:
 --------------
-python archaea_parsers.py \
+python uniprot.py \
     --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
     --output-dir "./output" \
     --namespace "uniprot_db" \
@@ -28,11 +28,6 @@ Functionality:
 - Writes all tables as Delta Lake tables, supporting incremental import
 - Supports overwrite of previous imports and incremental updates by unique entity_id
 
-Requirements:
--------------
-- Python 3.7+
-- pyspark, delta-spark, requests, click
-
 Typical scenario:
 -----------------
 - Large-scale UniProt batch parsing and warehouse ingestion
@@ -42,7 +37,6 @@ Typical scenario:
 
 import os
 import click
-import re
 import hashlib
 import datetime
 import json
@@ -52,6 +46,7 @@ import xml.etree.ElementTree as ET
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 from pyspark.sql.types import ArrayType, StringType, StructType, StructField
+
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
 NS = {"u": "https://uniprot.org/uniprot"}
@@ -63,37 +58,22 @@ def generate_cdm_id(accession:str) -> str:
     Uses MD5 hash to ensure fixed length and avoid exposing raw accession.
     """
     if not accession or not isinstance(accession, str):
-        raise ValueError("accession must be a non-empty string")
+        raise ValueError("accession must be non-empty string")
     normalized = accession.strip()
     md5_hash = hashlib.md5(normalized.encode("utf-8")).hexdigest()
     return f"CDM:{md5_hash}"
 
 
-def extract_version(url):
-    """
-    Extracts UniProt version string from a download URL
-    """
-    patterns = [(r'release[-_]?(\d{4}_\d{2})', 1)]
-    for pat, group in patterns:
-        match_obj = re.search(pat, url, re.IGNORECASE)
-        if match_obj:
-            return match_obj.group(group)
-    return None
-   
-
 def build_datasource_record(xml_url):
     """
-    Build a provenance record for the UniProt datasource
+    Build a provenance record for the UniProt datasource without version extraction.
     """
-    name = "UniProt import"
-    version = extract_version(xml_url) if xml_url else None
-    accessed = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
     return {
-        "name": name,
+        "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": accessed,
-        "version": version,
+        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "version": 115  
     }
 
 
@@ -134,19 +114,14 @@ def parse_names(entry, cdm_id):
     protein = entry.find("u:protein", NS)
     if protein is not None:
         for name_type in ["recommended", "alternative"]:
-            # recommendedName is singular, alternativeName can have multiple
-            if name_type == "recommended":
-                name_blocks = [protein.find("u:recommendedName", NS)]
-            else:
-                name_blocks = protein.findall("u:alternativeName", NS)
+            # Directly use findall for simplicity (recommendedName returns single-element list)
+            name_blocks = protein.findall(f"u:{name_type}Name", NS)
             for name in name_blocks:
-                if name is None:
-                    continue
-                # both <fullName> and <shortName> under each name block
                 for name_length in ["full", "short"]:
                     name_string = name.find(f"u:{name_length}Name", NS)
                     if name_string is None or not name_string.text:
                         continue
+
                     names.append({
                         "entity_id": cdm_id,
                         "name": name_string.text,
@@ -154,7 +129,7 @@ def parse_names(entry, cdm_id):
                         "source": "UniProt"
                     })
     return names
-
+    
 
 def parse_protein_info(entry, cdm_id):
     """
@@ -179,8 +154,7 @@ def parse_protein_info(entry, cdm_id):
                 if ec.text:
                     ec_numbers.append(ec.text)
         if ec_numbers:
-            # Join multiple EC numbers with commas for storage
-            protein_info["ec_numbers"] = ",".join(ec_numbers)
+            protein_info["ec_numbers"] = ec_numbers
 
     # Extract protein existence evidence type 
     protein_existence = entry.find("u:proteinExistence", NS)
@@ -307,7 +281,7 @@ def parse_associations(entry, cdm_id, evidence_map):
                     associations.append(catalyze_assoc)
 
         elif comment_type == "cofactor":
-            # Each cofactor may have dbReferences (ChEBI)
+            # Each cofactor may have dbReferences 
             for cofactor in comment.findall("u:cofactor", NS):
                 for dbref in cofactor.findall("u:dbReference", NS):
                     db_type = dbref.get("type")
@@ -414,9 +388,9 @@ def download_file(url, output_path, chunk_size=8192, overwrite=False):
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:  
                         f.write(chunk)
-        print(f"[download_file] Downloaded '{url}' to '{output_path}'")
+        print(f"Downloaded '{url}' to '{output_path}'")
     except Exception as e:
-        print(f"[download_file] Failed to download '{url}': {e}")
+        print(f"Failed to download '{url}': {e}")
 
         if os.path.exists(output_path):
             os.remove(output_path)  # Remove incomplete file
@@ -455,12 +429,14 @@ schema_entities = StructType([
     StructField("uniprot_created", StringType(), True),     
     StructField("uniprot_modified", StringType(), True),   
 ])
+
 schema_identifiers = StructType([
     StructField("entity_id", StringType(), False),
     StructField("identifier", StringType(), False),
     StructField("source", StringType(), True),
     StructField("description", StringType(), True)
 ])
+
 schema_proteins = StructType([
     StructField("protein_id", StringType(), False),
     StructField("ec_numbers", StringType(), True),
@@ -473,12 +449,14 @@ schema_proteins = StructType([
     StructField("sequence", StringType(), True),
     StructField("entry_modified", StringType(), True)
 ])
+
 schema_names = StructType([
     StructField("entity_id", StringType(), False),
     StructField("name", StringType(), False),
     StructField("description", StringType(), True),
     StructField("source", StringType(), True)
 ])
+
 schema_associations = StructType([
     StructField("subject", StringType(), True),
     StructField("object", StringType(), True),
@@ -487,6 +465,7 @@ schema_associations = StructType([
     StructField("supporting_objects", ArrayType(StringType()), True),
     StructField("publications", ArrayType(StringType()), True)
 ])
+
 schema_publications = StructType([
     StructField("entity_id", StringType(), False),
     StructField("publication", StringType(), True)
@@ -504,9 +483,11 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
     for table, (records, schema) in tables.items():
         if not records:
             continue  # Skip all empty tables
+
         delta_dir = os.path.abspath(os.path.join(output_dir, f"{namespace}_{table}_delta"))
         # Use "append" mode if the Delta directory already exists, otherwise "overwrite"
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
+
         try:
             df = spark.createDataFrame(records, schema)
             df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir)
@@ -516,7 +497,7 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
                 LOCATION '{delta_dir}'
             """)
         except Exception as e:
-            print(f"[WARN] Failed to save {table} to Delta: {e}")
+            print(f"Failed to save {table} to Delta: {e}")
 
 
 def prepare_local_xml(xml_url, output_dir):
@@ -524,9 +505,11 @@ def prepare_local_xml(xml_url, output_dir):
     Download the remote UniProt XML (.xml.gz) file to the specified local output directory,
     unless the file already exists locally. Returns the full local file path.
     """
-    os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)  
     local_xml_path = os.path.join(output_dir, os.path.basename(xml_url))
-    download_file(xml_url, local_xml_path)   # Download only if file does not exist
+    # Download only if file does not exist
+    download_file(xml_url, local_xml_path)   
     return local_xml_path
 
 
@@ -588,7 +571,7 @@ def parse_entries(local_xml_path, old_created_dict, target_date, batch_size, spa
         try:
             target_date_dt = datetime.datetime.strptime(target_date, "%Y-%m-%d")
         except Exception:
-            print(f"Invalid target date: {target_date}")
+            print(f"Invalid target date is {target_date}")
 
     entry_count, skipped = 0, 0
 
@@ -628,7 +611,7 @@ def parse_entries(local_xml_path, old_created_dict, target_date, batch_size, spa
                 save_batches_to_delta(spark, tables, output_dir, namespace)
                 for v in tables.values():
                     v[0].clear()
-                print(f"{entry_count} entries processed and saved...")
+                print(f"{entry_count} entries processed and saved")
 
         except Exception as e:
             print(f"Error parsing entry: {e}")
@@ -690,3 +673,4 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
 
 if __name__ == "__main__":
     main()
+
