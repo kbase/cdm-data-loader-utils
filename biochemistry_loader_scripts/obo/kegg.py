@@ -32,6 +32,9 @@ class KEGGBiochemistryGetter(Obo):
 	data_version = VERSION
 	name = PREFIX
 
+	idspaces = {"kegg.pathway":"https://rest.kegg.jp/find/pathway/",
+			 	"kegg.reaction":"http://rest.kegg.jp/find/reaction/"}
+	
 	typedefs = [
 		has_participant,
 		participates_in
@@ -52,7 +55,7 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 	kg_pwys = list()
 	kg_rxns = dict()
 	kg_pwy_parents = dict()
-	with open('../Data/KEGG_pathways.tsv') as fh:
+	with open('/Users/seaver/Seaver_Lab/Git_Repos/ModelSEEDDatabase/Scripts/Provenance/KEGG/KEGG_pathways.tsv') as fh:
 		for line in fh.readlines():
 			
 			if(header==1):
@@ -64,6 +67,9 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 
 			# for i in range(len(tmp_lst)):
 			#	print(i,tmp_lst[i])
+
+			if(' ' in tmp_lst[0]):
+				tmp_lst[0] = tmp_lst[0].replace(' ','_')
 
 			pwy_dict = {'id':tmp_lst[0],'name':tmp_lst[1],'description':tmp_lst[2],'reactions':[]}
 
@@ -82,6 +88,8 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 
 			if(tmp_lst[4] != ''):
 				for parent in tmp_lst[4].split('|'):
+					if(' ' in parent):
+						parent = parent.replace(' ','_')
 					if(pwy_dict['id'] not in kg_pwy_parents):
 						kg_pwy_parents[pwy_dict['id']]=[]
 					if(parent not in kg_pwy_parents[pwy_dict['id']]):
@@ -125,9 +133,9 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 	return terms
 
 if __name__ == "__main__":
-	# import argparse
-	# parser = argparse.ArgumentParser()
-	# parser.add_argument('file')
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument('file')
 	# args = parser.parse_args()
 	# print(args['file'])
 

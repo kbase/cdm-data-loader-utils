@@ -31,6 +31,9 @@ class MetaCycBiochemistryGetter(Obo):
 	def __post_init__(self):
 		self.data_version = VERSION
 
+	idspaces = {"metacyc.pathway":"https://metacyc.org/pathway?orgid=META&id=",
+				"metacyc.reaction":"https://metacyc.org/reaction?orgid=META&id="}
+	
 	typedefs = [
 		has_participant,
 		participates_in
@@ -51,7 +54,7 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 	mc_pwys = list()
 	mc_rxns = dict()
 	mc_pwy_parents = dict()
-	with open('../Data/MetaCyc_pathways.tsv') as fh:
+	with open('/Users/seaver/Seaver_Lab/Git_Repos/ModelSEEDDatabase/Scripts/Provenance/MetaCyc/MetaCyc_pathways.tsv') as fh:
 		for line in fh.readlines():
 			
 			if(header==1):

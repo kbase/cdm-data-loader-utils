@@ -36,6 +36,15 @@ class ModelSEEDBiochemistryGetter(Obo):
 	def __post_init__ (self):
 		self.data_version = VERSION
 
+	idspaces = {"seed.reaction":"https://modelseed.org/biochem/reactions/",
+		   		"seed.compound":"https://modelseed.org/biochem/compounds/",
+				"metacyc.compound":"https://metacyc.org/compound?orgid=META&id=",
+				"metacyc.reaction":"https://metacyc.org/reaction?orgid=META&id=",
+				"CHEBI":"https://www.ebi.ac.uk/chebi/searchId.do?chebiId=",
+				"rhea":"https://www.rhea-db.org/rhea/",
+				"kegg.compound":"https://rest.kegg.jp/find/compound/",
+			 	"kegg.reaction":"https://rest.kegg.jp/find/reaction/"}
+	
 	typedefs = [
 		has_participant,
 		participates_in
@@ -53,7 +62,7 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 	"""Get ModelSEED Biochemistry terms."""
 
 	ms_cpds = list()
-	with open('../Data/MSD_Compounds.json') as fh:
+	with open('../biochem/MSD_Compounds.json') as fh:
 		ms_cpds = json.load(fh)
 
 	cpds_in_refs = dict()
@@ -67,7 +76,7 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 
 		if(cpd['aliases'] is not None):
 			for alias in cpd['aliases']:
-				xref = alias.split(': ')[-1]
+				xrefs = alias.split(': ')[-1]
 				for db in ['MetaCyc','KEGG','Rhea','ChEBI']:
 					if(db in alias):
 						if(db not in cpd_aliases):
@@ -77,15 +86,16 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 						if(db=='MetaCyc' or db=='KEGG'):
 							db_prefix+='.compound'
 
-						xref_ref = Reference(prefix=db_prefix, identifier=xref)
-						cpd_term.append_xref(xref_ref)
+						for xref in xrefs.split(' '):
+							xref_ref = Reference(prefix=db_prefix, identifier=xref)
+							cpd_term.append_xref(xref_ref)
 
 						cpd_aliases[db]+=1
 
 		cpds_in_terms[cpd['id']]=cpd_term
 
 	ms_rxns = list()
-	with open('../Data/MSD_Reactions.json') as fh:
+	with open('../biochem/MSD_Reactions.json') as fh:
 		ms_rxns = json.load(fh)
 
 	rxns_in_refs=dict()
@@ -99,7 +109,7 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 
 		if(rxn['aliases'] is not None):
 			for alias in rxn['aliases']:
-				xref = alias.split(': ')[-1]
+				xrefs = alias.split(': ')[-1]
 				for db in ['MetaCyc','KEGG','Rhea']:
 					if(db in alias):
 
@@ -110,8 +120,9 @@ def get_terms(*, version: str, use_tqdm: bool = True, force: bool = False) -> It
 						if(db=='MetaCyc' or db=='KEGG'):
 							db_prefix+='.reaction'
 
-						xref_ref = Reference(prefix=db_prefix, identifier=xref)
-						rxn_term.append_xref(xref_ref)
+						for xref in xrefs.split(' '):
+							xref_ref = Reference(prefix=db_prefix, identifier=xref)
+							rxn_term.append_xref(xref_ref)
 
 						rxn_aliases[db]+=1
 					
