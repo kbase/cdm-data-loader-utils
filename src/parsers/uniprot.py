@@ -37,7 +37,6 @@ Typical scenario:
 
 import os
 import click
-import hashlib
 import datetime
 import json
 import requests
@@ -52,16 +51,42 @@ from pyspark.sql.types import ArrayType, StringType, StructType, StructField
 NS = {"u": "https://uniprot.org/uniprot"}
 
 
+def load_existing_identifiers(spark, output_dir, namespace):
+    """
+    Load the existing 'identifiers' Delta table and build a mapping from UniProt accession to CDM entity ID.
+    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows 
+
+    Returns:
+        dict: {accession: entity_id}
+    """
+
+    access_to_cdm_id = {}
+    id_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_identifiers_delta"))
+    if os.path.exists(id_path):
+        try:
+            # Read identifier and entity_id columns from the Delta table
+            df = spark.read.format("delta").load(id_path).select("identifier", "entity_id")
+            for row in df.collect():
+                # Identifier field: UniProt:Pxxxxx, extract the actual accession part after the colon
+                accession = row["identifier"].split(":", 1)[1]
+                access_to_cdm_id[accession] = row["entity_id"]
+        except Exception as e:
+            print(f"Couldn't load identifiers table: {e}")
+    else:
+        print(f"No previous identifiers delta at {id_path}.")
+    return access_to_cdm_id
+
+
 def generate_cdm_id(accession: str) -> str:
     """
-    Generate a deterministic CDM entity_id based on a UniProt accession.
-    Uses MD5 hash to ensure fixed length and avoid exposing raw accession.
+    Generate a CDM entity_id directly from UniProt accession, using 'CDM:' prefix
+    Ensures that each accession is mapped to stable and unique CDM entity ID, making it easy to join across different tables by accession.
     """
+
     if not isinstance(accession, str) or not accession.strip():
-        raise ValueError("accession must be non-empty string")
+        raise ValueError("Accession must be non-empty string")
     normalized = accession.strip()
-    md5_hash = hashlib.md5(normalized.encode("utf-8")).hexdigest()
-    return f"CDM:{md5_hash}"
+    return f"CDM:{normalized}"
 
 
 def build_datasource_record(xml_url):
@@ -332,56 +357,35 @@ def parse_publications(entry):
     return publications
 
 
-def parse_uniprot_entry(entry, datasource_name="UniProt import", prev_created=None):
-    """
-    Parse a single UniProt <entry> XML element into CDM-compatible records
-    """
-
-    # Extract primary accession as CDM unique id
-    main_accession = entry.find("u:accession", NS)
-    if main_accession is None or main_accession.text is None:
-        raise ValueError("Cannot generate entity_id")
-    cdm_id = generate_cdm_id(main_accession.text)
-
-    # Handle the CDM created/updated timestamps
+def parse_uniprot_entry(entry, cdm_id, datasource_name="UniProt import", prev_created=None):
     desire_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
     if prev_created:
-        entity_created = (
-            prev_created  # Use previous created date if updating existing record
-        )
-        entity_updated = desire_date  # Update the 'updated' timestamp
+        entity_created = prev_created
+        entity_updated = desire_date
     else:
         entity_created = desire_date
         entity_updated = desire_date
-
-    # Extract UniProt native metadata for provenance
     uniprot_created = entry.attrib.get("created")
     uniprot_modified = entry.attrib.get("modified") or entry.attrib.get("updated")
     uniprot_version = entry.attrib.get("version")
-
-    # Build CDM entity record, includes metadata extension
     entity = {
         "entity_id": cdm_id,
         "entity_type": "protein",
         "data_source": datasource_name,
-        "created": entity_created,  # CDM record created timestamp
-        "updated": entity_updated,  # CDM record last updated timestamp
-        "version": uniprot_version,  # UniProt version string
-        "uniprot_created": uniprot_created,  # UniProt record creation date
-        "uniprot_modified": uniprot_modified,  # UniProt last modified date
+        "created": entity_created,
+        "updated": entity_updated,
+        "version": uniprot_version,
+        "uniprot_created": uniprot_created,
+        "uniprot_modified": uniprot_modified,
     }
-
-    # Parse and collect related records for each CDM table
     evidence_map = parse_evidence_map(entry)
     return {
         "entity": entity,
-        "identifiers": parse_identifiers(entry, cdm_id),  # All UniProt accessions
-        "names": parse_names(entry, cdm_id),  # Protein names
-        "protein": parse_protein_info(entry, cdm_id),  # Sequence, EC, existence
-        "associations": parse_associations(
-            entry, cdm_id, evidence_map
-        ),  # Cross-refs, taxonomy, evidence
-        "publications": parse_publications(entry),  # Literature links
+        "identifiers": parse_identifiers(entry, cdm_id),
+        "names": parse_names(entry, cdm_id),
+        "protein": parse_protein_info(entry, cdm_id),
+        "associations": parse_associations(entry, cdm_id, evidence_map),
+        "publications": parse_publications(entry),
     }
 
 
@@ -516,6 +520,8 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
         # Use "append" mode if the Delta directory already exists, otherwise "overwrite"
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
 
+        print(f"[DEBUG] Registering table: {namespace}.{table} at {delta_dir} with mode={mode}, record count: {len(records)}")
+
         try:
             df = spark.createDataFrame(records, schema)
             df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(
@@ -606,6 +612,7 @@ def load_existing_entity(spark, output_dir, namespace):
 def parse_entries(
     local_xml_path,
     old_created_dict,
+    acc2cdm,
     target_date,
     batch_size,
     spark,
@@ -647,9 +654,15 @@ def parse_entries(
                 skipped += 1
                 continue
             main_accession = main_accession_elem.text
-            cdm_id = generate_cdm_id(main_accession)
+
+            cdm_id = acc2cdm.get(main_accession)
+
+            if cdm_id is None:
+                cdm_id = generate_cdm_id(main_accession)
+
+            
             prev_created = old_created_dict.get(cdm_id)
-            record = parse_uniprot_entry(entry_elem, prev_created=prev_created)
+            record = parse_uniprot_entry(entry_elem, cdm_id, prev_created=prev_created)
             tables["entities"][0].append(record["entity"])
             tables["identifiers"][0].extend(record["identifiers"])
             tables["names"][0].extend(record["names"])
@@ -687,6 +700,8 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     spark = get_spark_session(namespace)
     old_created_dict = load_existing_entity(spark, output_dir, namespace)
 
+    acc2cdm = load_existing_identifiers(spark, output_dir, namespace)
+
     # Define the table structure (batch storage)
     entities, identifiers, names, proteins, associations, publications = (
         [],
@@ -709,12 +724,13 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     entry_count, skipped = parse_entries(
         local_xml_path,
         old_created_dict,
+        acc2cdm,
         target_date,
         batch_size,
         spark,
         tables,
         output_dir,
-        namespace,
+        namespace
     )
     print(
         f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables."
@@ -748,6 +764,6 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
         batch_size=int(batch_size),
     )
 
-
 if __name__ == "__main__":
     main()
+    
