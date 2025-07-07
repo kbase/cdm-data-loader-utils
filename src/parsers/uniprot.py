@@ -6,7 +6,7 @@ This script parses UniProt XML (.xml.gz) file and ingests the data into structur
 
 Typical usage:
 --------------
-python uniprot.py \
+python3 src/parsers/uniprot.py \
     --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
     --output-dir "./output" \
     --namespace "uniprot_db" \
