@@ -5,7 +5,7 @@ import json,os,glob
 # biochemistry repository cloned from https://github.com/ModelSEED/ModelSEEDDatabase
 # Using dev branch as of 01/09/25 (commit a00786)
 
-biochem_root = "/Users/seaver/Projects/ModelSEEDDatabase/Biochemistry/"
+biochem_root = "/Users/seaver/Seaver_Lab/Git_Repos/ModelSEEDDatabase/Biochemistry/"
 
 # reactions for sample data is a couple of steps in the glycolytic pathway
 # rxn00781 rxn01100 rxn01106 rxn00459
