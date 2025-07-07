@@ -1,8 +1,30 @@
+"""
+
+This file uses pytest to provide parameterized and functional tests for all major
+UniProt parsing utility functions, ensuring correct parsing and transformation of
+UniProt XML into structured CDM records.
+
+Coverage:
+    - generate_cdm_id:     Stable CDM entity ID from accession
+    - build_datasource_record: Datasource provenance and metadata
+    - parse_identifiers:   UniProt accessions to identifier records
+    - parse_names:         Protein names (top-level, recommended, alternative)
+    - parse_protein_info:  EC numbers, existence evidence, sequences, etc.
+    - parse_evidence_map:  Evidence element mapping and supporting objects
+    - parse_associations:  Biological and database associations (taxonomy, PDB, Rhea, ChEBI)
+    - parse_publications:  Supported literature references (PMID, DOI, etc.)
+    - parse_uniprot_entry: Full record parsing, all fields together
+
+How to run in the terminal:
+    PYTHONPATH=src pytest tests/test_uniprot.py
+
+"""
+
+
 import pytest
-import hashlib
 import xml.etree.ElementTree as ET
 import datetime
-from uniprot import (
+from parsers.uniprot import (
     generate_cdm_id,
     build_datasource_record,
     parse_identifiers,
@@ -14,31 +36,23 @@ from uniprot import (
     parse_uniprot_entry
 )
 
-"""
-@pytest.mark.parametrize is pytest's parameterization mechanism. 
-It can automatically call the same test function multiple times with a set of parameter data.
-"""
-NS = {"u": "https://uniprot.org/uniprot"}
 
-
-## generate_cdm_id function test ##
 @pytest.mark.parametrize(
-    "accession, expected_id",
+    "accession, expected",
     [
-        ("P12345", f"CDM:{hashlib.md5('P12345'.encode('utf-8')).hexdigest()}"),
-        ("Q8ZFP4", f"CDM:{hashlib.md5('Q8ZFP4'.encode('utf-8')).hexdigest()}"),
-        ("A0A000", f"CDM:{hashlib.md5('A0A000'.encode('utf-8')).hexdigest()}"),
-    ],
+        ("P12345", "CDM:P12345"),
+        ("  Q8ZFP4  ", "CDM:Q8ZFP4"),     
+        ("\tA0A000\n", "CDM:A0A000"),      
+        ("X001", "CDM:X001"),
+    ]
 )
-def test_generate_cdm_id(accession, expected_id):
-    id1 = generate_cdm_id(accession)
-    id2 = generate_cdm_id(accession)
-    assert id1 == id2 == expected_id
-    assert id1.startswith("CDM:")
-    assert len(id1) == 36
+def test_generate_cdm_id_good(accession, expected):
+    assert generate_cdm_id(accession) == expected
 
-
-@pytest.mark.parametrize("bad_accession", ["", None, "   ", 123, [], {}])
+@pytest.mark.parametrize(
+    "bad_accession",
+    ["", "   ", None, 123, [], {}, 0.1]
+)
 def test_generate_cdm_id_bad(bad_accession):
     with pytest.raises(ValueError):
         generate_cdm_id(bad_accession)
@@ -740,8 +754,12 @@ def test_parse_publications(xml_str, expected):
     ],
 )
 def test_parse_uniprot_entry(xml_str, datasource_name, prev_created):
+    import xml.etree.ElementTree as ET
     entry = ET.fromstring(xml_str)
-    record = parse_uniprot_entry(entry, datasource_name, prev_created)
+   
+    accession = entry.find("{https://uniprot.org/uniprot}accession").text
+    cdm_id = generate_cdm_id(accession)
+    record = parse_uniprot_entry(entry, cdm_id, datasource_name, prev_created)
 
     entity = record["entity"]
     assert entity["entity_type"] == "protein"
