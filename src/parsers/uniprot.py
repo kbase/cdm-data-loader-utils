@@ -159,36 +159,49 @@ def parse_names(entry, cdm_id):
                     )
     return names
 
-
 def parse_protein_info(entry, cdm_id):
     """
     Extract protein-level metadata from a UniProt XML <entry> element
     """
     protein_info = {}
-    ec_numbers = []
+    ec_numbers = set()
+    protein_info["protein_id"] = cdm_id  
 
-    # Extract EC numbers from <recommendedName> and <alternativeName> in <protein>
     protein = entry.find("u:protein", NS)
     if protein is not None:
-        # Find EC numbers in recommendedName
+        # recommendedName
         rec = protein.find("u:recommendedName", NS)
         if rec is not None:
             for ec in rec.findall("u:ecNumber", NS):
                 if ec.text:
-                    ec_numbers.append(ec.text)
+                    ec_numbers.add(ec.text)
 
-        # Find EC numbers in all alternativeNames
+        # alternativeName
         for alt in protein.findall("u:alternativeName", NS):
             for ec in alt.findall("u:ecNumber", NS):
                 if ec.text:
-                    ec_numbers.append(ec.text)
-        if ec_numbers:
-            protein_info["ec_numbers"] = ec_numbers
+                    ec_numbers.add(ec.text)
+
+        # submittedName
+        for sub in protein.findall("u:submittedName", NS):
+            for ec in sub.findall("u:ecNumber", NS):
+                if ec.text:
+                    ec_numbers.add(ec.text)
+
+        # component → recommendedName
+        for comp in protein.findall("u:component", NS):
+            rec = comp.find("u:recommendedName", NS)
+            if rec is not None:
+                for ec in rec.findall("u:ecNumber", NS):
+                    if ec.text:
+                        ec_numbers.add(ec.text)
+
+    # Store unique EC numbers
+    protein_info["ec_numbers"] = "|".join(sorted(ec_numbers)) if ec_numbers else None
 
     # Extract protein existence evidence type
     protein_existence = entry.find("u:proteinExistence", NS)
     if protein_existence is not None:
-        protein_info["protein_id"] = cdm_id
         protein_info["evidence_for_existence"] = protein_existence.get("type")
 
     # Extract sequence and sequence-related attributes
@@ -201,12 +214,11 @@ def parse_protein_info(entry, cdm_id):
         protein_info["sequence_version"] = seq_elem.get("version")
         protein_info["sequence"] = seq_elem.text.strip()
 
-    # Capture the entry's modified/updated date for tracking
+    # Capture entry's modified/updated date
     entry_modified = entry.attrib.get("modified") or entry.attrib.get("updated")
     if entry_modified:
         protein_info["entry_modified"] = entry_modified
 
-    # Return the dictionary if any protein info was extracted
     return protein_info if protein_info else None
 
 
