@@ -26,9 +26,11 @@ Workflow:
 5. Print sample rows for each table after writing for inspection.
 
 Usage:
-python uniref_revise.py \
+cd ~/cdm-data-loader-utils
+
+python src/parsers/uniref.py \
   --ftp-url https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.xml.gz \
-  --output-dir output/uniref100_clusters \
+  --output-dir cdm-data-loader-utils/output/uniref100_clusters \
   --batch-size 1000
 
 **Parameters:**
