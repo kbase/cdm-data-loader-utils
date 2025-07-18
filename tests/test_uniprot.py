@@ -20,11 +20,11 @@ How to run in the terminal:
 
 """
 
-
+import re
 import pytest
 import xml.etree.ElementTree as ET
 import datetime
-from parsers.uniprot import (
+from uniprot import (
     generate_cdm_id,
     build_datasource_record,
     parse_identifiers,
@@ -36,26 +36,18 @@ from parsers.uniprot import (
     parse_uniprot_entry
 )
 
-
-@pytest.mark.parametrize(
-    "accession, expected",
-    [
-        ("P12345", "CDM:P12345"),
-        ("  Q8ZFP4  ", "CDM:Q8ZFP4"),     
-        ("\tA0A000\n", "CDM:A0A000"),      
-        ("X001", "CDM:X001"),
-    ]
+# Regular expression to validate UUID format
+UUID_PATTERN = re.compile(
+    r"^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
+    re.IGNORECASE
 )
-def test_generate_cdm_id_good(accession, expected):
-    assert generate_cdm_id(accession) == expected
 
-@pytest.mark.parametrize(
-    "bad_accession",
-    ["", "   ", None, 123, [], {}, 0.1]
-)
-def test_generate_cdm_id_bad(bad_accession):
-    with pytest.raises(ValueError):
-        generate_cdm_id(bad_accession)
+@pytest.mark.parametrize("n", range(5))
+def test_generate_cdm_id_format(n):
+    uuid = generate_cdm_id()
+    assert uuid.startswith("CDM:")
+    uuid_str = uuid[4:]
+    assert UUID_PATTERN.match(uuid_str), f"{uuid_str} is not a valid UUID"
 
 
 ## build_datasource_record ##
@@ -753,13 +745,15 @@ def test_parse_publications(xml_str, expected):
         ),
     ],
 )
+
 def test_parse_uniprot_entry(xml_str, datasource_name, prev_created):
     import xml.etree.ElementTree as ET
     entry = ET.fromstring(xml_str)
-   
-    accession = entry.find("{https://uniprot.org/uniprot}accession").text
-    cdm_id = generate_cdm_id(accession)
-    record = parse_uniprot_entry(entry, cdm_id, datasource_name, prev_created)
+    cdm_id = generate_cdm_id()   
+
+    current_timestamp = "2024-07-17T13:00:00Z"
+
+    record = parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name, prev_created)
 
     entity = record["entity"]
     assert entity["entity_type"] == "protein"
