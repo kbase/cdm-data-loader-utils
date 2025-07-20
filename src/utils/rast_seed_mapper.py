@@ -10,16 +10,23 @@ to achieve comprehensive mapping coverage.
 Example usage:
     from rast_seed_mapper import RASTSeedMapper, map_rast_to_seed
     
+    # Use default bundled ontology
+    mapper = RASTSeedMapper()
+    
+    # Or specify custom ontology file
+    mapper = RASTSeedMapper("path/to/seed.json")
+    
     # Single annotation mapping
-    seed_id = map_rast_to_seed("Alpha-ketoglutarate permease", "path/to/seed.json")
+    seed_id = map_rast_to_seed("Alpha-ketoglutarate permease")
     
     # Batch processing
-    mapper = RASTSeedMapper("path/to/seed.json")
     results = mapper.map_annotations(["annotation1", "annotation2"])
 """
 
 import json
 import logging
+import gzip
+import shutil
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
@@ -27,6 +34,9 @@ __version__ = "1.0.0"
 __author__ = "KBase CDM Team"
 
 logger = logging.getLogger(__name__)
+
+# Default path to bundled SEED ontology
+DEFAULT_ONTOLOGY_PATH = Path(__file__).parent.parent / "data" / "seed_ontology.json"
 
 
 class RASTSeedMapper:
@@ -43,12 +53,12 @@ class RASTSeedMapper:
         multi_func_separators (List[str]): Separators used in multi-function annotations
     """
     
-    def __init__(self, seed_ontology_path: Union[str, Path]):
+    def __init__(self, seed_ontology_path: Optional[Union[str, Path]] = None):
         """
         Initialize the mapper with a SEED ontology file.
         
         Args:
-            seed_ontology_path: Path to SEED ontology JSON file (seed.json or seed_new.json)
+            seed_ontology_path: Path to SEED ontology JSON file. If None, uses bundled ontology.
             
         Raises:
             FileNotFoundError: If the ontology file doesn't exist
@@ -58,14 +68,29 @@ class RASTSeedMapper:
         self.seed_mapping: Dict[str, str] = {}
         self.multi_func_separators = [' / ', ' @ ', '; ']
         
-        path = Path(seed_ontology_path)
+        # Use default path if none provided
+        if seed_ontology_path is None:
+            path = DEFAULT_ONTOLOGY_PATH
+            # Check for compressed version if uncompressed doesn't exist
+            if not path.exists() and path.with_suffix('.json.gz').exists():
+                self._decompress_ontology(path.with_suffix('.json.gz'), path)
+        else:
+            path = Path(seed_ontology_path)
+        
         if not path.exists():
             raise FileNotFoundError(f"Ontology file not found: {path}")
             
-        if path.suffix != '.json':
-            raise ValueError(f"Unsupported file format: {path.suffix}. Expected .json")
+        if path.suffix not in ['.json', '.gz']:
+            raise ValueError(f"Unsupported file format: {path.suffix}. Expected .json or .json.gz")
             
         self._load_seed_ontology(path)
+    
+    def _decompress_ontology(self, gz_path: Path, json_path: Path) -> None:
+        """Decompress gzipped ontology file"""
+        logger.info(f"Decompressing ontology from {gz_path}")
+        with gzip.open(gz_path, 'rb') as f_in:
+            with open(json_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
         
     def _load_seed_ontology(self, path: Path) -> None:
         """Load SEED ontology from JSON file."""
@@ -243,7 +268,7 @@ class RASTSeedMapper:
 
 # Convenience functions
 
-def map_rast_to_seed(annotation: str, seed_ontology_path: Union[str, Path]) -> Optional[str]:
+def map_rast_to_seed(annotation: str, seed_ontology_path: Optional[Union[str, Path]] = None) -> Optional[str]:
     """
     Map a single RAST annotation to a SEED role ID.
     
@@ -252,35 +277,35 @@ def map_rast_to_seed(annotation: str, seed_ontology_path: Union[str, Path]) -> O
     
     Args:
         annotation: RAST annotation string
-        seed_ontology_path: Path to SEED ontology JSON file
+        seed_ontology_path: Path to SEED ontology JSON file. If None, uses bundled ontology.
         
     Returns:
         seed.role ID if found, None otherwise
         
     Example:
-        >>> seed_id = map_rast_to_seed("Alpha-ketoglutarate permease", "seed.json")
+        >>> seed_id = map_rast_to_seed("Alpha-ketoglutarate permease")
         >>> print(seed_id)
-        'seed.role:0000000001234'
+        'seed.role:0000000010501'
     """
     mapper = RASTSeedMapper(seed_ontology_path)
     return mapper.map_annotation(annotation)
 
 
 def map_rast_batch(annotations: List[str], 
-                   seed_ontology_path: Union[str, Path]) -> List[Tuple[str, Optional[str]]]:
+                   seed_ontology_path: Optional[Union[str, Path]] = None) -> List[Tuple[str, Optional[str]]]:
     """
     Map a batch of RAST annotations to SEED role IDs.
     
     Args:
         annotations: List of RAST annotation strings
-        seed_ontology_path: Path to SEED ontology JSON file
+        seed_ontology_path: Path to SEED ontology JSON file. If None, uses bundled ontology.
         
     Returns:
         List of tuples (annotation, seed_role_id or None)
         
     Example:
         >>> annotations = ["Alpha-ketoglutarate permease", "Unknown function"]
-        >>> results = map_rast_batch(annotations, "seed.json")
+        >>> results = map_rast_batch(annotations)
         >>> for ann, seed_id in results:
         ...     print(f"{ann} -> {seed_id}")
     """
