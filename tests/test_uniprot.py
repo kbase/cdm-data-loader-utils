@@ -19,6 +19,9 @@ How to run in the terminal:
     PYTHONPATH=src pytest tests/test_uniprot.py
 
 """
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 import re
 import pytest
