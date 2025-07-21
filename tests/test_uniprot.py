@@ -19,6 +19,7 @@ How to run in the terminal:
     PYTHONPATH=src pytest tests/test_uniprot.py
 
 """
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
@@ -27,7 +28,7 @@ import re
 import pytest
 import xml.etree.ElementTree as ET
 import datetime
-from uniprot import (
+from parsers.uniprot import (
     generate_cdm_id,
     build_datasource_record,
     parse_identifiers,
