@@ -5,6 +5,7 @@ Unit tests for RAST to SEED role mapper
 import pytest
 import json
 import os
+import gzip
 from pathlib import Path
 import sys
 
@@ -59,10 +60,83 @@ class TestRASTSeedMapper:
         assert len(mapper.seed_mapping) > 0
         assert isinstance(mapper.seed_mapping, dict)
     
+    def test_initialization_with_default_path(self):
+        """Test mapper initialization with default ontology path"""
+        # This will use the bundled ontology
+        mapper = RASTSeedMapper()
+        assert len(mapper.seed_mapping) > 0
+        assert isinstance(mapper.seed_mapping, dict)
+    
     def test_invalid_file(self):
         """Test initialization with invalid file"""
         with pytest.raises(FileNotFoundError):
             RASTSeedMapper("nonexistent_file.json")
+    
+    def test_invalid_file_format(self, tmp_path):
+        """Test initialization with unsupported file format"""
+        invalid_file = tmp_path / "test.txt"
+        invalid_file.write_text("test")
+        with pytest.raises(ValueError, match="Unsupported file format"):
+            RASTSeedMapper(str(invalid_file))
+    
+    def test_invalid_json(self, tmp_path):
+        """Test initialization with invalid JSON"""
+        invalid_json = tmp_path / "invalid.json"
+        invalid_json.write_text("{invalid json")
+        with pytest.raises(json.JSONDecodeError):
+            RASTSeedMapper(str(invalid_json))
+    
+    def test_empty_graphs(self, tmp_path):
+        """Test ontology with no graphs"""
+        empty_graphs = tmp_path / "empty.json"
+        empty_graphs.write_text('{"graphs": []}')
+        mapper = RASTSeedMapper(str(empty_graphs))
+        assert len(mapper.seed_mapping) == 0
+    
+    def test_nodes_without_labels(self, tmp_path):
+        """Test nodes missing labels or IDs"""
+        incomplete_nodes = tmp_path / "incomplete.json"
+        incomplete_nodes.write_text(json.dumps({
+            "graphs": [{
+                "nodes": [
+                    {"id": "seed.role:0000000001234"},  # Missing label
+                    {"lbl": "Test function"},  # Missing ID
+                    {"id": "seed.role:0000000005678", "lbl": "Valid function"}  # Valid
+                ]
+            }]
+        }))
+        mapper = RASTSeedMapper(str(incomplete_nodes))
+        assert len(mapper.seed_mapping) == 1
+        assert mapper.map_annotation("Valid function") == "seed.role:0000000005678"
+    
+    def test_automatic_decompression(self, tmp_path, monkeypatch):
+        """Test automatic decompression of .gz file"""
+        # Create a simple ontology
+        ontology_data = {
+            "graphs": [{
+                "nodes": [
+                    {"id": "seed.role:0000000001234", "lbl": "Test function"}
+                ]
+            }]
+        }
+        
+        # Create compressed file
+        gz_path = tmp_path / "seed_ontology.json.gz"
+        json_path = tmp_path / "seed_ontology.json"
+        
+        with gzip.open(gz_path, 'wt', encoding='utf-8') as f:
+            json.dump(ontology_data, f)
+        
+        # Temporarily change the default path
+        monkeypatch.setattr('utils.rast_seed_mapper.DEFAULT_ONTOLOGY_PATH', json_path)
+        
+        # Initialize without providing a path (will use default)
+        mapper = RASTSeedMapper()
+        
+        # Check that decompression worked
+        assert json_path.exists()
+        assert len(mapper.seed_mapping) == 1
+        assert mapper.map_annotation("Test function") == "seed.role:0000000001234"
     
     def test_simple_annotations(self, mapper):
         """Test mapping of simple annotations"""
@@ -200,6 +274,13 @@ class TestIDParsing:
         url_id = "https://pubseed.theseed.org/RoleEditor.cgi?page=ShowRole&Role=0000000001234"
         parsed = mapper._parse_seed_role_id(url_id)
         assert parsed == "seed.role:0000000001234"
+    
+    def test_parse_url_format_malformed(self, mapper):
+        """Test parsing of malformed URL"""
+        # URL with Role= but no actual role number
+        bad_url = "https://pubseed.theseed.org/RoleEditor.cgi?page=ShowRole&Role="
+        parsed = mapper._parse_seed_role_id(bad_url)
+        assert parsed == "seed.role:"  # Will return this format even if empty
     
     def test_parse_clean_format(self, mapper):
         """Test parsing of clean IDs"""
