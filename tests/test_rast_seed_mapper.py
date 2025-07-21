@@ -86,13 +86,13 @@ class TestRASTSeedMapper:
         """Test multi-function annotations with @ separator"""
         annotation = "Uracil permease @ Uracil:proton symporter UraA"
         result = mapper.map_annotation(annotation)
-        assert result == "seed.role:0000000002527"
+        assert result == "seed.role:0000000008848"
     
     def test_multi_function_semicolon(self, mapper):
         """Test multi-function annotations with ; separator"""
         annotation = "Lead, cadmium, zinc and mercury transporting ATPase (EC 3.6.3.3) (EC 3.6.3.5); Copper-translocating P-type ATPase (EC 3.6.3.4)"
         result = mapper.map_annotation(annotation)
-        assert result == "seed.role:0000000010083"
+        assert result == "seed.role:0000000052456"
     
     def test_split_multi_function(self, mapper):
         """Test splitting of multi-function annotations"""

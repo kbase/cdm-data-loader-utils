@@ -154,10 +154,11 @@ class RASTSeedMapper:
         if raw_id.startswith("seed.role:"):
             return raw_id
             
-        # Try generic parsing
+        # Try generic parsing for OBO-style IDs (e.g., seed.role_0000000001234)
         try:
             ontology_part = raw_id.split('/')[-1]
-            if '_' in ontology_part:
+            # Only convert underscore if it looks like an OBO ID (namespace_number)
+            if '_' in ontology_part and ontology_part.startswith('seed.role_'):
                 return ontology_part.replace("_", ":", 1)
         except Exception as e:
             logger.warning(f"Failed to parse ID: {raw_id}, error: {e}")
