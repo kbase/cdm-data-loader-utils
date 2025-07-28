@@ -36,7 +36,7 @@ __author__ = "KBase CDM Team"
 logger = logging.getLogger(__name__)
 
 # Default path to bundled SEED ontology
-DEFAULT_ONTOLOGY_PATH = Path(__file__).parent.parent / "data" / "seed_ontology.json"
+DEFAULT_ONTOLOGY_PATH = Path(__file__).parent.parent / "data" / "seed.json"
 
 
 class RASTSeedMapper:

@@ -2,22 +2,19 @@
 
 This directory contains the SEED role ontology used for mapping RAST annotations to seed.role identifiers.
 
-## Current File
+## Current Files
 
-- **`seed_ontology.json.gz`** - Compressed SEED role ontology in JSON-LD format
+- **`seed.owl`** - SEED role ontology in OWL format with correct pubseed.theseed.org URLs
+- **`seed.json`** - SEED role ontology in JSON-LD format (converted from seed.owl using ROBOT)
 
 ## File Generation
 
-The current `seed_ontology.json.gz` file was generated from `seed.obo` using the following process:
+The `seed.json` file was generated from `seed.owl` using the following process:
 
-1. **Source**: The original `seed.obo` file was obtained from the SEED/ModelSEED project
-2. **Conversion**: The OBO file was converted to JSON using ROBOT (http://robot.obolibrary.org/):
+1. **Source**: The `seed.owl` file contains the SEED ontology with correct pubseed.theseed.org URLs
+2. **Conversion**: The OWL file was converted to JSON using ROBOT (http://robot.obolibrary.org/):
    ```bash
-   robot convert --input seed.obo --output seed.json
-   ```
-3. **Compression**: The resulting JSON file was compressed using gzip to reduce repository size:
-   ```bash
-   gzip -9 seed.json
+   robot convert --input seed.owl --output seed.json
    ```
 
 The OBO format includes idspace definitions like:

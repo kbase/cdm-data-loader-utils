@@ -27,7 +27,8 @@ results = mapper.map_annotations(annotations)
 
 ## Data Files
 
-- `data/seed_ontology.json.gz` - Compressed SEED role ontology (auto-decompressed on first use)
+- `data/seed.owl` - SEED role ontology in OWL format
+- `data/seed.json` - SEED role ontology in JSON-LD format
 - `data/example_rast_annotations.json` - Example annotations with various formats
 - `data/example_rast_annotations.csv` - Same examples in CSV format
 

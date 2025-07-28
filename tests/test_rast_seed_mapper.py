@@ -18,7 +18,7 @@ from utils.rast_seed_mapper import RASTSeedMapper, map_rast_to_seed, map_rast_ba
 @pytest.fixture
 def test_ontology_path():
     """Path to test SEED ontology file"""
-    return Path(__file__).parent.parent / "src" / "data" / "seed_ontology.json"
+    return Path(__file__).parent.parent / "src" / "data" / "seed.json"
 
 
 @pytest.fixture
@@ -121,8 +121,8 @@ class TestRASTSeedMapper:
         }
         
         # Create compressed file
-        gz_path = tmp_path / "seed_ontology.json.gz"
-        json_path = tmp_path / "seed_ontology.json"
+        gz_path = tmp_path / "seed.json.gz"
+        json_path = tmp_path / "seed.json"
         
         with gzip.open(gz_path, 'wt', encoding='utf-8') as f:
             json.dump(ontology_data, f)
