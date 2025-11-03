@@ -40,5 +40,5 @@ def read_fasta(f: str, split: str = DEFAULT_SPLIT, h_func=None) -> list[Feature]
         with gzip.open(f, "rb") as fh:
             return extract_features(fh.read().decode("utf-8"), split, h_func)
 
-    with open(f, "r") as fh:
+    with open(f) as fh:
         return extract_features(fh.read(), split, h_func)

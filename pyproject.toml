@@ -12,6 +12,9 @@ dependencies = [
     "biopython>=1.85",
     "pandas",
     "click",
+    "requests",
+    "pyspark>=3.3.0",
+    "delta-spark>=2.4.0"
 ]
 
 [dependency-groups]

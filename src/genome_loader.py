@@ -83,7 +83,7 @@ class GenomeDataFileCreator:
         """Prepare data for insertion into the database."""
         print(f"Preparing GFF3 data from: {self.gff_file}")
         if not self.gff_hash:
-            print(f"Error: GFF file hash not calculated.")
+            print("Error: GFF file hash not calculated.")
             return
 
         open_func = gzip.open if self.gff_file.endswith(".gz") else open
