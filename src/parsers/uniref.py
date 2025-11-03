@@ -1,13 +1,14 @@
-import os
 import gzip
+import os
 import uuid
-import click
 import xml.etree.ElementTree as ET
-from urllib.request import urlretrieve,URLError
-from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
 from datetime import datetime
+from urllib.request import URLError, urlretrieve
+
+import click
+from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
 
 """
 UniRef XML Cluster ETL Pipeline
@@ -40,12 +41,14 @@ python src/parsers/uniref.py \
 
 """
 
+
 # Generate a unique CDM entity_id based on accession
 def cdm_entity_id(accession):
     if not accession:
         return None
     uuid_part = uuid.uuid5(uuid.NAMESPACE_OID, accession)
     return f"CDM:{uuid_part}"
+
 
 # Download a file from the specified URL to the local path if it does not already exist
 def download_file(url, local_path):
@@ -66,6 +69,7 @@ def download_file(url, local_path):
     else:
         print(f"File already exists: {local_path}")
 
+
 # Load mapping from data_source_entity_id to created timestamp from Delta table
 def load_existing_created(spark, entity_table):
     existing_created = {}
@@ -74,16 +78,21 @@ def load_existing_created(spark, entity_table):
         return existing_created
 
     try:
-        df = spark.read.format("delta").load(entity_table).select("data_source_entity_id", "created")
+        df = (
+            spark.read.format("delta").load(entity_table).select("data_source_entity_id", "created")
+        )
         existing_created = {row["data_source_entity_id"]: row["created"] for row in df.collect()}
         print(f"Loaded {len(existing_created)} existing created timestamps.")
     except Exception as e:
-        print(f"No existing Delta table found at {entity_table}. Starting fresh. ({e.__class__.__name__})")
+        print(
+            f"No existing Delta table found at {entity_table}. Starting fresh. ({e.__class__.__name__})"
+        )
 
     return existing_created
 
 
 ##### -------------- List utility function --------------- #####
+
 
 # Helper function to extract basic cluster info from XML entry element
 def extract_cluster(elem, ns):
@@ -91,6 +100,7 @@ def extract_cluster(elem, ns):
     name_elem = elem.find("ns:name", ns)
     name = name_elem.text if name_elem is not None else "UNKNOWN"
     return cluster_id, name
+
 
 # Returns tuple of (updated_time, created_time)
 def get_timestamps(uniref_id, existing_created, now=None):
@@ -131,15 +141,17 @@ def add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns):
 
     for dbref, is_representative in dbrefs:
         acc, is_seed = get_accession_and_seed(dbref, ns)
-        if acc:  
+        if acc:
             member_entity_id = cdm_entity_id(acc)
-            cluster_member_data.append((
-                cluster_id,
-                member_entity_id,
-                str(is_representative).lower(),
-                str(is_seed).lower(),
-                "1.0"
-            ))
+            cluster_member_data.append(
+                (
+                    cluster_id,
+                    member_entity_id,
+                    str(is_representative).lower(),
+                    str(is_seed).lower(),
+                    "1.0",
+                )
+            )
 
 
 # Extract cross-references (UniRef90/50/UniParc) from a dbReference element
@@ -156,6 +168,7 @@ def extract_cross_refs(dbref, cross_reference_data, ns):
 
 ##### -------------- Parse Uniref XML --------------- #####
 
+
 def parse_uniref_xml(local_gz, batch_size, existing_created):
     """
     Parse UniRef XML (gzipped) and extract cluster, entity, cluster member, UniProtKB member, and cross-reference info.
@@ -166,9 +179,8 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         existing_created (dict): Mapping from UniRef cluster ID to 'created' timestamp for idempotent imports.
 
     Returns:
-        dict: Dictionary with lists for each CDM table 
+        dict: Dictionary with lists for each CDM table
     """
-
     ns = {"ns": "http://uniprot.org/uniref"}  # Namespace for XML parsing
     entry_count = 0
 
@@ -183,30 +195,34 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         context = ET.iterparse(f, events=("end",))
         for _, elem in context:
             if elem.tag.endswith("entry"):
-                # Cluster basic info 
+                # Cluster basic info
                 cluster_id, name = extract_cluster(elem, ns)
 
-                # Get UniRef cluster id and timestamps 
+                # Get UniRef cluster id and timestamps
                 uniref_id = elem.attrib.get("id")
                 updated_time, created_time = get_timestamps(uniref_id, existing_created)
 
-                # Populate Cluster and Entity table data 
-                cluster_data.append((
-                    cluster_id,           # cluster_id
-                    name,                 # cluster name
-                    "protein",            # entity_type (fixed value)
-                    None,                 # description (not present)
-                    "UniRef 100"          # protocol_id
-                ))
+                # Populate Cluster and Entity table data
+                cluster_data.append(
+                    (
+                        cluster_id,  # cluster_id
+                        name,  # cluster name
+                        "protein",  # entity_type (fixed value)
+                        None,  # description (not present)
+                        "UniRef 100",  # protocol_id
+                    )
+                )
 
-                entity_data.append((
-                    cluster_id,           # entity_id (matches cluster_id)
-                    uniref_id,            # data_source_entity_id (UniRef100_xxx)
-                    "Cluster",            # entity_type
-                    "UniRef 100",         # data_source
-                    updated_time,         # updated
-                    created_time          # created
-                ))
+                entity_data.append(
+                    (
+                        cluster_id,  # entity_id (matches cluster_id)
+                        uniref_id,  # data_source_entity_id (UniRef100_xxx)
+                        "Cluster",  # entity_type
+                        "UniRef 100",  # data_source
+                        updated_time,  # updated
+                        created_time,  # created
+                    )
+                )
 
                 # Extract UniProtKB member attributes and cross-references
                 repr_db = elem.find("ns:representativeMember/ns:dbReference", ns)
@@ -215,10 +231,10 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
                 for mem in elem.findall("ns:member/ns:dbReference", ns):
                     extract_cross_refs(mem, cross_reference_data, ns)
 
-                # ClusterMember table (representative + members) 
+                # ClusterMember table (representative + members)
                 add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns)
 
-                # Batch size limit 
+                # Batch size limit
                 entry_count += 1
                 if entry_count >= batch_size:
                     break
@@ -231,35 +247,40 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         "cluster_data": cluster_data,
         "entity_data": entity_data,
         "cluster_member_data": cluster_member_data,
-        "cross_reference_data": cross_reference_data
+        "cross_reference_data": cross_reference_data,
     }
-           
+
 
 ##### -------------- Save dalta table and print the preview --------------- #####
 
+
 def save_delta_tables(spark, output_dir, data_dict):
     # Cluster
-    cluster_schema = StructType([
-        StructField("cluster_id", StringType(), False),
-        StructField("name", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("description", StringType(), True),
-        StructField("protocol_id", StringType(), False),
-    ])
+    cluster_schema = StructType(
+        [
+            StructField("cluster_id", StringType(), False),
+            StructField("name", StringType(), False),
+            StructField("entity_type", StringType(), False),
+            StructField("description", StringType(), True),
+            StructField("protocol_id", StringType(), False),
+        ]
+    )
 
     cluster_df = spark.createDataFrame(data_dict["cluster_data"], cluster_schema)
     cluster_df.write.format("delta").mode("overwrite").save(os.path.join(output_dir, "Cluster"))
     print(f"Cluster Delta table written to: {os.path.join(output_dir, 'Cluster')}")
 
     # Entity
-    entity_schema = StructType([
-        StructField("entity_id", StringType(), False),
-        StructField("data_source_entity_id", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("data_source", StringType(), False),
-        StructField("updated", StringType(), False),
-        StructField("created", StringType(), False),
-    ])
+    entity_schema = StructType(
+        [
+            StructField("entity_id", StringType(), False),
+            StructField("data_source_entity_id", StringType(), False),
+            StructField("entity_type", StringType(), False),
+            StructField("data_source", StringType(), False),
+            StructField("updated", StringType(), False),
+            StructField("created", StringType(), False),
+        ]
+    )
 
     entity_df = spark.createDataFrame(data_dict["entity_data"], entity_schema)
     entity_table_path = os.path.join(output_dir, "Entity")
@@ -267,27 +288,35 @@ def save_delta_tables(spark, output_dir, data_dict):
     print(f"Entity Delta table written to: {entity_table_path}")
 
     # ClusterMember
-    cluster_member_schema = StructType([
-        StructField("cluster_id", StringType(), False),
-        StructField("entity_id", StringType(), False),
-        StructField("is_representative", StringType(), False),
-        StructField("is_seed", StringType(), False),
-        StructField("score", StringType(), False),
-    ])
+    cluster_member_schema = StructType(
+        [
+            StructField("cluster_id", StringType(), False),
+            StructField("entity_id", StringType(), False),
+            StructField("is_representative", StringType(), False),
+            StructField("is_seed", StringType(), False),
+            StructField("score", StringType(), False),
+        ]
+    )
 
-    cluster_member_df = spark.createDataFrame(data_dict["cluster_member_data"], cluster_member_schema)
+    cluster_member_df = spark.createDataFrame(
+        data_dict["cluster_member_data"], cluster_member_schema
+    )
     cluster_member_path = os.path.join(output_dir, "ClusterMember")
     cluster_member_df.write.format("delta").mode("overwrite").save(cluster_member_path)
     print(f"ClusterMember Delta table written to: {cluster_member_path}")
 
     # CrossReference
-    cross_reference_schema = StructType([
-        StructField("entity_id", StringType(), False),
-        StructField("xref_type", StringType(), False),
-        StructField("xref_value", StringType(), False),
-    ])
+    cross_reference_schema = StructType(
+        [
+            StructField("entity_id", StringType(), False),
+            StructField("xref_type", StringType(), False),
+            StructField("xref_value", StringType(), False),
+        ]
+    )
 
-    cross_reference_df = spark.createDataFrame(data_dict["cross_reference_data"], cross_reference_schema)
+    cross_reference_df = spark.createDataFrame(
+        data_dict["cross_reference_data"], cross_reference_schema
+    )
     cross_reference_path = os.path.join(output_dir, "CrossReference")
     cross_reference_df.write.format("delta").mode("overwrite").save(cross_reference_path)
     print(f"CrossReference Delta table written to: {cross_reference_path}")
@@ -315,17 +344,18 @@ def build_spark_session():
     builder = (
         SparkSession.builder.appName("UniRef Cluster Extractor")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        .config(
+            "spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        )
     )
     return configure_spark_with_delta_pip(builder).getOrCreate()
+
 
 # Click command-line interface for parameter parsing
 @click.command()
 @click.option("--ftp-url", required=True, help="FTP URL to UniRef100 XML file")
 @click.option("--output-dir", required=True, help="Output directory for Delta table")
 @click.option("--batch-size", default=1000, help="Number of UniRef entries to parse (limit)")
-
-
 def main(ftp_url, output_dir, batch_size):
     # Set local path for downloaded gzipped XML file
     local_gz = os.path.join("/tmp", os.path.basename(ftp_url))
@@ -336,11 +366,11 @@ def main(ftp_url, output_dir, batch_size):
     except URLError as e:
         print(f"Error! Cannot download file: {e.reason}")
         return
-    
+
     # Start Spark session with Delta Lake support
     spark = build_spark_session()
 
-    # Load existing entity creation timestamps 
+    # Load existing entity creation timestamps
     entity_table_path = os.path.join(output_dir, "Entity")
     existing_created = load_existing_created(spark, entity_table_path)
 
@@ -355,4 +385,3 @@ def main(ftp_url, output_dir, batch_size):
 
 if __name__ == "__main__":
     main()
-

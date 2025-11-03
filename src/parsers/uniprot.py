@@ -1,5 +1,5 @@
 """
-UniProt XML Delta Lake Ingestion Pipeline
+UniProt XML Delta Lake Ingestion Pipeline.
 =========================================
 
 This script parses UniProt XML (.xml.gz) file and ingests the data into structured Delta Lake tables.
@@ -14,15 +14,15 @@ python3 src/parsers/uniprot.py \
 
 Arguments:
 ----------
---xml-url:      URL to the UniProt XML .gz file 
+--xml-url:      URL to the UniProt XML .gz file
 --output-dir:   Output directory for Delta tables and logs (default: './output')
 --namespace:    Delta Lake database name (default: 'uniprot_db')
---target-date:  Process entries modified/updated since specific date 
+--target-date:  Process entries modified/updated since specific date
 --batch-size:   Number of UniProt entries to process per write batch (default: 5000)
 
 Functionality:
 --------------
-- Downloads the XML file if not present locally 
+- Downloads the XML file if not present locally
 - Parses UniProt entries in a memory-efficient streaming fashion
 - Maps parsed data into standardized CDM tables
 - Writes all tables as Delta Lake tables, supporting incremental import
@@ -35,18 +35,18 @@ Typical scenario:
 
 """
 
-import os
-import click
 import datetime
-import json
-import requests
 import gzip
-import uuid 
+import json
+import os
+import uuid
 import xml.etree.ElementTree as ET
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
-from pyspark.sql.types import ArrayType, StringType, StructType, StructField
 
+import click
+import requests
+from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
 NS = {"u": "https://uniprot.org/uniprot"}
@@ -55,12 +55,11 @@ NS = {"u": "https://uniprot.org/uniprot"}
 def load_existing_identifiers(spark, output_dir, namespace):
     """
     Load the existing 'identifiers' Delta table and build a mapping from UniProt accession to CDM entity ID.
-    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows 
+    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows
 
     Returns:
         dict: {accession: entity_id}
     """
-
     access_to_cdm_id = {}
     id_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_identifiers_delta"))
     if os.path.exists(id_path):
@@ -94,8 +93,8 @@ def build_datasource_record(xml_url):
         "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "version": 115
+        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
+        "version": 115,
     }
 
 
@@ -108,7 +107,7 @@ def parse_identifiers(entry, cdm_id):
             "entity_id": cdm_id,
             "identifier": f"UniProt:{acc.text}",
             "source": "UniProt",
-            "description": "UniProt accession"
+            "description": "UniProt accession",
         }
         for acc in entry.findall("u:accession", NS)
     ]
@@ -130,7 +129,7 @@ def parse_names(entry, cdm_id):
                     "entity_id": cdm_id,
                     "name": name_element.text,
                     "description": "UniProt protein name",
-                    "source": "UniProt"
+                    "source": "UniProt",
                 }
             )
 
@@ -151,7 +150,7 @@ def parse_names(entry, cdm_id):
                             "entity_id": cdm_id,
                             "name": name_string.text,
                             "description": f"UniProt {name_type} {name_length} name",
-                            "source": "UniProt"
+                            "source": "UniProt",
                         }
                     )
     return names
@@ -245,6 +244,7 @@ def parse_evidence_map(entry):
 
     return evidence_map
 
+
 def parse_reaction_association(reaction, cdm_id, evidence_map):
     associations = []
     for dbref in reaction.findall("u:dbReference", NS):
@@ -306,7 +306,7 @@ def parse_associations(entry, cdm_id, evidence_map):
                         "predicate": None,
                         "evidence_type": None,
                         "supporting_objects": None,
-                        "publications": None
+                        "publications": None,
                     }
                 )
             )
@@ -321,7 +321,7 @@ def parse_associations(entry, cdm_id, evidence_map):
             "predicate": None,
             "evidence_type": None,
             "supporting_objects": None,
-            "publications": None
+            "publications": None,
         }
         evidence_key = dbref.get("evidence")
         if evidence_key and evidence_key in evidence_map:
@@ -332,17 +332,17 @@ def parse_associations(entry, cdm_id, evidence_map):
     for comment in entry.findall("u:comment", NS):
         comment_type = comment.get("type")
         if comment_type == "catalytic activity":
-            # extract catalytic associations 
+            # extract catalytic associations
             for reaction in comment.findall("u:reaction", NS):
                 for assoc in parse_reaction_association(reaction, cdm_id, evidence_map):
                     associations.append(clean(assoc))
         elif comment_type == "cofactor":
-            # extract cofactor associations 
+            # extract cofactor associations
             for cofactor in comment.findall("u:cofactor", NS):
                 for assoc in parse_cofactor_association(cofactor, cdm_id):
                     associations.append(clean(assoc))
     return associations
-    
+
 
 def parse_publications(entry):
     """
@@ -368,8 +368,9 @@ def parse_publications(entry):
     return publications
 
 
-def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None):
-    
+def parse_uniprot_entry(
+    entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None
+):
     if prev_created:
         entity_created = prev_created
         entity_updated = current_timestamp
@@ -436,7 +437,7 @@ def stream_uniprot_xml(filepath):
     with gzip.open(filepath, "rb") as f:
         # Use iterparse to process XML incrementally, triggering on element end events
         context = ET.iterparse(f, events=("end",))
-        for event, element in context:
+        for _, element in context:
             # Check tag name, ignoring namespace
             if element.tag.endswith("entry"):
                 yield element
@@ -526,19 +527,17 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
         if not records:
             continue  # Skip all empty tables
 
-        delta_dir = os.path.abspath(
-            os.path.join(output_dir, f"{namespace}_{table}_delta")
-        )
+        delta_dir = os.path.abspath(os.path.join(output_dir, f"{namespace}_{table}_delta"))
         # Use "append" mode if the Delta directory already exists, otherwise "overwrite"
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
 
-        print(f"[DEBUG] Registering table: {namespace}.{table} at {delta_dir} with mode={mode}, record count: {len(records)}")
+        print(
+            f"[DEBUG] Registering table: {namespace}.{table} at {delta_dir} with mode={mode}, record count: {len(records)}"
+        )
 
         try:
             df = spark.createDataFrame(records, schema)
-            df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(
-                delta_dir
-            )
+            df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir)
             spark.sql(f"""
                 CREATE TABLE IF NOT EXISTS {namespace}.{table}
                 USING DELTA
@@ -598,22 +597,16 @@ def load_existing_entity(spark, output_dir, namespace):
     This mapping is used to support upserts and idempotent writes.
     """
     old_created_dict = {}
-    entities_table_path = os.path.abspath(
-        os.path.join(output_dir, f"{namespace}_entities_delta")
-    )
+    entities_table_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_entities_delta"))
     if os.path.exists(entities_table_path):
         try:
             # Read only the required columns for efficiency
             old_df = (
-                spark.read.format("delta")
-                .load(entities_table_path)
-                .select("entity_id", "created")
+                spark.read.format("delta").load(entities_table_path).select("entity_id", "created")
             )
             for row in old_df.collect():
                 old_created_dict[row["entity_id"]] = row["created"]
-            print(
-                f"Loaded {len(old_created_dict)} existing entity_id records for upsert."
-            )
+            print(f"Loaded {len(old_created_dict)} existing entity_id records for upsert.")
         except Exception as e:
             print(f"Couldn't load previous entities delta table: {e}")
     else:
@@ -622,21 +615,13 @@ def load_existing_entity(spark, output_dir, namespace):
 
 
 def parse_entries(
-    local_xml_path,
-    target_date,
-    batch_size,
-    spark,
-    tables,
-    output_dir,
-    namespace,
-    current_timestamp
+    local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp
 ):
     """
     Parse UniProt XML entries, write to Delta Lake in batches
     Return (processed_entry_count, skipped_entry_count)
 
     """
-
     target_date_dt = None
 
     # Convert target_date string to datetime for comparison if provided
@@ -663,7 +648,7 @@ def parse_entries(
                 except Exception:
                     skipped += 1
                     continue
-            
+
             # Extract main accession (skip entry if not present)
             main_accession_elem = entry_elem.find("u:accession", NS)
             if main_accession_elem is None or main_accession_elem.text is None:
@@ -699,16 +684,15 @@ def parse_entries(
             print(f"Error parsing entry: {e}")
             skipped += 1
             continue
-        
-    # write remaining records 
+
+    # write remaining records
     save_batches_to_delta(spark, tables, output_dir, namespace)
     return entry_count, skipped
 
 
-
 def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
     # Generate the timestamp for the current run
-    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
     # Prepare local XML
     local_xml_path = prepare_local_xml(xml_url, output_dir)
@@ -745,30 +729,24 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
         spark,
         tables,
         output_dir,
-        namespace, 
-        current_timestamp
+        namespace,
+        current_timestamp,
     )
-    print(
-        f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables."
-    )
+    print(f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables.")
     spark.sql(f"SHOW TABLES IN {namespace}").show()
     spark.sql(f"SELECT COUNT(*) FROM {namespace}.entities").show()
-    
-    # make sql test in entity table 
+
+    # make sql test in entity table
     spark.sql(f"SELECT * FROM {namespace}.entities LIMIT 10").show(truncate=False)
 
     spark.stop()
 
-    print(
-        f"All Delta tables are created and registered in Spark SQL under `{namespace}`."
-    )
+    print(f"All Delta tables are created and registered in Spark SQL under `{namespace}`.")
 
 
 @click.command()
 @click.option("--xml-url", required=True, help="URL to UniProt XML (.xml.gz)")
-@click.option(
-    "--output-dir", default="output", help="Output directory for Delta tables"
-)
+@click.option("--output-dir", default="output", help="Output directory for Delta tables")
 @click.option("--namespace", default="uniprot_db", help="Delta Lake database name")
 @click.option(
     "--target-date",
@@ -776,8 +754,6 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     help="Only process entries modified/updated since this date (YYYY-MM-DD)",
 )
 @click.option("--batch-size", default=5000, help="Batch size for writing Delta tables")
-
-
 def main(xml_url, output_dir, namespace, target_date, batch_size):
     ingest_uniprot(
         xml_url=xml_url,
@@ -787,6 +763,6 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
         batch_size=int(batch_size),
     )
 
+
 if __name__ == "__main__":
     main()
-    
