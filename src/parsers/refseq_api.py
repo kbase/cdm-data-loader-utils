@@ -89,7 +89,6 @@ def write_delta(
         target_path = os.path.abspath(os.path.join(data_dir, database, table))
         os.makedirs(target_path, exist_ok=True)
 
-        # 如果不是 Delta 目录且要覆盖，先删掉旧目录
         delta_log = os.path.join(target_path, "_delta_log")
         if mode == "overwrite" and os.path.exists(target_path) and not os.path.exists(delta_log):
             print(f"[WARN] Non-Delta data at {target_path}. Removing because mode=overwrite ...")
@@ -97,11 +96,9 @@ def write_delta(
             os.makedirs(target_path, exist_ok=True)
 
         writer.save(target_path)
-        # 用 LOCATION 注册/创建外部表
         spark.sql(f"CREATE TABLE IF NOT EXISTS {full_table} USING DELTA LOCATION '{target_path}'")
         print(f"Saved {len(pandas_df)} rows to {full_table} at {target_path} (mode={mode})")
     else:
-        # 托管表
         writer.saveAsTable(full_table)
         print(f"Saved {len(pandas_df)} rows to {full_table} (mode={mode})")
 
@@ -785,17 +782,6 @@ def cli(taxid, api_key, database, mode, debug, allow_genbank_date, unique_per_ta
     )
 
 
-# def cli(taxid, api_key, database, mode, debug, allow_genbank_date, unique_per_taxon):
-#     main(
-#         taxid=taxid,
-#         api_key=api_key,
-#         database=database,
-#         mode=mode,
-#         debug=debug,
-#         allow_genbank_date=allow_genbank_date,
-#         unique_per_taxon=unique_per_taxon
-#     )
-
 
 def process_report(rep: dict, tx: str, seen: set, debug: bool, allow_genbank_date: bool):
     """
@@ -880,20 +866,6 @@ def finalize_tables(entities, collections, names, identifiers):
     return pdf_entity, pdf_coll, pdf_name, pdf_ident
 
 
-
-# def write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident):
-#     """
-#     Write tables to Delta and preview results.
-#     """
-#     write_delta(spark, pdf_entity, database, "entity", mode)
-#     write_delta(spark, pdf_coll, database, "contig_collection", mode)
-#     write_delta(spark, pdf_name, database, "name", mode)
-#     write_delta(spark, pdf_ident, database, "identifier", mode)
-
-#     print("\nDelta tables written:")
-#     for tbl in ["datasource", "entity", "contig_collection", "name", "identifier"]:
-#         preview_or_skip(spark, database, tbl)
-
 def write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident, data_dir=None):
     """
     Write tables to Delta and preview results.
@@ -908,34 +880,6 @@ def write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf
         preview_or_skip(spark, database, tbl)
 
 
-
-# def main(taxid, api_key, database, mode, debug, allow_genbank_date=False, unique_per_taxon=False):
-#     spark = build_spark(database)
-
-#     # datasource table (fixed record)
-#     df_ds = build_cdm_datasource()
-#     write_delta(spark, df_ds, database, "datasource", mode)
-
-#     entities, collections, names, identifiers = [], [], [], []
-#     seen = set()
-
-#     taxids = [t.strip() for t in taxid.split(",") if t.strip()]
-#     print(f"Using TaxIDs: {taxids}")
-
-#     for tx in taxids:
-#         print(f"Fetching taxon={tx}")
-#         e, c, n, i = process_taxon(tx, api_key, debug, allow_genbank_date, unique_per_taxon, seen)
-
-#         # extend results into global containers
-#         entities.extend(e)
-#         collections.extend(c)
-#         names.extend(n)
-#         identifiers.extend(i)
-
-#     pdf_entity, pdf_coll, pdf_name, pdf_ident = finalize_tables(entities, collections, names, identifiers)
-#     write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident, data_dir)
-
-
 def main(taxid,
          api_key,
          database,
@@ -947,7 +891,6 @@ def main(taxid,
 
     spark = build_spark(database)
 
-    # datasource 表（固定一行）
     df_ds = build_cdm_datasource()
     write_delta(spark, df_ds, database, "datasource", mode, data_dir=data_dir)  # ← 传 data_dir
 
