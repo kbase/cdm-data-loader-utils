@@ -1,4 +1,6 @@
 name: Run tests
+permissions:
+  contents: read
 
 on:
   push:
@@ -53,7 +55,7 @@ jobs:
         run: uv sync
 
       - name: Run code linting checks
-        run: uv run ruff check --statistics
+        run: uv run ruff check --output-format=github .
 
   tests:
     name: Run tests (${{ matrix.python-version }}, ${{ matrix.os }})
