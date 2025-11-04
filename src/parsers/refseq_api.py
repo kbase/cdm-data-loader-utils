@@ -8,7 +8,6 @@ import requests
 from typing import Optional
 from typing import Any, Literal
 from pyspark.sql.types import StructType, StructField, StringType
-
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
 
@@ -89,7 +88,6 @@ def write_delta(
         target_path = os.path.abspath(os.path.join(data_dir, database, table))
         os.makedirs(target_path, exist_ok=True)
 
-        # 如果不是 Delta 目录且要覆盖，先删掉旧目录
         delta_log = os.path.join(target_path, "_delta_log")
         if mode == "overwrite" and os.path.exists(target_path) and not os.path.exists(delta_log):
             print(f"[WARN] Non-Delta data at {target_path}. Removing because mode=overwrite ...")
@@ -97,11 +95,10 @@ def write_delta(
             os.makedirs(target_path, exist_ok=True)
 
         writer.save(target_path)
-        # 用 LOCATION 注册/创建外部表
+        # Register/create an external table using LOCATION
         spark.sql(f"CREATE TABLE IF NOT EXISTS {full_table} USING DELTA LOCATION '{target_path}'")
         print(f"Saved {len(pandas_df)} rows to {full_table} at {target_path} (mode={mode})")
     else:
-        # 托管表
         writer.saveAsTable(full_table)
         print(f"Saved {len(pandas_df)} rows to {full_table} (mode={mode})")
 
@@ -259,7 +256,6 @@ def fetch_reports_by_taxon(
             break
 
 
-
 # ---------------- Robust extractors set up ----------------
 
 # regex patterns
@@ -394,7 +390,6 @@ def extract_created_date(rep: dict[str, Any], allow_genbank_date: bool = False, 
     return None
 
 
-
 def extract_assembly_name(rep: dict[str, Any]) -> str | None:
     """
     Extract the assembly name from a genome report record.
@@ -416,7 +411,6 @@ def extract_assembly_name(rep: dict[str, Any]) -> str | None:
 
     # Fallback: recursively search the nested structure
     return _deep_find_str(rep, {"assemblyName", "assembly_name"})
-
 
 
 def extract_organism_name(rep: dict[str, Any]) -> str | None:
@@ -482,7 +476,6 @@ def extract_taxid(rep: dict[str, Any]) -> str | None:
     return _deep_find_taxid(rep)
 
 
-
 def extract_biosample_ids(rep: dict[str, Any]) -> list[str]:
     """
     Extract BioSample IDs from a genome assembly report.
@@ -512,7 +505,6 @@ def extract_biosample_ids(rep: dict[str, Any]) -> list[str]:
 
     # --- Return unique + sorted IDs ---
     return sorted(accs)
-
 
 
 def extract_bioproject_ids(rep: dict[str, Any]) -> list[str]:
@@ -574,7 +566,6 @@ def extract_assembly_accessions(rep: dict[str, Any]) -> tuple[list[str], list[st
     return sorted(gcf), sorted(gca)
 
 
-
 # ---------------- CDM Builders ----------------
 def build_cdm_datasource() -> pd.DataFrame:
     """Generate a single CDM datasource record for NCBI RefSeq (via API)."""
@@ -583,7 +574,7 @@ def build_cdm_datasource() -> pd.DataFrame:
         "source": "NCBI RefSeq",
         "url": "https://api.ncbi.nlm.nih.gov/datasets/v2/genome/taxon/",  
         "accessed": date.today().isoformat(),
-        "version": "231", 
+        "version": "231"
     }
     return pd.DataFrame([record])
 
@@ -781,20 +772,8 @@ def cli(taxid, api_key, database, mode, debug, allow_genbank_date, unique_per_ta
         debug=debug,
         allow_genbank_date=allow_genbank_date,
         unique_per_taxon=unique_per_taxon,
-        data_dir=data_dir,   
+        data_dir=data_dir,
     )
-
-
-# def cli(taxid, api_key, database, mode, debug, allow_genbank_date, unique_per_taxon):
-#     main(
-#         taxid=taxid,
-#         api_key=api_key,
-#         database=database,
-#         mode=mode,
-#         debug=debug,
-#         allow_genbank_date=allow_genbank_date,
-#         unique_per_taxon=unique_per_taxon
-#     )
 
 
 def process_report(rep: dict, tx: str, seen: set, debug: bool, allow_genbank_date: bool):
@@ -808,7 +787,7 @@ def process_report(rep: dict, tx: str, seen: set, debug: bool, allow_genbank_dat
     gcf_list, gca_list = extract_assembly_accessions(rep)
     acc = gcf_list[0] if gcf_list else (gca_list[0] if gca_list else None)
 
-    # === assembly + organism names ===
+    # === assembly with organism names ===
     asm_name = extract_assembly_name(rep)
     org_name = extract_organism_name(rep)
 
@@ -864,7 +843,6 @@ def process_taxon(tx: str, api_key: str, debug: bool, allow_genbank_date: bool, 
     return entities, collections, names, identifiers
 
 
-
 def finalize_tables(entities, collections, names, identifiers):
     """
     Concatenate and deduplicate CDM tables.
@@ -873,67 +851,25 @@ def finalize_tables(entities, collections, names, identifiers):
     def _dedup(pdf, cols): return pdf.drop_duplicates(subset=cols) if not pdf.empty else pdf
 
     pdf_entity = _dedup(_concat(entities), ["entity_id"])
-    pdf_coll   = _dedup(_concat(collections), ["collection_id"])
-    pdf_name   = _dedup(pd.DataFrame(names), ["entity_id", "name"]) if names else pd.DataFrame()
-    pdf_ident  = _dedup(pd.DataFrame(identifiers), ["entity_id", "identifier"]) if identifiers else pd.DataFrame()
+    pdf_coll = _dedup(_concat(collections), ["collection_id"])
+    pdf_name = _dedup(pd.DataFrame(names), ["entity_id", "name"]) if names else pd.DataFrame()
+    pdf_ident = _dedup(pd.DataFrame(identifiers), ["entity_id", "identifier"]) if identifiers else pd.DataFrame()
 
     return pdf_entity, pdf_coll, pdf_name, pdf_ident
 
-
-
-# def write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident):
-#     """
-#     Write tables to Delta and preview results.
-#     """
-#     write_delta(spark, pdf_entity, database, "entity", mode)
-#     write_delta(spark, pdf_coll, database, "contig_collection", mode)
-#     write_delta(spark, pdf_name, database, "name", mode)
-#     write_delta(spark, pdf_ident, database, "identifier", mode)
-
-#     print("\nDelta tables written:")
-#     for tbl in ["datasource", "entity", "contig_collection", "name", "identifier"]:
-#         preview_or_skip(spark, database, tbl)
 
 def write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident, data_dir=None):
     """
     Write tables to Delta and preview results.
     """
     write_delta(spark, pdf_entity, database, "entity", mode, data_dir=data_dir)
-    write_delta(spark, pdf_coll,   database, "contig_collection", mode, data_dir=data_dir)
-    write_delta(spark, pdf_name,   database, "name", mode, data_dir=data_dir)
-    write_delta(spark, pdf_ident,  database, "identifier", mode, data_dir=data_dir)
+    write_delta(spark, pdf_coll, database, "contig_collection", mode, data_dir=data_dir)
+    write_delta(spark, pdf_name, database, "name", mode, data_dir=data_dir)
+    write_delta(spark, pdf_ident, database, "identifier", mode, data_dir=data_dir)
 
     print("\nDelta tables written:")
     for tbl in ["datasource", "entity", "contig_collection", "name", "identifier"]:
         preview_or_skip(spark, database, tbl)
-
-
-
-# def main(taxid, api_key, database, mode, debug, allow_genbank_date=False, unique_per_taxon=False):
-#     spark = build_spark(database)
-
-#     # datasource table (fixed record)
-#     df_ds = build_cdm_datasource()
-#     write_delta(spark, df_ds, database, "datasource", mode)
-
-#     entities, collections, names, identifiers = [], [], [], []
-#     seen = set()
-
-#     taxids = [t.strip() for t in taxid.split(",") if t.strip()]
-#     print(f"Using TaxIDs: {taxids}")
-
-#     for tx in taxids:
-#         print(f"Fetching taxon={tx}")
-#         e, c, n, i = process_taxon(tx, api_key, debug, allow_genbank_date, unique_per_taxon, seen)
-
-#         # extend results into global containers
-#         entities.extend(e)
-#         collections.extend(c)
-#         names.extend(n)
-#         identifiers.extend(i)
-
-#     pdf_entity, pdf_coll, pdf_name, pdf_ident = finalize_tables(entities, collections, names, identifiers)
-#     write_and_preview(spark, database, mode, pdf_entity, pdf_coll, pdf_name, pdf_ident, data_dir)
 
 
 def main(taxid,
@@ -943,13 +879,12 @@ def main(taxid,
          debug,
          allow_genbank_date: bool = False,
          unique_per_taxon: bool = False,
-         data_dir: str | None = None):   # ← 新增 data_dir
+         data_dir: str | None = None):   
 
     spark = build_spark(database)
 
-    # datasource 表（固定一行）
     df_ds = build_cdm_datasource()
-    write_delta(spark, df_ds, database, "datasource", mode, data_dir=data_dir)  # ← 传 data_dir
+    write_delta(spark, df_ds, database, "datasource", mode, data_dir=data_dir)
 
     entities, collections, names, identifiers = [], [], [], []
     seen = set()
@@ -967,18 +902,11 @@ def main(taxid,
 
     pdf_entity, pdf_coll, pdf_name, pdf_ident = finalize_tables(entities, collections, names, identifiers)
 
-    
     write_and_preview(
         spark, database, mode,
         pdf_entity, pdf_coll, pdf_name, pdf_ident,
-        data_dir=data_dir  
-    )
+        data_dir=data_dir)
 
 
 if __name__ == "__main__":
     cli()
-
-
-
-
-
