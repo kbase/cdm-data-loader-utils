@@ -136,9 +136,7 @@ class GenomeDataFileCreator:
                     # Including contigset_hash ensures that features
                     #  are uniquely identified across different contigsets.
 
-                    feature_hash = ch.generate_hash_id(
-                        contigset_hash, contig_hash, start, end, feature_type
-                    )
+                    feature_hash = ch.generate_hash_id(contigset_hash, contig_hash, start, end, feature_type)
 
                     # Prepare feature data including hash of the contigset and contig
                     feature_data = {
@@ -187,9 +185,7 @@ class GenomeDataFileCreator:
                 contig_name = seq_record.id
                 sequence = str(seq_record.seq).upper()
                 length = len(sequence)
-                gc_content = (
-                    (sequence.count("G") + sequence.count("C")) / length if length > 0 else 0
-                )
+                gc_content = (sequence.count("G") + sequence.count("C")) / length if length > 0 else 0
                 # TODO: check if contig_id_map generated or not
                 self.contigs.append(
                     {
@@ -485,13 +481,9 @@ class MultiGenomeDataFileCreator:
     def from_args(cls: type["MultiGenomeDataFileCreator"]) -> "MultiGenomeDataFileCreator":
         """Parse command-line arguments and create an instance of MultiGenomeDataFileCreator."""
         parser = argparse.ArgumentParser(description="Create tables for a specified genome ID.")
-        parser.add_argument(
-            "--genome_paths_file", type=str, required=True, help="Path to genome paths JSON file"
-        )
+        parser.add_argument("--genome_paths_file", type=str, required=True, help="Path to genome paths JSON file")
 
-        parser.add_argument(
-            "--output_dir", type=str, required=True, help="Output path to save the table files"
-        )
+        parser.add_argument("--output_dir", type=str, required=True, help="Output path to save the table files")
 
         parser.add_argument(
             "--stats",

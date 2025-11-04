@@ -46,9 +46,7 @@ def contig_set_hash(features) -> str:
 
 
 # TODO: check protein_id_map issue
-def compute_hash(
-    contigset_file: str, protein_file: str
-) -> tuple[str, dict[str, Any], dict[str, Any]]:
+def compute_hash(contigset_file: str, protein_file: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """
     Compute the hash of the entire contigset and contigs.
     """

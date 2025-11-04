@@ -9,22 +9,20 @@ authors = [
 ]
 
 dependencies = [
-    "biopython>=1.85",
-    "pandas",
-    "click",
+    "biopython>=1.86",
+    "click>=8.3.0",
+    "pandas>=2.3.3",
+    "ruff>=0.14.3",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.4",
-    "pytest-cov>=6.0.0",
-    "coverage",
-    "ruff>=0.11.5",
-    "gffutils>=0.13",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 # Assume Python 3.12.
 target-version = "py312"
 

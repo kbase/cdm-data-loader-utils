@@ -2,20 +2,46 @@ name: Run tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
   pull_request:
-      types:
-          - opened
-          - reopened
-          - synchronize
-          - ready_for_review
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 jobs:
+  code_quality:
+    name: Run code quality checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.1.2
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run code formatting checks
+        shell: bash -l {0}
+        continue-on-error: false
+        run: uv run ruff format --check
+
+      - name: Run code linting checks
+        run: uv run ruff check --statistics
 
   tests:
     name: Run tests (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    needs: code_quality
     strategy:
       fail-fast: false
       matrix:
@@ -24,20 +50,20 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7.1.2
 
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --dev
 
       - name: Run tests
         shell: bash -l {0}
@@ -46,11 +72,11 @@ jobs:
 
       - name: Send to Codecov
         id: send_to_codecov
-        uses: codecov/codecov-action@main
+        uses: codecov/codecov-action@v5.5.1
         with:
-            files: coverage.xml
-            # fail_ci_if_error: true
-            token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          # fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # generate_suppl_files:
   #   name: Runs stats and checkm2

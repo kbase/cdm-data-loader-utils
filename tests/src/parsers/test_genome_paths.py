@@ -29,9 +29,7 @@ def test_get_genome_paths_empty_file(tmp_path: Path) -> None:
 
     with pytest.raises(
         RuntimeError,
-        match=re.escape(
-            "error parsing genome_paths_file: Expecting value: line 1 column 1 (char 0)"
-        ),
+        match=re.escape("error parsing genome_paths_file: Expecting value: line 1 column 1 (char 0)"),
     ):
         get_genome_paths(full_path)
 
@@ -125,7 +123,7 @@ def test_get_genome_paths_valid_input_invalid_format(
 
     with pytest.raises(
         RuntimeError,
-        match=f'Please ensure that the genome_paths_file is in the correct format.\n\n{params["err_msg"]}',
+        match=f"Please ensure that the genome_paths_file is in the correct format.\n\n{params['err_msg']}",
     ):
         get_genome_paths(full_path)
 
