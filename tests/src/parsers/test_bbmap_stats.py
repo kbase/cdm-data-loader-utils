@@ -60,11 +60,7 @@ format_errors = {
     "empty": "no valid data found in stats_file",
 }
 
-err_types = {
-    err_id: RuntimeError
-    for err_id in format_errors
-    if format_errors[err_id] != err_msgs["not_dicts"]
-}
+err_types = {err_id: RuntimeError for err_id in format_errors if format_errors[err_id] != err_msgs["not_dicts"]}
 
 
 @pytest.mark.parametrize(

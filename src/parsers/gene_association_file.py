@@ -32,7 +32,7 @@ Run via CLI:
 
 import pandas as pd
 import click
-import os 
+import os
 import sys
 
 # --- Constants ---
@@ -99,18 +99,30 @@ GAF_COLUMNS = {
     DATE: "Date",
     ASSIGNED_BY: "Assigned_By",
     ANNOTATION_EXTENSION: "Annotation_Extension",
-    GENE_PRODUCT_FORM: "Gene_Product_Form_ID"
+    GENE_PRODUCT_FORM: "Gene_Product_Form_ID",
 }
 
 REQUIRED_INPUT_COLUMNS = {
-    DB, DB_OBJ_ID, QUALIFIER, GO_ID,
-    DB_REF, EVIDENCE_CODE, WITH_FROM,
-    DATE, ASSIGNED_BY
+    DB,
+    DB_OBJ_ID,
+    QUALIFIER,
+    GO_ID,
+    DB_REF,
+    EVIDENCE_CODE,
+    WITH_FROM,
+    DATE,
+    ASSIGNED_BY,
 }
 
 DROP_COLUMNS = {
-    DB_OBJ_SYMBOL, ASPECT, DB_OBJ_NAME, SYNONYM,
-    DB_OBJ_TYPE, TAXON, ANNOTATION_EXTENSION, GENE_PRODUCT_FORM
+    DB_OBJ_SYMBOL,
+    ASPECT,
+    DB_OBJ_NAME,
+    SYNONYM,
+    DB_OBJ_TYPE,
+    TAXON,
+    ANNOTATION_EXTENSION,
+    GENE_PRODUCT_FORM,
 }
 
 # --- Load ECO Mapping ---
@@ -118,11 +130,13 @@ DROP_COLUMNS = {
 ECO_MAPPING_URL = "http://purl.obolibrary.org/obo/eco/gaf-eco-mapping.txt"
 ECO_MAPPING_COLUMNS = [EVIDENCE_CODE, DB_REF, EVIDENCE_TYPE]
 
+
 def load_eco_mapping():
     try:
         eco_mapping_df = pd.read_csv(ECO_MAPPING_URL, sep="\t", comment="#", header=None, names=ECO_MAPPING_COLUMNS)
     except Exception as e:
         raise ConnectionError(f"Failed to load ECO mapping from {ECO_MAPPING_URL}: {e}")
+
 
 # --- Helper Functions ---
 def validate_annotation_schema(df: pd.DataFrame):
@@ -138,7 +152,7 @@ def validate_annotation_schema(df: pd.DataFrame):
     missing_cols = set(ASSOCIATION_COL_TYPES.keys()) - set(df.columns)
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
-    
+
     for column, expected_type in ASSOCIATION_COL_TYPES.items():
         """
         Check all match the expected types
@@ -146,11 +160,12 @@ def validate_annotation_schema(df: pd.DataFrame):
         """
         if not df[column].map(type).eq(expected_type).all():
             raise ValueError(f"Invalid type in column '{column}': expected {expected_type}")
-        
-def check_header_data(df, header_names = GAF_COLUMNS):
+
+
+def check_header_data(df, header_names=GAF_COLUMNS):
     """
-    Prevents duplicate header lines in a file if CSV spliced multiple times. 
-    Check if DataFrame contains any rows that exactly match the header names and remove them. 
+    Prevents duplicate header lines in a file if CSV spliced multiple times.
+    Check if DataFrame contains any rows that exactly match the header names and remove them.
     """
     # Convert header names to a list for comparison
     header_names = list(header_names.values())
@@ -160,6 +175,7 @@ def check_header_data(df, header_names = GAF_COLUMNS):
     if mask.any():
         return df[~mask]
     return df
+
 
 def load_go_file(input_path):
     """
@@ -181,8 +197,9 @@ def load_go_file(input_path):
     # Determine which of the relevant columns are actually present in the file
     actual_cols = list(RELEVANT_COLUMNS & set(df.columns))
 
-    # Select only the relevant columns 
+    # Select only the relevant columns
     return df[actual_cols].copy()
+
 
 def normalize_dates(df):
     """
@@ -199,9 +216,11 @@ def normalize_dates(df):
 
     # Convert valid parts to standard date format
     df.loc[~invalid_mask, ANNOTATION_DATE] = pd.to_datetime(
-        date_strs[~invalid_mask], format="%Y%m%d", errors="coerce").dt.strftime("%Y-%m-%d")
+        date_strs[~invalid_mask], format="%Y%m%d", errors="coerce"
+    ).dt.strftime("%Y-%m-%d")
     df.loc[invalid_mask, ANNOTATION_DATE] = None
     return df
+
 
 def process_predicates(df):
     """
@@ -212,6 +231,7 @@ def process_predicates(df):
     df[NEGATED] = predicates.str.startswith("NOT|")
     df[PREDICATE] = predicates.str.replace(r"^NOT\|", "", regex=True)
     return df
+
 
 def transform_go_data(df):
     """
@@ -226,47 +246,73 @@ def transform_go_data(df):
     - Reorders the columns to match the expected output format.
     """
 
-    df.rename(columns={
-        QUALIFIER: PREDICATE,
-        GO_ID: OBJECT,
-        DB_REF: PUBLICATIONS,
-        WITH_FROM: SUPPORTING_OBJECTS,
-        DATE: ANNOTATION_DATE,
-        ASSIGNED_BY: PRIMARY_KNOWLEDGE_SOURCE,
-        }, inplace=True)
-    
+    df.rename(
+        columns={
+            QUALIFIER: PREDICATE,
+            GO_ID: OBJECT,
+            DB_REF: PUBLICATIONS,
+            WITH_FROM: SUPPORTING_OBJECTS,
+            DATE: ANNOTATION_DATE,
+            ASSIGNED_BY: PRIMARY_KNOWLEDGE_SOURCE,
+        },
+        inplace=True,
+    )
+
     df = normalize_dates(df)
     df[AGGREGATOR] = "UniProt"
     df[PROTOCOL_ID] = None
-    
+
     # Split '|' separated publication/supporting_objects into lists
-    df[PUBLICATIONS] = df[PUBLICATIONS].apply(lambda x: str(x).split('|') if pd.notna(x) and isinstance(x, str) else x)
-    df[SUPPORTING_OBJECTS] = df[SUPPORTING_OBJECTS].apply(lambda x: str(x).split('|') if pd.notna(x) and isinstance(x, str) else x)
+    df[PUBLICATIONS] = df[PUBLICATIONS].apply(lambda x: str(x).split("|") if pd.notna(x) and isinstance(x, str) else x)
+    df[SUPPORTING_OBJECTS] = df[SUPPORTING_OBJECTS].apply(
+        lambda x: str(x).split("|") if pd.notna(x) and isinstance(x, str) else x
+    )
     df = process_predicates(df)
 
     ALLOWED_PREDICATES = [
-    "enables", "contributes_to", "acts_upstream_of_or_within", "involved_in",
-    "acts_upstream_of", "acts_upstream_of_positive_effect", "acts_upstream_of_negative_effect",
-    "acts_upstream_of_or_within_negative_effect", "acts_upstream_of_or_within_positive_effect",
-    "located_in", "part_of", "is_active_in", "colocalizes_with"]
+        "enables",
+        "contributes_to",
+        "acts_upstream_of_or_within",
+        "involved_in",
+        "acts_upstream_of",
+        "acts_upstream_of_positive_effect",
+        "acts_upstream_of_negative_effect",
+        "acts_upstream_of_or_within_negative_effect",
+        "acts_upstream_of_or_within_positive_effect",
+        "located_in",
+        "part_of",
+        "is_active_in",
+        "colocalizes_with",
+    ]
 
     # Validate predicates
     invalid_predicates = ~df[PREDICATE].isin(ALLOWED_PREDICATES)
     if invalid_predicates.any():
         raise ValueError(f"Invalid predicates found: {df.loc[invalid_predicates, PREDICATE].unique()}")
-    
+
     df[SUBJECT] = df[DB].astype(str) + ":" + df[DB_OBJ_ID].astype(str)
 
     DESIRED_COLUMN_ORDER = [
-        "subject", "DB", "DB_Object_ID", "predicate", "object", 
-        "publications", "Evidence_Code","supporting_objects", 
-        "annotation_date", "primary_knowledge_source","aggregator", 
-        "protocol_id", "negated"]
-    
+        "subject",
+        "DB",
+        "DB_Object_ID",
+        "predicate",
+        "object",
+        "publications",
+        "Evidence_Code",
+        "supporting_objects",
+        "annotation_date",
+        "primary_knowledge_source",
+        "aggregator",
+        "protocol_id",
+        "negated",
+    ]
+
     for col in DESIRED_COLUMN_ORDER:
         if col not in df.columns:
-            df[col] = None #fill missing column with None
+            df[col] = None  # fill missing column with None
     return df
+
 
 def merge_evidence_mapping(df: pd.DataFrame, evidence_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -289,13 +335,14 @@ def merge_evidence_mapping(df: pd.DataFrame, evidence_df: pd.DataFrame) -> pd.Da
     df[PUBLICATIONS] = df[PUBLICATIONS].str.strip().str.upper()
     evidence_df[DB_REF] = evidence_df[DB_REF].str.strip().str.upper()
     evidence_df[EVIDENCE_CODE] = evidence_df[EVIDENCE_CODE].str.strip().str.upper()
-    
+
     # Merge with ECO mapping
     merged = df.merge(
         evidence_df,
         how="left",
         left_on=[EVIDENCE_CODE, PUBLICATIONS],
-        right_on=[EVIDENCE_CODE, DB_REF])
+        right_on=[EVIDENCE_CODE, DB_REF],
+    )
 
     # Handle unmatched evidence types
     unmatched = merged[EVIDENCE_TYPE].isna()
@@ -304,6 +351,7 @@ def merge_evidence_mapping(df: pd.DataFrame, evidence_df: pd.DataFrame) -> pd.Da
     if unmatched.any():
         merged.loc[unmatched, EVIDENCE_TYPE] = merged.loc[unmatched, EVIDENCE_CODE].map(fallback)
     return merged.drop(columns=[DB_REF])
+
 
 def process_go_annotations(input_path, output_path, eco_mapping_df, debug=False):
     """
@@ -318,34 +366,36 @@ def process_go_annotations(input_path, output_path, eco_mapping_df, debug=False)
     try:
         raw_df = load_go_file(input_path)
 
-        if debug: print("Raw data loaded:", raw_df.shape)
+        if debug:
+            print("Raw data loaded:", raw_df.shape)
         transformed_df = transform_go_data(raw_df)
 
-        if debug: print("Transformed data:", transformed_df.columns)
+        if debug:
+            print("Transformed data:", transformed_df.columns)
         merged = merge_evidence_mapping(transformed_df, eco_mapping_df)
 
         if merged.empty:
             print("Warning: Merging resulted in empty DataFrame.")
         else:
-            merged[ANNOTATION_DATE] = pd.to_datetime(merged[ANNOTATION_DATE]).dt.strftime('%Y-%m-%d')
+            merged[ANNOTATION_DATE] = pd.to_datetime(merged[ANNOTATION_DATE]).dt.strftime("%Y-%m-%d")
             merged.to_csv(output_path, index=False)
     except Exception as e:
         print(f"[ERROR] {e}")
 
+
 # --- CLI Interface ---
 @click.command()
-@click.option('--input', '-i', required=True, help='Path to input GO annotation CSV file.')
-@click.option('--output', '-o', required=True, help='Path to output normalized CSV file.')
-
+@click.option("--input", "-i", required=True, help="Path to input GO annotation CSV file.")
+@click.option("--output", "-o", required=True, help="Path to output normalized CSV file.")
 def main(input, output):
     """CLI entry point to process GO annotations."""
-    # Valid input file 
+    # Valid input file
     if not os.path.isfile(input):
         print(f"Error: Input file '{input}' does not exist.", file=sys.stderr)
         sys.exit(1)
 
-    # Validate output directory 
-    output_dir = os.path.dirname(output) or '.'
+    # Validate output directory
+    output_dir = os.path.dirname(output) or "."
     if not os.path.isdir(output_dir):
         print(f"Error: Output directory '{output_dir}' does not exist.", file=sys.stderr)
         sys.exit(1)
@@ -360,5 +410,6 @@ def main(input, output):
     # If all checks passed, then process annotations
     process_go_annotations(input, output, eco_mapping_df)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
