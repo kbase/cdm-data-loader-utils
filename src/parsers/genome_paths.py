@@ -36,9 +36,7 @@ def get_genome_paths(genome_paths_file: Path) -> dict[str, dict[str, Any]]:
     for entry_id in entry_list:
         entry_data = genome_paths[entry_id]
         if not entry_id:
-            err_list.append(
-                f"No ID specified for entry {json.dumps(entry_data, indent=None, sort_keys=True)}"
-            )
+            err_list.append(f"No ID specified for entry {json.dumps(entry_data, indent=None, sort_keys=True)}")
             continue
 
         if not isinstance(entry_data, dict):
