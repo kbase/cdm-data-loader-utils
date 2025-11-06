@@ -32,12 +32,8 @@ checkm2_output = {
 
 RESULTS = {
     "single": {
-        "stats": {
-            "FW305-3-2-15-C-TSA1_scaffolds.fna": stats_output["FW305-3-2-15-C-TSA1_scaffolds.fna"]
-        },
-        "checkm2": {
-            "FW305-3-2-15-C-TSA1_scaffolds": checkm2_output["FW305-3-2-15-C-TSA1_scaffolds"]
-        },
+        "stats": {"FW305-3-2-15-C-TSA1_scaffolds.fna": stats_output["FW305-3-2-15-C-TSA1_scaffolds.fna"]},
+        "checkm2": {"FW305-3-2-15-C-TSA1_scaffolds": checkm2_output["FW305-3-2-15-C-TSA1_scaffolds"]},
     },
     "multi": {"stats": stats_output, "checkm2": checkm2_output},
 }

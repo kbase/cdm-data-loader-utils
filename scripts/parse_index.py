@@ -40,11 +40,7 @@ def main() -> None:
         sys.exit(1)
 
     # iterate over dictionary values and extract the values from dicts containing the target key
-    extracted_paths = [
-        entry[target_key]
-        for entry in data.values()
-        if isinstance(entry, dict) and target_key in entry
-    ]
+    extracted_paths = [entry[target_key] for entry in data.values() if isinstance(entry, dict) and target_key in entry]
 
     # Print each extracted path on a new line
     for path in extracted_paths:
