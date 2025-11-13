@@ -22,36 +22,28 @@ Result:
 - Schema conforms to the CDM-style structured annotation model.
 """
 
-
-# import os
-# import sys
-# import urllib.request
-
-# import click
-
-# from pyspark.sql import SparkSession
-# from pyspark.sql.functions import (
-#     col, split, trim, when, upper, explode, lit, regexp_replace, to_date,
-#     concat, concat_ws
-# )
-# from pyspark.sql.types import StringType
-# from delta import configure_spark_with_delta_pip
-
+import logging
 import os
 import sys
 import urllib.request
-import logging
 
 import click
-
+from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
-    col, split, trim, when, upper, explode, lit, regexp_replace,
-    to_date, concat, concat_ws
+    col,
+    concat,
+    concat_ws,
+    explode,
+    lit,
+    regexp_replace,
+    split,
+    to_date,
+    trim,
+    upper,
+    when,
 )
 from pyspark.sql.types import StringType
-from delta import configure_spark_with_delta_pip
-
 
 # ---------------------- Logging Setup ----------------------
 logging.basicConfig(level=logging.INFO)
@@ -85,18 +77,26 @@ ASSIGNED_BY = "Assigned_By"
 ECO_MAPPING_URL = "http://purl.obolibrary.org/obo/eco/gaf-eco-mapping.txt"
 
 ALLOWED_PREDICATES = [
-    "enables", "contributes_to", "acts_upstream_of_or_within", "involved_in",
-    "acts_upstream_of", "acts_upstream_of_positive_effect", "acts_upstream_of_negative_effect",
-    "acts_upstream_of_or_within_negative_effect", "acts_upstream_of_or_within_positive_effect",
-    "located_in", "part_of", "is_active_in", "colocalizes_with"
+    "enables",
+    "contributes_to",
+    "acts_upstream_of_or_within",
+    "involved_in",
+    "acts_upstream_of",
+    "acts_upstream_of_positive_effect",
+    "acts_upstream_of_negative_effect",
+    "acts_upstream_of_or_within_negative_effect",
+    "acts_upstream_of_or_within_positive_effect",
+    "located_in",
+    "part_of",
+    "is_active_in",
+    "colocalizes_with",
 ]
 
 
 def get_spark():
     """Initialize and return a Spark session configured for Delta Lake."""
     builder = (
-        SparkSession.builder
-        .appName("GO-GAF-Spark-Parser")
+        SparkSession.builder.appName("GO-GAF-Spark-Parser")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .config("spark.sql.shuffle.partitions", "200")
@@ -108,15 +108,16 @@ def load_annotation(spark, input_path):
     """Load and preprocess raw annotation CSV."""
     df = spark.read.csv(input_path, header=True, inferSchema=True)
 
-    df = df.select(DB, DB_OBJ_ID, QUALIFIER, GO_ID, DB_REF, EVIDENCE_CODE,
-                   WITH_FROM, DATE, ASSIGNED_BY)
+    df = df.select(DB, DB_OBJ_ID, QUALIFIER, GO_ID, DB_REF, EVIDENCE_CODE, WITH_FROM, DATE, ASSIGNED_BY)
 
-    df = df.withColumn(PREDICATE, col(QUALIFIER)) \
-           .withColumn(OBJECT, col(GO_ID)) \
-           .withColumn(PUBLICATIONS, split(trim(when(col(DB_REF).isNotNull(), col(DB_REF)).otherwise(lit(""))), "\\|")) \
-           .withColumn(SUPPORTING_OBJECTS, split(trim(col(WITH_FROM)), "\\|")) \
-           .withColumn(ANNOTATION_DATE, col(DATE)) \
-           .withColumn(PRIMARY_KNOWLEDGE_SOURCE, col(ASSIGNED_BY))
+    df = (
+        df.withColumn(PREDICATE, col(QUALIFIER))
+        .withColumn(OBJECT, col(GO_ID))
+        .withColumn(PUBLICATIONS, split(trim(when(col(DB_REF).isNotNull(), col(DB_REF)).otherwise(lit(""))), "\\|"))
+        .withColumn(SUPPORTING_OBJECTS, split(trim(col(WITH_FROM)), "\\|"))
+        .withColumn(ANNOTATION_DATE, col(DATE))
+        .withColumn(PRIMARY_KNOWLEDGE_SOURCE, col(ASSIGNED_BY))
+    )
 
     return df
 
@@ -124,18 +125,17 @@ def load_annotation(spark, input_path):
 def normalize_dates(df):
     """Normalize annotation dates to yyyy-MM-dd format if 8-digit string."""
     df = df.withColumn(
-        ANNOTATION_DATE,
-        when(col(ANNOTATION_DATE).rlike("^[0-9]{8}$"),
-             to_date(col(ANNOTATION_DATE), "yyyyMMdd"))
+        ANNOTATION_DATE, when(col(ANNOTATION_DATE).rlike("^[0-9]{8}$"), to_date(col(ANNOTATION_DATE), "yyyyMMdd"))
     )
     return df
 
 
 def process_predicates(df):
     """Validate and clean predicate values (e.g., remove NOT| prefix)."""
-    df = df.withColumn(NEGATED, col(PREDICATE).startswith("NOT|")) \
-           .withColumn(PREDICATE, regexp_replace(col(PREDICATE), "^NOT\\|", ""))
-    
+    df = df.withColumn(NEGATED, col(PREDICATE).startswith("NOT|")).withColumn(
+        PREDICATE, regexp_replace(col(PREDICATE), "^NOT\\|", "")
+    )
+
     invalid = df.filter(~col(PREDICATE).isin(ALLOWED_PREDICATES))
     if invalid.count() > 0:
         invalid_values = [r[PREDICATE] for r in invalid.select(PREDICATE).distinct().collect()]
@@ -147,8 +147,8 @@ def add_metadata(df):
     """Add aggregator, protocol ID, and subject URI."""
     return (
         df.withColumn(AGGREGATOR, lit("UniProt"))
-          .withColumn(PROTOCOL_ID, lit(None).cast(StringType()))
-          .withColumn(SUBJECT, concat(col(DB).cast("string"), lit(":"), col(DB_OBJ_ID).cast("string")))
+        .withColumn(PROTOCOL_ID, lit(None).cast(StringType()))
+        .withColumn(SUBJECT, concat(col(DB).cast("string"), lit(":"), col(DB_OBJ_ID).cast("string")))
     )
 
 
@@ -166,35 +166,35 @@ def load_eco_mapping(spark, local_path="gaf-eco-mapping.txt"):
 def merge_evidence(df, eco):
     """Join annotation DataFrame with ECO evidence mapping."""
     df = (
-        df.withColumn(PUBLICATIONS, explode(col(PUBLICATIONS))) \
-          .filter(col(PUBLICATIONS).isNotNull() & (col(PUBLICATIONS) != "")) \
-          .withColumn(PUBLICATIONS, upper(trim(col(PUBLICATIONS))))
+        df.withColumn(PUBLICATIONS, explode(col(PUBLICATIONS)))
+        .filter(col(PUBLICATIONS).isNotNull() & (col(PUBLICATIONS) != ""))
+        .withColumn(PUBLICATIONS, upper(trim(col(PUBLICATIONS))))
     )
 
-    eco = (
-        eco.withColumn(DB_REF, upper(trim(col(DB_REF))))
-           .withColumn(EVIDENCE_CODE, upper(trim(col(EVIDENCE_CODE))))
-    )
+    eco = eco.withColumn(DB_REF, upper(trim(col(DB_REF)))).withColumn(EVIDENCE_CODE, upper(trim(col(EVIDENCE_CODE))))
 
-    merged = df.alias("df").join(
-        eco.alias("eco"),
-        on=(
-            col("df." + EVIDENCE_CODE) == col("eco." + EVIDENCE_CODE)) &
-           (col("df." + PUBLICATIONS) == col("eco." + DB_REF)),
-        how="left"
-    ).drop(col("eco." + DB_REF)).drop(col("eco." + EVIDENCE_CODE))
+    merged = (
+        df.alias("df")
+        .join(
+            eco.alias("eco"),
+            on=(col("df." + EVIDENCE_CODE) == col("eco." + EVIDENCE_CODE))
+            & (col("df." + PUBLICATIONS) == col("eco." + DB_REF)),
+            how="left",
+        )
+        .drop(col("eco." + DB_REF))
+        .drop(col("eco." + EVIDENCE_CODE))
+    )
 
     fallback = (
         eco.filter(col(DB_REF) == "DEFAULT")
-           .select(EVIDENCE_CODE, EVIDENCE_TYPE)
-           .withColumnRenamed(EVIDENCE_TYPE, "fallback")
+        .select(EVIDENCE_CODE, EVIDENCE_TYPE)
+        .withColumnRenamed(EVIDENCE_TYPE, "fallback")
     )
 
     merged = (
         merged.join(fallback, on=EVIDENCE_CODE, how="left")
-              .withColumn(EVIDENCE_TYPE,
-                          when(col(EVIDENCE_TYPE).isNull(), col("fallback")).otherwise(col(EVIDENCE_TYPE)))
-              .drop("fallback")
+        .withColumn(EVIDENCE_TYPE, when(col(EVIDENCE_TYPE).isNull(), col("fallback")).otherwise(col(EVIDENCE_TYPE)))
+        .drop("fallback")
     )
 
     return merged
@@ -204,16 +204,26 @@ def reorder_columns(df):
     """Ensure correct column order and clean up types."""
     df = (
         df.withColumn(PUBLICATIONS, concat_ws("|", col(PUBLICATIONS)))
-          .withColumn(SUPPORTING_OBJECTS, concat_ws("|", col(SUPPORTING_OBJECTS)))
-          .withColumn(SUPPORTING_OBJECTS, when(col(SUPPORTING_OBJECTS) == "", None).otherwise(col(SUPPORTING_OBJECTS)))
-          .withColumn(NEGATED, col(NEGATED).cast("boolean").cast("string"))
+        .withColumn(SUPPORTING_OBJECTS, concat_ws("|", col(SUPPORTING_OBJECTS)))
+        .withColumn(SUPPORTING_OBJECTS, when(col(SUPPORTING_OBJECTS) == "", None).otherwise(col(SUPPORTING_OBJECTS)))
+        .withColumn(NEGATED, col(NEGATED).cast("boolean").cast("string"))
     )
 
     final_cols = [
-        OBJECT, DB, ANNOTATION_DATE, PREDICATE, EVIDENCE_CODE,
-        PUBLICATIONS, DB_OBJ_ID, PRIMARY_KNOWLEDGE_SOURCE,
-        SUPPORTING_OBJECTS, AGGREGATOR, PROTOCOL_ID, NEGATED,
-        SUBJECT, EVIDENCE_TYPE
+        OBJECT,
+        DB,
+        ANNOTATION_DATE,
+        PREDICATE,
+        EVIDENCE_CODE,
+        PUBLICATIONS,
+        DB_OBJ_ID,
+        PRIMARY_KNOWLEDGE_SOURCE,
+        SUPPORTING_OBJECTS,
+        AGGREGATOR,
+        PROTOCOL_ID,
+        NEGATED,
+        SUBJECT,
+        EVIDENCE_TYPE,
     ]
     return df.select([col(c) for c in final_cols])
 
@@ -238,7 +248,15 @@ def register_table(spark, output_path, table_name="normalized_annotation", perma
         df.createOrReplaceTempView(table_name)
 
 
-def run(input_path, output_path, register=False, table_name="normalized_annotation", permanent=True, dry_run=False, mode="overwrite"):
+def run(
+    input_path,
+    output_path,
+    register=False,
+    table_name="normalized_annotation",
+    permanent=True,
+    dry_run=False,
+    mode="overwrite",
+):
     spark = None
     try:
         spark = get_spark()
@@ -275,10 +293,10 @@ def run(input_path, output_path, register=False, table_name="normalized_annotati
 @click.option("--register", is_flag=True, help="Register the output as Spark SQL table")
 @click.option("--table-name", default="normalized_annotation", help="SQL table name to register")
 @click.option("--temp", is_flag=True, help="Register as temporary view (default is permanent)")
-@click.option("--mode", default="overwrite", type=click.Choice(["overwrite", "append", "ignore"]), help="Delta write mode")
+@click.option(
+    "--mode", default="overwrite", type=click.Choice(["overwrite", "append", "ignore"]), help="Delta write mode"
+)
 @click.option("--dry-run", is_flag=True, help="Dry run without writing output")
-
-
 def main(input, output, register, table_name, temp, mode, dry_run):
     if not os.path.isfile(input):
         logger.error(f"Input file does not exist: {input}")
@@ -288,5 +306,3 @@ def main(input, output, register, table_name, temp, mode, dry_run):
 
 if __name__ == "__main__":
     main()
-
-
