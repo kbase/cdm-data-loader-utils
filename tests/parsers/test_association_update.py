@@ -13,11 +13,9 @@ from pyspark.sql.functions import col
 from pyspark.sql import functions as F
 from delta import configure_spark_with_delta_pip
 
-from association_update import (
+from cdm_data_loader_utils.parsers.association_update import (
     load_annotation, normalize_dates, process_predicates, add_metadata,
-    load_eco_mapping, merge_evidence, write_output)
-
-from association_update import (
+    load_eco_mapping, merge_evidence, write_output,
     ANNOTATION_DATE, PREDICATE, NEGATED,
     AGGREGATOR, PROTOCOL_ID, SUBJECT, DB, DB_OBJ_ID,
     EVIDENCE_CODE, DB_REF, PUBLICATIONS, EVIDENCE_TYPE
@@ -56,9 +54,9 @@ UniProtKB,P12345,enables,GO:0008150,PMID:123456,ECO:0000313,GO_REF:0000033,20240
 
     assert row["predicate"] == "enables"
     assert row["object"] == "GO:0008150"
-    assert row["publications"] == ["PMID:123456"]              
-    assert row["supporting_objects"] == ["GO_REF:0000033"]     
-    assert str(row["annotation_date"]) == "20240101"               
+    assert row["publications"] == ["PMID:123456"]
+    assert row["supporting_objects"] == ["GO_REF:0000033"]
+    assert str(row["annotation_date"]) == "20240101"
     assert row["primary_knowledge_source"] == "GO_Curator"
 
 
@@ -190,4 +188,3 @@ def test_write_output_and_read_back(spark, tmp_path):
     assert result[0]["object"] == "GO:0008150"
     assert result[0]["db"] == "UniProtKB"
     assert str(result[0]["annotation_date"]) == "2024-01-01"
-
