@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from src.parsers.gene_association_file import (
+from cdm_data_loader_utils.parsers.gene_association_file import (
     process_go_annotations,
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,
@@ -77,7 +77,6 @@ def annotation_df():
 
 
 # --- Tests ---
-@pytest.mark.unit
 def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -89,7 +88,6 @@ def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
     )
 
 
-@pytest.mark.integration
 def test_io_behavior(temp_csv_files, evidence_mapping_df):
     """Integration test for I/O behavior of process_go_annotations."""
     input_path, output_path = temp_csv_files
@@ -102,7 +100,6 @@ def test_io_behavior(temp_csv_files, evidence_mapping_df):
         assert col in df_out.columns, f"Column {col} missing in output."
 
 
-@pytest.mark.unit
 def test_column_types(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -114,7 +111,6 @@ def test_column_types(temp_csv_files, evidence_mapping_df):
             assert not mismatches.any(), f"Column {column} has incorrect types."
 
 
-@pytest.mark.unit
 def test_negated_logic(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -124,7 +120,8 @@ def test_negated_logic(temp_csv_files, evidence_mapping_df):
 
 
 # --- Helper function for evidence mapping test ---
-@pytest.mark.unit
+
+
 def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     """Test the evidence mapping merge and fallback logic."""
     merged = merge_evidence_mapping(annotation_df, evidence_mapping_df)
@@ -133,7 +130,6 @@ def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     assert "DB_Reference" not in merged.columns, "'DB_Reference' should have been dropped after merge."
 
 
-@pytest.mark.unit
 def test_no_fallback():
     annotation_df = pd.DataFrame([{"Evidence_Code": "IEA", "publications": "PMID:999999"}])
     evidence_df = pd.DataFrame(
@@ -145,7 +141,6 @@ def test_no_fallback():
     )
 
 
-@pytest.mark.unit
 def test_fallback_after_explode():
     annotation_df = pd.DataFrame([{"Evidence_Code": "ND", "publications": ["PMID:111111", "PMID:222222"]}])
     evidence_df = pd.DataFrame([{"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"}])
@@ -154,7 +149,6 @@ def test_fallback_after_explode():
     assert all(merged["evidence_type"] == "ECO:0000307"), "Fallback evidence_type not correctly applied after explode"
 
 
-@pytest.mark.unit
 def test_normalize_dates():
     df = pd.DataFrame({"annotation_date": ["20200101", "20221301", "abcd1234", "20181231", None]})
     result = normalize_dates(df.copy())
@@ -167,7 +161,6 @@ def test_normalize_dates():
             assert a == e
 
 
-@pytest.mark.unit
 def test_process_predicates():
     df = pd.DataFrame({"predicate": ["NOT|enables", "involved_in", "NOT|located_in", "part_of"]})
     result = process_predicates(df.copy())
@@ -175,6 +168,3 @@ def test_process_predicates():
     assert result["predicate"].tolist() == ["enables", "involved_in", "located_in", "part_of"], (
         "Predicate cleaning incorrect."
     )
-
-
-# ### PYTHONPATH=. pytest tests/test_gene_association_file.py ###

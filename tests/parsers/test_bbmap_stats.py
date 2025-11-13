@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from src.parsers.bbmap_stats import get_bbmap_stats
+from cdm_data_loader_utils.parsers.bbmap_stats import get_bbmap_stats
 from tests.conftest import RESULTS
 
 
