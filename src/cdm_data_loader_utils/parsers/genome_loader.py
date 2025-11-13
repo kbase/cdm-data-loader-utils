@@ -10,10 +10,10 @@ from typing import Any
 
 from Bio import SeqIO
 
-from src.parsers.bbmap_stats import get_bbmap_stats
-from src.parsers.checkm2 import get_checkm2_data
-from src.parsers.genome_paths import get_genome_paths
-from src.utils import calculate_hash as ch
+from cdm_data_loader_utils.parsers.bbmap_stats import get_bbmap_stats
+from cdm_data_loader_utils.parsers.checkm2 import get_checkm2_data
+from cdm_data_loader_utils.parsers.genome_paths import get_genome_paths
+from cdm_data_loader_utils.utils import calculate_hash as ch
 
 # Define SO terms mapping
 so_terms = {

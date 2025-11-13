@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.parsers.checkm2 import get_checkm2_data
+from cdm_data_loader_utils.parsers.checkm2 import get_checkm2_data
 from tests.conftest import RESULTS
 
 

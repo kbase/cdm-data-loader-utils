@@ -2,7 +2,7 @@
 
 import gzip
 
-from src.model.feature import Feature
+from cdm_data_loader_utils.model.feature import Feature
 
 DEFAULT_SPLIT = " "
 

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from src.parsers.genome_paths import get_genome_paths
+from cdm_data_loader_utils.parsers.genome_paths import get_genome_paths
 
 GPF_DIR = "genome_paths_file"
 
