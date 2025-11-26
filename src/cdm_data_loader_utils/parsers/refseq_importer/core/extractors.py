@@ -137,23 +137,35 @@ def extract_created_date(rep: Dict[str, Any],
 def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
     """
     Extract the assembly name from a genome report record.
-    This function normalizes extraction because the assembly name may appear in different parts of the JSON depending on API.
+    Supports:
+      - assemblyInfo.assemblyName
+      - assembly.assemblyName
+      - assembly.display_name / displayName  
+      - rep.assemblyName
+      - deep search fallback
     """
 
     assembly_info = rep.get("assemblyInfo") or {}
     a = rep.get("assembly") or {}
 
-    # Try to extract directly from the most common locations
+    # Try direct fields including display_name
     v = _coalesce(
         assembly_info.get("assemblyName"),
         a.get("assemblyName"),
-        rep.get("assemblyName"),
+        a.get("display_name"),   
+        a.get("displayName"),    
+        rep.get("assemblyName")
     )
     if v:
-        return v
+        return v.strip()
 
-    # Fallback: recursively search the nested structure
-    return _deep_find_str(rep, {"assemblyName", "assembly_name"})
+    # Fallback deep search for assemblyName or display_name
+    return _deep_find_str(rep, {
+        "assemblyName",
+        "assembly_name",
+        "display_name",    
+        "displayName"      
+    })
 
 
 def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
@@ -161,24 +173,24 @@ def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
     a = rep.get("assembly") or {}
     org_top = rep.get("organism") or {}
 
-    # Candidate locations where the organism name might appear
     candidates = [
         org_top.get("organismName"),
         org_top.get("scientificName"),
         org_top.get("taxName"),
-        (assembly_info.get("organism") or {}).get("organismName") if isinstance(assembly_info.get("organism"), dict) else None,
-        (a.get("organism") or {}).get("organismName") if isinstance(a.get("organism"), dict) else None
+        org_top.get("name"),   
+        (assembly_info.get("organism") or {}).get("organismName")
+            if isinstance(assembly_info.get("organism"), dict) else None,
+        (a.get("organism") or {}).get("organismName")
+            if isinstance(a.get("organism"), dict) else None
     ]
 
-    # Return the first non-empty candidate string
     for v in candidates:
         if isinstance(v, str) and v.strip():
             return v.strip()
 
-    # Fallback deep search across nested structure
     return _deep_find_str(rep,
-                          {"organismName", "scientificName", "sciName", "taxName",
-                           "displayName", "organism_name"})
+                          {"organismName", "scientificName", "sciName",
+                           "taxName", "displayName", "organism_name", "name"})
 
 
 def extract_taxid(rep: Dict[str, Any]) -> Optional[str]:
@@ -218,12 +230,13 @@ def extract_taxid(rep: Dict[str, Any]) -> Optional[str]:
 
 
 def extract_biosample_ids(rep: Dict[str, Any]) -> list[str]:
-    """
-    Extract BioSample IDs from a genome assembly report.
-    """
     accs = set()
 
-    # --- Check standard paths ---
+    direct_bs = rep.get("biosample")
+    if isinstance(direct_bs, list) and all(isinstance(x, str) for x in direct_bs):
+        accs.update([x.strip() for x in direct_bs if x.strip()])
+        return sorted(accs)
+
     for path in [
         rep.get("assemblyInfo", {}).get("biosample"),
         rep.get("assembly", {}).get("biosample"),
@@ -240,16 +253,20 @@ def extract_biosample_ids(rep: Dict[str, Any]) -> list[str]:
                     if isinstance(v, str) and v.strip():
                         accs.add(v.strip())
 
-    # --- Regex fallback if no BioSamples found ---
     if not accs:
         accs.update(_deep_collect_regex(rep, PAT_BIOSAMPLE))
 
-    # --- Return unique + sorted IDs ---
     return sorted(accs)
 
 
 def extract_bioproject_ids(rep: Dict[str, Any]) -> list[str]:
     accs = set()
+
+    direct_bp = rep.get("bioproject")
+    if isinstance(direct_bp, list) and all(isinstance(x, str) for x in direct_bp):
+        accs.update([x.strip() for x in direct_bp if x.strip()])
+        return sorted(accs)
+
     for path in [
         rep.get("assemblyInfo", {}).get("bioproject"),
         rep.get("assembly", {}).get("bioproject"),
@@ -265,29 +282,18 @@ def extract_bioproject_ids(rep: Dict[str, Any]) -> list[str]:
                     v = it.get("accession") or it.get("bioprojectAccession")
                     if isinstance(v, str) and v.strip():
                         accs.add(v.strip())
+
     if not accs:
         accs.update(_deep_collect_regex(rep, PAT_BIOPROJECT))
+
     return sorted(accs)
 
 
 def extract_assembly_accessions(rep: Dict[str, Any]) -> tuple[list[str], list[str]]:
-    """
-    Extract RefSeq (GCF_) and GenBank (GCA_) accession IDs from an assembly report.
-    - Consider only the top-level accession and assembly_info.paired_assembly.
-    - Classify accessions into GCF (RefSeq) and GCA (GenBank).
-    - Return sorted unique lists for both GCF and GCA.
-
-    Returns:
-        A tuple of two lists:
-            - List of GCF accessions (RefSeq)
-            - List of GCA accessions (GenBank)
-    """
-
     gcf, gca = set(), set()
 
-    def _add_if_valid(acc: str):
-        """classify accession into GCF or GCA bucket."""
-        if not isinstance(acc, str) or not acc.strip():
+    def _add(acc):
+        if not isinstance(acc, str): 
             return
         acc = acc.strip()
         if acc.startswith("GCF_"):
@@ -295,14 +301,18 @@ def extract_assembly_accessions(rep: Dict[str, Any]) -> tuple[list[str], list[st
         elif acc.startswith("GCA_"):
             gca.add(acc)
 
-    # --- Top-level accession ---
-    _add_if_valid(rep.get("accession"))
+    asm = rep.get("assembly", {})
+    if isinstance(asm, dict):
+        for k in ["assembly_accession", "insdc_assembly_accession"]:
+            val = asm.get(k)
+            if isinstance(val, list):
+                for x in val:
+                    _add(x)
 
-    # --- Paired assembly accession (from assembly_info) ---
+    _add(rep.get("accession"))
     ai = rep.get("assembly_info") or rep.get("assemblyInfo") or {}
     paired = ai.get("paired_assembly", {})
     if isinstance(paired, dict):
-        _add_if_valid(paired.get("accession"))
+        _add(paired.get("accession"))
 
     return sorted(gcf), sorted(gca)
-
