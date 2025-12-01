@@ -19,6 +19,7 @@ dependencies = [
 dev = [
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
+    "pytest-env>=1.2.0",
 ]
 
 [tool.ruff]
@@ -155,6 +156,24 @@ build-backend = "uv_build"
 
 [tool.pytest]
 pythonpath = ["src"]
+log_cli = true
+log_cli_level = "DEBUG"
+
+# environment settings for running tests
+[tool.pytest_env]
+USER = "fake_user"
+KBASE_AUTH_TOKEN = "test-token-123"
+CDM_TASK_SERVICE_URL = "http://localhost:8080"
+MINIO_ENDPOINT_URL = "http://localhost:9000"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+MINIO_SECURE_FLAG = "false"
+BERDL_POD_IP = "192.168.1.100"
+SPARK_MASTER_URL = "spark://localhost:7077"
+BERDL_HIVE_METASTORE_URI = "thrift://localhost:9083"
+SPARK_CLUSTER_MANAGER_API_URL = "http://localhost:8000"
+GOVERNANCE_API_URL = "http://localhost:8000"
+DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
 
 [tool.uv.sources]
 berdl-notebook-utils = { git = "https://github.com/BERDataLakehouse/spark_notebook", subdirectory = "notebook_utils" }
