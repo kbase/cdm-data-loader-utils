@@ -52,11 +52,29 @@ Pull the docker image:
 > docker pull ghcr.io/berdatalakehouse/spark_notebook:main
 ```
 
-Mount the current directory and run the tests:
+Mount the current directory at `/tmp/cdm` and run the tests:
 
 ```sh
 > docker run --rm -e NB_USER=runner -v .:/tmp/cdm ghcr.io/berdatalakehouse/spark_notebook:main /bin/bash /tmp/cdm/scripts/run_tests.sh
 ```
+
+Run the container interactively as the user `runner`; current directory is mounted at `/tmp/cdm`:
+
+```sh
+> docker run --rm -e NB_USER=runner -it -v .:/tmp/cdm ghcr.io/berdatalakehouse/spark_notebook:main
+```
+
+This will launch a bash shell; the contents of the `cdm-data-loader-utils` directory are mounted at `/tmp/cdm`.
+
+
+Run the container and sleep:
+
+```sh
+> docker run --rm -e NB_USER=runner -it -v .:/tmp/cdm ghcr.io/berdatalakehouse/spark_notebook:main sleep 100000000
+```
+
+The `sleep` command will run the container for long enough that you can then connect to it via Docker Desktop or the [VSCode Containers extension](https://code.visualstudio.com/docs/containers/overview).
+
 
 See the [BERDataLakehouse/spark_notebook](https://github.com/BERDataLakehouse/spark_notebook) repo for more information on the container and for a full docker-compose set up to mimic the BER Data Lakehouse container infrastructure.
 
