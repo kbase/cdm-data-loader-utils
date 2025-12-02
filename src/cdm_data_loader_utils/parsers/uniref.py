@@ -1,14 +1,3 @@
-import os
-import gzip
-import uuid
-import click
-import xml.etree.ElementTree as ET
-from urllib.request import urlretrieve,URLError
-from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
-from datetime import datetime
-
 """
 UniRef XML Cluster ETL Pipeline
 
@@ -39,6 +28,19 @@ python src/parsers/uniref.py \
 - --batch-size:    Number of UniRef entries to process.
 
 """
+
+import os
+import gzip
+import uuid
+import click
+import xml.etree.ElementTree as ET
+from urllib.request import urlretrieve,URLError
+from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql import SparkSession
+from delta import configure_spark_with_delta_pip
+from datetime import datetime
+
+
 
 # Generate a unique CDM entity_id based on accession
 def cdm_entity_id(accession):
@@ -131,7 +133,7 @@ def add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns):
 
     for dbref, is_representative in dbrefs:
         acc, is_seed = get_accession_and_seed(dbref, ns)
-        if acc:  
+        if acc:
             member_entity_id = cdm_entity_id(acc)
             cluster_member_data.append((
                 cluster_id,
@@ -166,7 +168,7 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         existing_created (dict): Mapping from UniRef cluster ID to 'created' timestamp for idempotent imports.
 
     Returns:
-        dict: Dictionary with lists for each CDM table 
+        dict: Dictionary with lists for each CDM table
     """
 
     ns = {"ns": "http://uniprot.org/uniref"}  # Namespace for XML parsing
@@ -183,14 +185,14 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         context = ET.iterparse(f, events=("end",))
         for _, elem in context:
             if elem.tag.endswith("entry"):
-                # Cluster basic info 
+                # Cluster basic info
                 cluster_id, name = extract_cluster(elem, ns)
 
-                # Get UniRef cluster id and timestamps 
+                # Get UniRef cluster id and timestamps
                 uniref_id = elem.attrib.get("id")
                 updated_time, created_time = get_timestamps(uniref_id, existing_created)
 
-                # Populate Cluster and Entity table data 
+                # Populate Cluster and Entity table data
                 cluster_data.append((
                     cluster_id,           # cluster_id
                     name,                 # cluster name
@@ -215,10 +217,10 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
                 for mem in elem.findall("ns:member/ns:dbReference", ns):
                     extract_cross_refs(mem, cross_reference_data, ns)
 
-                # ClusterMember table (representative + members) 
+                # ClusterMember table (representative + members)
                 add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns)
 
-                # Batch size limit 
+                # Batch size limit
                 entry_count += 1
                 if entry_count >= batch_size:
                     break
@@ -233,7 +235,7 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
         "cluster_member_data": cluster_member_data,
         "cross_reference_data": cross_reference_data
     }
-           
+
 
 ##### -------------- Save dalta table and print the preview --------------- #####
 
@@ -324,8 +326,6 @@ def build_spark_session():
 @click.option("--ftp-url", required=True, help="FTP URL to UniRef100 XML file")
 @click.option("--output-dir", required=True, help="Output directory for Delta table")
 @click.option("--batch-size", default=1000, help="Number of UniRef entries to parse (limit)")
-
-
 def main(ftp_url, output_dir, batch_size):
     # Set local path for downloaded gzipped XML file
     local_gz = os.path.join("/tmp", os.path.basename(ftp_url))
@@ -336,11 +336,11 @@ def main(ftp_url, output_dir, batch_size):
     except URLError as e:
         print(f"Error! Cannot download file: {e.reason}")
         return
-    
+
     # Start Spark session with Delta Lake support
     spark = build_spark_session()
 
-    # Load existing entity creation timestamps 
+    # Load existing entity creation timestamps
     entity_table_path = os.path.join(output_dir, "Entity")
     existing_created = load_existing_created(spark, entity_table_path)
 
@@ -355,4 +355,3 @@ def main(ftp_url, output_dir, batch_size):
 
 if __name__ == "__main__":
     main()
-

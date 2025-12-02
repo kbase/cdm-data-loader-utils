@@ -88,7 +88,6 @@ def generate_hash_id(*args):
 
 def calculate_sha256_checksums(gff_file: str) -> str | None:
     """Calculate checksums for the contigset and its contigs."""
-
     print(f"Calculating sha256 for GFF: {gff_file}")
     gff_hash = generate_file_sha256(gff_file)
     if not gff_hash:

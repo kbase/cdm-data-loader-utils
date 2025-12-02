@@ -1,10 +1,10 @@
 import pandas as pd
 import pytest
 from cdm_data_loader_utils.parsers.gene_association_file import (
-    process_go_annotations,
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,
     normalize_dates,
+    process_go_annotations,
     process_predicates,
 )
 
@@ -13,7 +13,6 @@ from cdm_data_loader_utils.parsers.gene_association_file import (
 @pytest.fixture
 def temp_csv_files(tmp_path):
     """Create temporary CSV files for input and output testing."""
-
     input_path = tmp_path / "annotations_data100.csv"
     output_path = tmp_path / "normalized_annotation.csv"
 
@@ -96,7 +95,7 @@ def test_io_behavior(temp_csv_files, evidence_mapping_df):
     assert output_path.exists(), "Output file not created."
     df_out = pd.read_csv(output_path)
     assert not df_out.empty, "Output DataFrame is empty."
-    for col in ASSOCIATION_COL_TYPES.keys():
+    for col in ASSOCIATION_COL_TYPES:
         assert col in df_out.columns, f"Column {col} missing in output."
 
 
@@ -120,8 +119,6 @@ def test_negated_logic(temp_csv_files, evidence_mapping_df):
 
 
 # --- Helper function for evidence mapping test ---
-
-
 def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     """Test the evidence mapping merge and fallback logic."""
     merged = merge_evidence_mapping(annotation_df, evidence_mapping_df)
@@ -154,7 +151,7 @@ def test_normalize_dates():
     result = normalize_dates(df.copy())
     expected = ["2020-01-01", None, None, "2018-12-31", None]
     actual = result["annotation_date"].tolist()
-    for a, e in zip(actual, expected):
+    for a, e in zip(actual, expected, strict=True):
         if e is None:
             assert pd.isna(a)
         else:

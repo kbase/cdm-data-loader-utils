@@ -14,15 +14,15 @@ python3 src/parsers/uniprot.py \
 
 Arguments:
 ----------
---xml-url:      URL to the UniProt XML .gz file 
+--xml-url:      URL to the UniProt XML .gz file
 --output-dir:   Output directory for Delta tables and logs (default: './output')
 --namespace:    Delta Lake database name (default: 'uniprot_db')
---target-date:  Process entries modified/updated since specific date 
+--target-date:  Process entries modified/updated since specific date
 --batch-size:   Number of UniProt entries to process per write batch (default: 5000)
 
 Functionality:
 --------------
-- Downloads the XML file if not present locally 
+- Downloads the XML file if not present locally
 - Parses UniProt entries in a memory-efficient streaming fashion
 - Maps parsed data into standardized CDM tables
 - Writes all tables as Delta Lake tables, supporting incremental import
@@ -41,7 +41,7 @@ import datetime
 import json
 import requests
 import gzip
-import uuid 
+import uuid
 import xml.etree.ElementTree as ET
 from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
@@ -55,7 +55,7 @@ NS = {"u": "https://uniprot.org/uniprot"}
 def load_existing_identifiers(spark, output_dir, namespace):
     """
     Load the existing 'identifiers' Delta table and build a mapping from UniProt accession to CDM entity ID.
-    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows 
+    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows
 
     Returns:
         dict: {accession: entity_id}
@@ -332,17 +332,17 @@ def parse_associations(entry, cdm_id, evidence_map):
     for comment in entry.findall("u:comment", NS):
         comment_type = comment.get("type")
         if comment_type == "catalytic activity":
-            # extract catalytic associations 
+            # extract catalytic associations
             for reaction in comment.findall("u:reaction", NS):
                 for assoc in parse_reaction_association(reaction, cdm_id, evidence_map):
                     associations.append(clean(assoc))
         elif comment_type == "cofactor":
-            # extract cofactor associations 
+            # extract cofactor associations
             for cofactor in comment.findall("u:cofactor", NS):
                 for assoc in parse_cofactor_association(cofactor, cdm_id):
                     associations.append(clean(assoc))
     return associations
-    
+
 
 def parse_publications(entry):
     """
@@ -369,7 +369,7 @@ def parse_publications(entry):
 
 
 def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None):
-    
+
     if prev_created:
         entity_created = prev_created
         entity_updated = current_timestamp
@@ -663,7 +663,7 @@ def parse_entries(
                 except Exception:
                     skipped += 1
                     continue
-            
+
             # Extract main accession (skip entry if not present)
             main_accession_elem = entry_elem.find("u:accession", NS)
             if main_accession_elem is None or main_accession_elem.text is None:
@@ -699,8 +699,8 @@ def parse_entries(
             print(f"Error parsing entry: {e}")
             skipped += 1
             continue
-        
-    # write remaining records 
+
+    # write remaining records
     save_batches_to_delta(spark, tables, output_dir, namespace)
     return entry_count, skipped
 
@@ -745,7 +745,7 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
         spark,
         tables,
         output_dir,
-        namespace, 
+        namespace,
         current_timestamp
     )
     print(
@@ -753,8 +753,8 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     )
     spark.sql(f"SHOW TABLES IN {namespace}").show()
     spark.sql(f"SELECT COUNT(*) FROM {namespace}.entities").show()
-    
-    # make sql test in entity table 
+
+    # make sql test in entity table
     spark.sql(f"SELECT * FROM {namespace}.entities LIMIT 10").show(truncate=False)
 
     spark.stop()
@@ -789,4 +789,3 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
 
 if __name__ == "__main__":
     main()
-    
