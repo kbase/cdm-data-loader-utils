@@ -57,8 +57,37 @@ jobs:
       - name: Run code linting checks
         run: uv run ruff check --output-format=github .
 
+  spark_tests:
+    name: Run container tests
+    needs: code_format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Run spark tests
+        shell: bash -l {0}
+        continue-on-error: false
+        run: |
+          docker pull ghcr.io/berdatalakehouse/spark_notebook:main
+          echo "Running tests inside container..."
+          # slightly nasty hack
+          chmod 777 .
+          docker run --rm -e NB_USER=runner -v .:/tmp/cdm ghcr.io/berdatalakehouse/spark_notebook:main /bin/bash /tmp/cdm/scripts/run_tests.sh
+
+      - name: Send to Codecov
+        id: send_to_codecov
+        uses: codecov/codecov-action@v5.5.1
+        with:
+          files: coverage.xml
+          # fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   tests:
-    name: Run tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Run local tests (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: code_format
     strategy:
@@ -84,15 +113,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
 
-      - name: Run tests
+      - name: Run local tests
         shell: bash -l {0}
         continue-on-error: false
-        run: uv run pytest --cov=src --cov-report=xml tests/
-
-      - name: Send to Codecov
-        id: send_to_codecov
-        uses: codecov/codecov-action@v5.5.1
-        with:
-          files: coverage.xml
-          # fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+        run: uv run pytest -m "not requires_spark"

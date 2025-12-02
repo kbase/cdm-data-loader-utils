@@ -158,6 +158,8 @@ build-backend = "uv_build"
 pythonpath = ["src"]
 log_cli = true
 log_cli_level = "DEBUG"
+addopts = ["-v"]
+markers = ["requires_spark: must be run in an environment where spark is available"]
 
 # environment settings for running tests
 [tool.pytest_env]
@@ -176,4 +178,4 @@ GOVERNANCE_API_URL = "http://localhost:8000"
 DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
 
 [tool.uv.sources]
-berdl-notebook-utils = { git = "https://github.com/BERDataLakehouse/spark_notebook", subdirectory = "notebook_utils" }
+berdl-notebook-utils = { git = "https://github.com/BERDataLakehouse/spark_notebook.git", subdirectory = "notebook_utils" }
