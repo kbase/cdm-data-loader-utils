@@ -12,6 +12,20 @@ python3 src/parsers/uniprot.py \
     --namespace "uniprot_db" \
     --batch-size 5000
 
+Use it in the local computer as:
+python3 uniprot.py \
+  --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
+  --output-dir "./output_archaea" \
+  --namespace "uniprot_archaea_db" \
+  --batch-size 5000
+
+Use it in the local computer as:
+python3 uniprot.py \
+  --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
+  --output-dir "./output_archaea" \
+  --namespace "uniprot_archaea_db" \
+  --batch-size 5000
+
 Arguments:
 ----------
 --xml-url:      URL to the UniProt XML .gz file
@@ -45,11 +59,15 @@ import xml.etree.ElementTree as ET
 import click
 import requests
 from delta import configure_spark_with_delta_pip
-from pyspark.sql import SparkSession
-from pyspark.sql.types import ArrayType, StringType, StructField, StructType
+from pyspark.sql.types import ArrayType, StringType, StructType, StructField
+from shared_identifiers import parse_identifiers_generic
+from typing import Optional
+
+from xml_utils import get_attr, get_text, find_all_text, clean_dict, parse_db_references
+
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
-NS = {"u": "https://uniprot.org/uniprot"}
+NS = {"ns": "https://uniprot.org/uniprot"}
 
 
 def load_existing_identifiers(spark, output_dir, namespace):
@@ -77,12 +95,12 @@ def load_existing_identifiers(spark, output_dir, namespace):
     return access_to_cdm_id
 
 
-def generate_cdm_id() -> str:
+def generate_cdm_id(prefix="cdm_prot_"):
     """
-    Generate a CDM entity_id directly from UniProt accession, using 'CDM:' prefix
-    Ensures that each accession is mapped to stable and unique CDM entity ID, making it easy to join across different tables by accession.
+    Generate a CDM internal ID with a configurable prefix.
+    Example: cdm_prot_<uuid>
     """
-    return f"CDM:{uuid.uuid4()}"
+    return f"{prefix}{uuid.uuid4()}"
 
 
 def build_datasource_record(xml_url):
@@ -99,155 +117,193 @@ def build_datasource_record(xml_url):
 
 
 def parse_identifiers(entry, cdm_id):
+    out = parse_identifiers_generic(entry=entry, xpath="ns:accession", prefix="UniProt", ns=NS)
+    for row in out:
+        row["entity_id"] = cdm_id
+    return out
+
+
+def _make_name_record(cdm_id: str, name_text: str, description: str) -> dict:
     """
-    Extract all accession numbers in the UniProt entry and format them into a CDM identifier structure.
+    Small helper to create a standardized name record.
     """
-    return [
-        {
-            "entity_id": cdm_id,
-            "identifier": f"UniProt:{acc.text}",
-            "source": "UniProt",
-            "description": "UniProt accession",
-        }
-        for acc in entry.findall("u:accession", NS)
-    ]
+    return {
+        "entity_id": cdm_id,
+        "name": name_text,
+        "description": description,
+        "source": "UniProt",
+    }
 
 
 def parse_names(entry, cdm_id):
     """
     Extract all protein names from a UniProt <entry> element, including
     - Top-level <name> elements (generic names)
-    - <recommendedName> and <alternativeName> blocks within <protein> (full and short names).
+    - <recommendedName> and <alternativeName> blocks within <protein> (full and short names)
+
+    Returns:
+        List[Dict[str, str]] with keys:
+          - entity_id
+          - name
+          - description
+          - source
     """
+
     names = []
 
-    # Extract all top-level <name> tags
-    for name_element in entry.findall("u:name", NS):
-        if name_element.text:
-            names.append(
-                {
-                    "entity_id": cdm_id,
-                    "name": name_element.text,
-                    "description": "UniProt protein name",
-                    "source": "UniProt",
-                }
+    # Use `find_all_text` to automatically perform strip and deduplication
+    top_level_names = find_all_text(entry, "ns:name", NS)
+    for txt in top_level_names:
+        names.append(
+            _make_name_record(
+                cdm_id=cdm_id,
+                name_text=txt,
+                description="UniProt protein name",
             )
+        )
 
-    # Extract recommended and alternative names from <protein> block
-    protein = entry.find("u:protein", NS)
+    # Recommended/alternative names in <protein> block
+    protein = entry.find("ns:protein", NS)
     if protein is not None:
-        for name_type in ["recommended", "alternative"]:
-            # Directly use findall for simplicity (recommendedName returns single-element list)
-            name_blocks = protein.findall(f"u:{name_type}Name", NS)
-            for name in name_blocks:
-                for name_length in ["full", "short"]:
-                    name_string = name.find(f"u:{name_length}Name", NS)
-                    if name_string is None or not name_string.text:
-                        continue
+        # (tag_name, logical_type)
+        name_blocks_spec = [
+            ("recommendedName", "recommended"),
+            ("alternativeName", "alternative"),
+        ]
 
+        # (xml tag, label used in description)
+        length_spec = [
+            ("fullName", "full"),
+            ("shortName", "short"),
+        ]
+
+        for tag_name, logical_type in name_blocks_spec:
+            for name_block in protein.findall(f"ns:{tag_name}", NS):
+                for xml_tag, length_label in length_spec:
+                    elem = name_block.find(f"ns:{xml_tag}", NS)
+                    text = get_text(elem)
+                    if not text:
+                        continue
+                    desc = f"UniProt {logical_type} {length_label} name"
                     names.append(
-                        {
-                            "entity_id": cdm_id,
-                            "name": name_string.text,
-                            "description": f"UniProt {name_type} {name_length} name",
-                            "source": "UniProt",
-                        }
+                        _make_name_record(
+                            cdm_id=cdm_id,
+                            name_text=text,
+                            description=desc,
+                        )
                     )
+
     return names
 
 
 def parse_protein_info(entry, cdm_id):
     """
-    Extract protein-level metadata from a UniProt XML <entry> element.
+    Extract protein-level metadata from a UniProt XML <entry> element
+    using shared XML utilities.
     """
+
     protein_info = {}
-    ec_numbers = []
 
-    # Extract EC numbers from <recommendedName> and <alternativeName> in <protein>
-    protein = entry.find("u:protein", NS)
+    # Extract EC numbers (recommended + alternative names)
+    protein = entry.find("ns:protein", NS)
     if protein is not None:
-        # Find EC numbers in recommendedName
-        rec = protein.find("u:recommendedName", NS)
-        if rec is not None:
-            for ec in rec.findall("u:ecNumber", NS):
-                if ec.text:
-                    ec_numbers.append(ec.text)
+        # full list of EC number search paths
+        ec_paths = [
+            "ns:recommendedName/ns:ecNumber",
+            "ns:alternativeName/ns:ecNumber",
+        ]
 
-        # Find EC numbers in all alternativeNames
-        for alt in protein.findall("u:alternativeName", NS):
-            for ec in alt.findall("u:ecNumber", NS):
-                if ec.text:
-                    ec_numbers.append(ec.text)
+        ec_numbers = []
+        for path in ec_paths:
+            ec_numbers.extend(find_all_text(protein, path, NS))
+
         if ec_numbers:
             protein_info["ec_numbers"] = ec_numbers
 
-    # Extract protein existence evidence type
-    protein_existence = entry.find("u:proteinExistence", NS)
+    # Protein existence evidence
+    protein_existence = entry.find("ns:proteinExistence", NS)
     if protein_existence is not None:
         protein_info["protein_id"] = cdm_id
-        protein_info["evidence_for_existence"] = protein_existence.get("type")
+        protein_info["evidence_for_existence"] = get_attr(protein_existence, "type")
 
-    # Extract sequence and sequence-related attributes
-    seq_elem = entry.find("u:sequence", NS)
-    if seq_elem is not None and seq_elem.text:
-        protein_info["length"] = seq_elem.get("length")
-        protein_info["mass"] = seq_elem.get("mass")
-        protein_info["checksum"] = seq_elem.get("checksum")
-        protein_info["modified"] = seq_elem.get("modified")
-        protein_info["sequence_version"] = seq_elem.get("version")
-        protein_info["sequence"] = seq_elem.text.strip()
+    # Sequence block
+    seq_elem = entry.find("ns:sequence", NS)
+    if seq_elem is not None:
+        protein_info.update(
+            clean_dict(
+                {
+                    "length": get_attr(seq_elem, "length"),
+                    "mass": get_attr(seq_elem, "mass"),
+                    "checksum": get_attr(seq_elem, "checksum"),
+                    "modified": get_attr(seq_elem, "modified"),
+                    "sequence_version": get_attr(seq_elem, "version"),
+                    "sequence": get_text(seq_elem),
+                }
+            )
+        )
 
-    # Capture the entry's modified/updated date for tracking
-    entry_modified = entry.attrib.get("modified") or entry.attrib.get("updated")
+    # XML entry metadata (modified timestamp)
+    entry_modified = get_attr(entry, "modified") or get_attr(entry, "updated")
     if entry_modified:
         protein_info["entry_modified"] = entry_modified
 
-    # Return the dictionary if any protein info was extracted
+    # Return clean dict
     return protein_info if protein_info else None
 
 
 def parse_evidence_map(entry):
     """
-    Parse all <evidence> elements from a UniProt XML entry and build a mapping
-    from evidence key to metadata (type, supporting objects, publications).
+    Parse all <evidence> elements and return:
+        { evidence_key : { evidence_type, supporting_objects, publications } }
+    Using shared XML helpers for dbReference parsing and dict cleaning.
     """
+
     evidence_map = {}
 
-    # Loop through every <evidence> element in the entry
-    for evidence in entry.findall("u:evidence", NS):
-        key = evidence.get("key")  # Unique evidence key (string)
-        evidence_type = evidence.get("type")  # Evidence code/type (e.g., ECO:0000255)
+    # Iterate over <evidence> elements
+    for ev in entry.findall("ns:evidence", NS):
+        key = get_attr(ev, "key")
+        if not key:
+            continue
 
-        supporting_objects = []
-        publications = []
+        evidence_type = get_attr(ev, "type")
 
-        # Check if this evidence has a <source> element with <dbReference> children
-        source = evidence.find("u:source", NS)
+        # Parse <source><dbReference>
+        pubs: list[str] = []
+        others: list[str] = []
+
+        source = ev.find("ns:source", NS)
         if source is not None:
-            for dbref in source.findall("u:dbReference", NS):
-                db_type = dbref.get("type")
-                db_id = dbref.get("id")
-                # Add publication references as PubMed or DOI; others as supporting objects
-                if db_type == "PubMed":
-                    publications.append(f"PMID:{db_id}")
-                elif db_type == "DOI":
-                    publications.append(f"DOI:{db_id}")
-                else:
-                    supporting_objects.append(f"{db_type}:{db_id}")
+            raw_pubs, raw_others = parse_db_references(source, NS)
 
-        # Store evidence metadata, omitting empty lists for cleanliness
-        evidence_map[key] = {
-            "evidence_type": evidence_type,
-            "supporting_objects": supporting_objects if supporting_objects else None,
-            "publications": publications if publications else None,
-        }
+            # Normalize publications:
+            normalized_pubs: list[str] = []
+            for p in raw_pubs:
+                up = p.upper()
+                if up.startswith("PUBMED:"):
+                    _, acc = p.split(":", 1)
+                    normalized_pubs.append(f"PMID:{acc}")
+                else:
+                    normalized_pubs.append(p)
+
+            pubs = normalized_pubs
+            others = raw_others
+
+        # Build clean evidence metadata
+        evidence_map[key] = clean_dict(
+            {
+                "evidence_type": evidence_type,
+                "publications": pubs or None,
+                "supporting_objects": others or None,
+            }
+        )
 
     return evidence_map
 
 
 def parse_reaction_association(reaction, cdm_id, evidence_map):
     associations = []
-    for dbref in reaction.findall("u:dbReference", NS):
+    for dbref in reaction.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
         assoc = {
@@ -267,7 +323,7 @@ def parse_reaction_association(reaction, cdm_id, evidence_map):
 
 def parse_cofactor_association(cofactor, cdm_id):
     associations = []
-    for dbref in cofactor.findall("u:dbReference", NS):
+    for dbref in cofactor.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
         assoc = {
@@ -282,6 +338,31 @@ def parse_cofactor_association(cofactor, cdm_id):
     return associations
 
 
+def _make_association(
+    cdm_id: str,
+    obj: str,
+    predicate: Optional[str] = None,
+    evidence_key: Optional[str] = None,
+    evidence_map: Optional[dict] = None,
+):
+    """
+    Helper to construct a CDM association dict and merge evidence fields from evidence_map.
+    """
+    assoc = {
+        "subject": cdm_id,
+        "object": obj,
+        "predicate": predicate,
+        "evidence_type": None,
+        "supporting_objects": None,
+        "publications": None,
+    }
+
+    if evidence_key and evidence_map and evidence_key in evidence_map:
+        assoc.update(evidence_map[evidence_key])
+
+    return clean_dict(assoc)
+
+
 def parse_associations(entry, cdm_id, evidence_map):
     """
     Parse all relevant associations from a UniProt XML entry for the CDM model.
@@ -289,83 +370,86 @@ def parse_associations(entry, cdm_id, evidence_map):
     """
     associations = []
 
-    def clean(d):
-        """Remove None-value keys from a dict."""
-        return {k: v for k, v in d.items() if v is not None}
-
-    # Taxonomy association
-    organism = entry.find("u:organism", NS)
+    # ---------------- Taxonomy association ----------------
+    organism = entry.find("ns:organism", NS)
     if organism is not None:
-        taxon_ref = organism.find('u:dbReference[@type="NCBI Taxonomy"]', NS)
+        taxon_ref = organism.find('ns:dbReference[@type="NCBI Taxonomy"]', NS)
         if taxon_ref is not None:
-            associations.append(
-                clean(
-                    {
-                        "subject": cdm_id,
-                        "object": f"NCBITaxon:{taxon_ref.get('id')}",
-                        "predicate": None,
-                        "evidence_type": None,
-                        "supporting_objects": None,
-                        "publications": None,
-                    }
+            tax_id = taxon_ref.get("id")
+            if tax_id:
+                associations.append(
+                    _make_association(
+                        cdm_id=cdm_id,
+                        obj=f"NCBITaxon:{tax_id}",
+                        predicate=None,
+                        evidence_key=None,
+                        evidence_map=None,
+                    )
                 )
-            )
 
-    # Database cross-references with evidence
-    for dbref in entry.findall("u:dbReference", NS):
+    # ------------- Database cross-references --------------
+    for dbref in entry.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
-        association = {
-            "subject": cdm_id,
-            "object": f"{db_type}:{db_id}",
-            "predicate": None,
-            "evidence_type": None,
-            "supporting_objects": None,
-            "publications": None,
-        }
-        evidence_key = dbref.get("evidence")
-        if evidence_key and evidence_key in evidence_map:
-            association.update(evidence_map[evidence_key])
-        associations.append(clean(association))
+        if not db_type or not db_id:
+            continue
 
-    # Catalytic/cofactor
-    for comment in entry.findall("u:comment", NS):
+        evidence_key = dbref.get("evidence")
+        associations.append(
+            _make_association(
+                cdm_id=cdm_id,
+                obj=f"{db_type}:{db_id}",
+                predicate=None,
+                evidence_key=evidence_key,
+                evidence_map=evidence_map,
+            )
+        )
+
+    # ------------- Catalytic activity / cofactor ----------
+    for comment in entry.findall("ns:comment", NS):
         comment_type = comment.get("type")
         if comment_type == "catalytic activity":
-            # extract catalytic associations
-            for reaction in comment.findall("u:reaction", NS):
+            for reaction in comment.findall("ns:reaction", NS):
                 for assoc in parse_reaction_association(reaction, cdm_id, evidence_map):
-                    associations.append(clean(assoc))
+                    associations.append(clean_dict(assoc))
         elif comment_type == "cofactor":
-            # extract cofactor associations
-            for cofactor in comment.findall("u:cofactor", NS):
+            for cofactor in comment.findall("ns:cofactor", NS):
                 for assoc in parse_cofactor_association(cofactor, cdm_id):
-                    associations.append(clean(assoc))
+                    associations.append(clean_dict(assoc))
+
     return associations
 
 
 def parse_publications(entry):
     """
-    Extract all publication references from a UniProt XML <entry>
-    Returns a list of standardized publication IDs (PMID and DOI).
+    Extract all publication references from a UniProt XML <entry>.
+    Uses shared parse_db_references() to gather PubMed/DOI IDs from <citation> blocks.
+
+    Returns:
+        List[str] of standardized publication IDs, e.g. ["PMID:12345", "DOI:10.1000/xyz"]
     """
-    publications = []
+    publications: list[str] = []
 
-    # Iterate through all <reference> blocks in the entry
-    for reference in entry.findall("u:reference", NS):
-        citation = reference.find("u:citation", NS)
-        if citation is not None:
-            # Each <citation> may have multiple <dbReference> elements (e.g., PubMed, DOI)
-            for dbref in citation.findall("u:dbReference", NS):
-                db_type = dbref.get("type")
-                db_id = dbref.get("id")
-                # Standardize format for known publication types
-                if db_type == "PubMed":
-                    publications.append(f"PMID:{db_id}")
-                elif db_type == "DOI":
-                    publications.append(f"DOI:{db_id}")
+    for reference in entry.findall("ns:reference", NS):
+        citation = reference.find("ns:citation", NS)
+        if citation is None:
+            continue
 
-    return publications
+        # Reuse the shared dbReference parser
+        raw_pubs, _ = parse_db_references(citation, NS)
+
+        for p in raw_pubs:
+            up = p.upper()
+            # Expect formats like "PUBMED:" or "DOI:"
+            if up.startswith("PUBMED:"):
+                _, acc = p.split(":", 1)
+                publications.append(f"PMID:{acc}")
+            elif up.startswith("DOI:"):
+                # Preserve DOI value, but normalize prefix to upper
+                _, acc = p.split(":", 1)
+                publications.append(f"DOI:{acc}")
+
+    return list(dict.fromkeys(publications))
 
 
 def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None):
@@ -443,11 +527,6 @@ def stream_uniprot_xml(filepath):
 
 
 ## ================================ SCHEMA =================================
-"""
-Defines the Spark schema for all major CDM tables derived from UniProt XML.
-Each schema is tailored for protein entities, identifiers, protein details, names, associations, and linked publications.
-"""
-
 schema_entities = StructType(
     [
         StructField("entity_id", StringType(), False),
@@ -515,34 +594,45 @@ schema_publications = StructType(
 
 def save_batches_to_delta(spark, tables, output_dir, namespace) -> None:
     """
-    Persist batches of parsed records for each CDM table into Delta Lake format.
+    Persist batches of parsed records for each CDM table into Delta Lake format,
+    and register them into Spark SQL as managed Delta tables under {namespace}.
 
-    - Each table is saved into a Delta directory named '{namespace}_{table}_delta' in the output folder.
-    - If the Delta directory exists, append new records. Otherwise, overwrite it.
-    - Registers the table in the Spark SQL for downstream query.
     """
-    for table, (records, schema) in tables.items():
+
+    # Ensure the namespace(database) exists
+    spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
+
+    for table_name, (records, schema) in tables.items():
         if not records:
             continue  # Skip all empty tables
 
-        delta_dir = os.path.abspath(os.path.join(output_dir, f"{namespace}_{table}_delta"))
-        # Use "append" mode if the Delta directory already exists, otherwise "overwrite"
+        # Directory path: <output_dir>/<namespace>/<table_name>
+        delta_dir = os.path.abspath(os.path.join(output_dir, namespace, table_name))
+
+        # Determine write mode based on directory presence
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
 
         print(
-            f"[DEBUG] Registering table: {namespace}.{table} at {delta_dir} with mode={mode}, record count: {len(records)}"
+            f"[DEBUG] Saving table '{namespace}.{table_name}' to {delta_dir} "
+            f"with mode={mode}, record count={len(records)}"
         )
 
         try:
+            # Convert to Spark DataFrame
             df = spark.createDataFrame(records, schema)
-            df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir)
+
+            # Write to Delta directory
+            (df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir))
+
+            # Register using Spark SQL
             spark.sql(f"""
-                CREATE TABLE IF NOT EXISTS {namespace}.{table}
+                CREATE TABLE IF NOT EXISTS {namespace}.{table_name}
                 USING DELTA
                 LOCATION '{delta_dir}'
             """)
+
         except Exception as e:
-            print(f"Failed to save {table} to Delta: {e}")
+            print(f"[ERROR] Failed to save '{table_name}' to Delta: {e}")
 
 
 def prepare_local_xml(xml_url, output_dir):
@@ -644,13 +734,13 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
                     continue
 
             # Extract main accession (skip entry if not present)
-            main_accession_elem = entry_elem.find("u:accession", NS)
+            main_accession_elem = entry_elem.find("ns:accession", NS)
             if main_accession_elem is None or main_accession_elem.text is None:
                 skipped += 1
                 continue
 
             # Generate a unique CDM ID (UUID) for this entry
-            cdm_id = generate_cdm_id()
+            cdm_id = generate_cdm_id(prefix="cdm_prot_")
 
             # Parse all sub-objects: entity, identifiers, names, protein, associations, publications
             record = parse_uniprot_entry(entry_elem, cdm_id, current_timestamp)
