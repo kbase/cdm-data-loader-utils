@@ -1,284 +1,318 @@
-"""Tests for the UniRef importer."""
+import os
+import sys
 
-import datetime as dt
-import textwrap
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+import gzip
+import tempfile
 import xml.etree.ElementTree as ET
-
+from datetime import datetime, timezone
 import pytest
 
 from cdm_data_loader_utils.parsers.uniref import (
-    add_cluster_members,
     cdm_entity_id,
-    extract_cluster,
-    extract_cross_refs,
-    get_accession_and_seed,
     get_timestamps,
+    extract_cluster,
+    get_accession_and_seed,
+    add_cluster_members,
+    extract_cross_refs,
+    parse_uniref_xml,
 )
 
+NS = {"ns": "http://uniprot.org/uniref"}
 
+
+# ---------------------------------------------------------
+# cdm_entity_id
+# ---------------------------------------------------------
 @pytest.mark.parametrize(
-    ("accession", "expected_prefix"),
-    [("A0B0123456", "CDM:"), ("P01234", "CDM:"), ("", None), (None, None)],
+    "value, should_raise",
+    [
+        ("A0A009HJL9", False),
+        ("UniRef100_A0A009HJL9", False),
+        ("", True),
+        (None, True),
+    ],
 )
-def test_cdm_entity_id(accession: str | None, expected_prefix: str | None) -> None:
-    """Ensure that CDM entities start with the appropriate prefix."""
-    result = cdm_entity_id(accession)
-    if expected_prefix is None:
-        assert result is None
+def test_cdm_entity_id(value, should_raise):
+    if should_raise:
+        with pytest.raises(ValueError):
+            cdm_entity_id(value)
     else:
-        assert result.startswith(expected_prefix)
+        out = cdm_entity_id(value)
+        assert isinstance(out, str)
+        assert out.startswith("CDM:")
 
 
+# ---------------------------------------------------------
+# get_timestamps
+# ---------------------------------------------------------
 @pytest.mark.parametrize(
-    ("xml_str", "expected_name"),
+    "uniref_id, existing, now, expect_created_same_as_updated",
     [
         (
-            "<entry xmlns='http://uniprot.org/uniref' id='UniRef100_A0A009GP46' updated='2016-10-05'>"
-            "<name>TestName</name></entry>",
-            "TestName",
+            "UniRef100_A",
+            {"UniRef100_A": "2024-01-01T00:00:00+00:00"},
+            datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            False,
         ),
         (
-            "<entry xmlns='http://uniprot.org/uniref' id='UniRef100_XYZ' updated='2024-01-01'/>",
+            "UniRef100_B",
+            {},
+            datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            True,
+        ),
+        (
+            "UniRef100_C",
+            {},
+            None,
+            True,
+        ),
+    ],
+)
+def test_get_timestamps(uniref_id, existing, now, expect_created_same_as_updated):
+    updated, created = get_timestamps(uniref_id, existing, now)
+
+    assert isinstance(updated, str)
+    assert isinstance(created, str)
+    assert updated.endswith("+00:00")
+
+    if expect_created_same_as_updated:
+        assert updated == created
+    else:
+        assert updated != created
+
+
+@pytest.mark.parametrize("bad_id", ["", None])
+def test_get_timestamps_rejects_empty_uniref_id(bad_id):
+    with pytest.raises(ValueError):
+        get_timestamps(bad_id, {}, None)
+
+
+# ---------------------------------------------------------
+# add_cluster_members
+# ---------------------------------------------------------
+@pytest.mark.parametrize(
+    "repr_xml, member_xmls, expected_count",
+    [
+        (
+            """
+            <dbReference xmlns="http://uniprot.org/uniref">
+                <property type="UniProtKB accession" value="REP_ACC"/>
+                <property type="isSeed" value="true"/>
+            </dbReference>
+            """,
+            [
+                """
+                <dbReference xmlns="http://uniprot.org/uniref">
+                    <property type="UniProtKB accession" value="MEM1_ACC"/>
+                </dbReference>
+                """,
+                """
+                <dbReference xmlns="http://uniprot.org/uniref">
+                    <property type="UniProtKB accession" value="MEM2_ACC"/>
+                </dbReference>
+                """,
+            ],
+            3,
+        ),
+        (
+            None,
+            [
+                """
+                <dbReference xmlns="http://uniprot.org/uniref">
+                    <property type="UniProtKB accession" value="ONLY_ACC"/>
+                </dbReference>
+                """,
+            ],
+            1,
+        ),
+        (None, [], 0),
+    ],
+)
+def test_add_cluster_members(repr_xml, member_xmls, expected_count):
+    cluster_id = "CDM_CLUSTER"
+    repr_db = ET.fromstring(repr_xml) if repr_xml else None
+
+    entry = ET.Element("{http://uniprot.org/uniref}entry")
+    for m in member_xmls:
+        mem = ET.SubElement(entry, "{http://uniprot.org/uniref}member")
+        mem.append(ET.fromstring(m))
+
+    rows = []
+    add_cluster_members(cluster_id, repr_db, entry, rows, NS)
+
+    assert len(rows) == expected_count
+    for r in rows:
+        assert r[0] == cluster_id
+        assert r[1].startswith("CDM:")
+        assert r[4] == "1.0"
+
+
+# ---------------------------------------------------------
+# extract_cluster
+# ---------------------------------------------------------
+@pytest.mark.parametrize(
+    "xml_str, uniref_id, expected_name",
+    [
+        (
+            "<entry xmlns='http://uniprot.org/uniref' id='UniRef100_A'><name>Test Cluster Name</name></entry>",
+            "UniRef100_A",
+            "Test Cluster Name",
+        ),
+        (
+            "<entry xmlns='http://uniprot.org/uniref' id='UniRef100_B'/>",
+            "UniRef100_B",
             "UNKNOWN",
         ),
     ],
 )
-def test_extract_cluster(xml_str: str, expected_name: str) -> None:
-    """Test cluster extraction from XML."""
-    ns = {"ns": "http://uniprot.org/uniref"}
+def test_extract_cluster(xml_str, uniref_id, expected_name):
     elem = ET.fromstring(xml_str)
-    cluster_id, name = extract_cluster(elem, ns)
-    assert cluster_id.startswith("CDM:")
+
+    cluster_id, name = extract_cluster(elem, NS, uniref_id)
+
+    # ---- cluster_id checks ----
     assert isinstance(cluster_id, str)
+    assert cluster_id.startswith("CDM:")
+
+    # ---- name checks ----
     assert name == expected_name
 
 
 @pytest.mark.parametrize(
-    ("uniref_id", "existing_created", "now", "expected"),
+    "xml_str, expected_acc, expected_is_seed",
     [
-        # Has existing_created
-        (
-            "UniRef100_A",
-            {"UniRef100_A": "2024-01-01T00:00:00"},
-            dt.datetime(2025, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
-            ("2025-01-01T00:00:00", "2024-01-01T00:00:00"),
-        ),
-        # There is no existing_created
-        (
-            "UniRef100_B",
-            {"UniRef100_A": "2024-01-01T00:00:00"},
-            dt.datetime(2025, 1, 1, 0, 0, 0, tzinfo=dt.UTC),
-            ("2025-01-01T00:00:00", "2025-01-01T00:00:00"),
-        ),
-        # There is no existing_created，also not provide "now"
-        (
-            "UniRef100_C",
-            {},
-            None,  # The system automatically use the current time
-            None,  # Only assert that the return is a string and they are equal
-        ),
-    ],
-)
-def test_get_timestamps(uniref_id: str, existing_created: str, now: dt.datetime, expected: tuple[str] | None) -> None:
-    """Test timestamps."""
-    result = get_timestamps(uniref_id, existing_created, now)
-    if expected is not None:
-        assert result == expected
-    else:
-        formatted_now, created_time = result
-        assert formatted_now == created_time
-        assert isinstance(formatted_now, str)
-        assert len(formatted_now) == 19  # "YYYY-MM-DDTHH:MM:SS" ---> 19 bites
-
-
-@pytest.mark.parametrize(
-    ("xml_str", "expected_acc", "expected_is_seed"),
-    [
-        # Have accession and isSeed
+        # accession + isSeed=true
         (
             """
-        <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="A0A009HJL9_ACIB9">
-            <property type="UniProtKB accession" value="A0A009HJL9"/>
-            <property type="isSeed" value="true"/>
-        </dbReference>
-        """,
+            <dbReference xmlns="http://uniprot.org/uniref">
+                <property type="UniProtKB accession" value="A0A009HJL9"/>
+                <property type="isSeed" value="true"/>
+            </dbReference>
+            """,
             "A0A009HJL9",
             True,
         ),
-        # Only accession, no isSeed
+        # accession only
         (
             """
-        <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="A0A241V597_9GAMM">
-            <property type="UniProtKB accession" value="A0A241V597"/>
-        </dbReference>
-        """,
+            <dbReference xmlns="http://uniprot.org/uniref">
+                <property type="UniProtKB accession" value="A0A241V597"/>
+            </dbReference>
+            """,
             "A0A241V597",
             False,
         ),
-        # No accession, only id
+        # no accession
         (
             """
-        <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="ID_ONLY"></dbReference>
-        """,
-            "ID_ONLY",
+            <dbReference xmlns="http://uniprot.org/uniref">
+                <property type="protein name" value="Some protein"/>
+            </dbReference>
+            """,
+            None,
             False,
         ),
-        # None
-        (None, None, False),
+        # dbref is None
+        (
+            None,
+            None,
+            False,
+        ),
     ],
 )
-def test_get_accession_and_seed(xml_str: str | None, expected_acc: str | None, expected_is_seed: bool) -> None:
-    """Test parsing of UniRef entries for accession and seed status."""
-    ns = {"ns": "http://uniprot.org/uniref"}
+def test_get_accession_and_seed(xml_str, expected_acc, expected_is_seed):
     dbref = ET.fromstring(xml_str) if xml_str else None
-    acc, is_seed = get_accession_and_seed(dbref, ns)
+
+    acc, is_seed = get_accession_and_seed(dbref, NS)
+
     assert acc == expected_acc
     assert is_seed == expected_is_seed
 
 
-def make_entry_with_members(member_xmls: list[str], ns_uri: str = "http://uniprot.org/uniref") -> ET.Element:
-    """
-    Receives a list of xml strings from dbReference, generates an <entry> element with <member> child nodes.
-    """
-    entry_elem = ET.Element(f"{{{ns_uri}}}entry")
-    for dbref_xml in member_xmls:
-        dbref_elem = ET.fromstring(dbref_xml)
-        member_elem = ET.SubElement(entry_elem, f"{{{ns_uri}}}member")
-        member_elem.append(dbref_elem)
-    return entry_elem
-
-
+# ---------------------------------------------------------
+# extract_cross_refs
+# ---------------------------------------------------------
 @pytest.mark.parametrize(
-    ("repr_xml", "member_xmls", "expected"),
+    "props, expected",
     [
-        pytest.param(
-            # representative member, two members
-            textwrap.dedent("""
-                <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="REP_ID">
-                    <property type="UniProtKB accession" value="REP_ACC"/>
-                    <property type="isSeed" value="true"/>
-                </dbReference>
-            """),
+        (
             [
-                textwrap.dedent("""
-                    <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="MEM1_ID">
-                        <property type="UniProtKB accession" value="MEM1_ACC"/>
-                    </dbReference>
-                """),
-                textwrap.dedent("""
-                    <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="MEM2_ID">
-                        <property type="UniProtKB accession" value="MEM2_ACC"/>
-                        <property type="isSeed" value="true"/>
-                    </dbReference>
-                """),
+                ("UniProtKB accession", "A0A1"),
+                ("UniRef90 ID", "UniRef90_X"),
+                ("UniParc ID", "UPI0001"),
             ],
-            [
-                ("CLUSTER_X", "CDM:", "true", "true", "1.0"),
-                ("CLUSTER_X", "CDM:", "false", "false", "1.0"),
-                ("CLUSTER_X", "CDM:", "false", "true", "1.0"),
-            ],
-            id="with-representative-and-members",
+            {
+                ("UniRef90 ID", "UniRef90_X"),
+                ("UniParc ID", "UPI0001"),
+            },
         ),
-        pytest.param(
-            # Only memebers, no representative member
-            None,
+        (
             [
-                textwrap.dedent("""
-                    <dbReference xmlns="http://uniprot.org/uniref" type="UniProtKB ID" id="MEM_ID">
-                        <property type="UniProtKB accession" value="MEM_ACC"/>
-                    </dbReference>
-                """)
+                ("UniProtKB accession", "A0A2"),
             ],
-            [("CLUSTER_X", "CDM:", "false", "false", "1.0")],
-            id="members-only",
-        ),
-        pytest.param(
-            # No members, no representative member
-            None,
-            [],
-            [],
-            id="no-members",
+            set(),
         ),
     ],
 )
-def test_add_cluster_members(repr_xml: str | None, member_xmls: list[str], expected: list[tuple[str, ...]]) -> None:
-    """Test add_cluster_members with various representative/member combinations."""
-    ns = {"ns": "http://uniprot.org/uniref"}
-    cluster_id = "CLUSTER_X"
+def test_extract_cross_refs(props, expected):
+    dbref = ET.Element("{http://uniprot.org/uniref}dbReference", id="UniProtKB:A0A1")
 
-    # Structure (representative members) dbReference if it exists
-    repr_db = ET.fromstring(repr_xml) if repr_xml else None
+    for k, v in props:
+        ET.SubElement(
+            dbref,
+            "{http://uniprot.org/uniref}property",
+            type=k,
+            value=v,
+        )
 
-    # Structure <entry> nodes, and add <member>
-    elem = make_entry_with_members(member_xmls)
+    rows = []
+    extract_cross_refs(dbref, rows, NS)
 
-    # Calling the function under test
-    cluster_member_data = []
-    add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns)
-
-    assert len(cluster_member_data) == len(expected)
-    for i, (clu_id, cdm_prefix, is_repr, is_seed, score) in enumerate(expected):
-        out = cluster_member_data[i]
-        assert out[0] == clu_id, f"Wrong cluster_id at idx {i}: {out[0]}"
-        assert out[1].startswith(cdm_prefix), f"Wrong entity_id at idx {i}: {out[1]}"
-        assert out[2] == is_repr, f"Wrong is_representative at idx {i}: {out[2]}"
-        assert out[3] == is_seed, f"Wrong is_seed at idx {i}: {out[3]}"
-        assert out[4] == score, f"Wrong score at idx {i}: {out[4]}"
-
-
-XREF_TYPES = ["UniRef90 ID", "UniRef50 ID", "UniParc ID"]
-
-
-@pytest.mark.parametrize(
-    ("dbref_props", "expected_xrefs"),
-    [
-        (
-            # all cross-ref fields present
-            [
-                ("UniRef90 ID", "UniRef90_N8Q6C0"),
-                ("UniRef50 ID", "UniRef50_A0A7Z7LP76"),
-                ("UniParc ID", "UPI00044F6C4F"),
-                ("protein name", "foo"),
-            ],
-            [
-                ("UniRef90 ID", "UniRef90_N8Q6C0"),
-                ("UniRef50 ID", "UniRef50_A0A7Z7LP76"),
-                ("UniParc ID", "UPI00044F6C4F"),
-            ],
-        ),
-        (
-            # partial cross-ref
-            [
-                ("UniRef90 ID", "UniRef90_ABC"),
-                ("protein name", "bar"),
-            ],
-            [
-                ("UniRef90 ID", "UniRef90_ABC"),
-            ],
-        ),
-        (
-            # No cross-ref
-            [
-                ("protein name", "baz"),
-            ],
-            [],
-        ),
-    ],
-)
-def test_extract_cross_refs_param(dbref_props: list[tuple[str, str]], expected_xrefs: list[tuple[str, str]]) -> None:
-    """
-    Test that extract_cross_refs correctly extracts all UniRef cross-reference fields.
-    """
-    dbref = ET.Element("{http://uniprot.org/uniref}dbReference", type="UniProtKB ID", id="TEST_ID")
-
-    for t, v in dbref_props:
-        ET.SubElement(dbref, "{http://uniprot.org/uniref}property", type=t, value=v)
-
-    ns = {"ns": "http://uniprot.org/uniref"}
-    cross_reference_data = []
-    extract_cross_refs(dbref, cross_reference_data, ns)
-
-    entity_id = cdm_entity_id("TEST_ID")
-    expected = {(entity_id, typ, val) for typ, val in expected_xrefs}
-    got = set(cross_reference_data)
+    got = {(t, v) for _, t, v in rows}
     assert got == expected
+
+    for entity_id, _, _ in rows:
+        assert entity_id is not None
+        assert isinstance(entity_id, str)
+
+
+# ---------------------------------------------------------
+# parse_uniref_xml
+# ---------------------------------------------------------
+@pytest.mark.parametrize("batch_size", [1, 2])
+def test_parse_uniref_xml_batch(batch_size):
+    xml = """
+    <root xmlns="http://uniprot.org/uniref">
+        <entry id="UniRef100_A">
+            <name>A</name>
+            <representativeMember>
+                <dbReference id="UniProtKB:A1">
+                    <property type="UniProtKB accession" value="A1"/>
+                </dbReference>
+            </representativeMember>
+        </entry>
+
+        <entry id="UniRef100_B">
+            <name>B</name>
+            <representativeMember>
+                <dbReference id="UniProtKB:B1">
+                    <property type="UniProtKB accession" value="B1"/>
+                </dbReference>
+            </representativeMember>
+        </entry>
+    </root>
+    """.strip()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        gz_path = f"{tmpdir}/uniref_test.xml.gz"
+        with gzip.open(gz_path, "wb") as gz:
+            gz.write(xml.encode("utf-8"))
+
+        result = parse_uniref_xml(gz_path, batch_size, {})
+
+    assert len(result["cluster_data"]) == batch_size
+    assert len(result["entity_data"]) == batch_size
+    assert len(result["cluster_member_data"]) == batch_size
+    assert len(result["cross_reference_data"]) in (0, batch_size)

@@ -273,7 +273,7 @@ def run(
             if register:
                 register_table(spark, output_path, table_name=table_name, permanent=permanent)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Pipeline failed")
         sys.exit(1)
     finally:

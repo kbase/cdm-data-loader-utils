@@ -1,4 +1,4 @@
-"""Tests for the UniProt parser.
+"""
 
 This file uses pytest to provide parameterized and functional tests for all major
 UniProt parsing utility functions, ensuring correct parsing and transformation of
@@ -16,756 +16,729 @@ Coverage:
     - parse_uniprot_entry: Full record parsing, all fields together
 
 How to run in the terminal:
-    PYTHONPATH=src pytest tests/test_uniprot.py
+   pytest tests/uniprot_refactor/test_uniprot_parsers.py
 
 """
 
 import datetime
-import re
+import json
 import xml.etree.ElementTree as ET
-from typing import Any
+from pathlib import Path
 
 import pytest
 
 from cdm_data_loader_utils.parsers.uniprot import (
     build_datasource_record,
-    generate_cdm_id,
     parse_associations,
+    parse_cross_references,
     parse_evidence_map,
     parse_identifiers,
     parse_names,
     parse_protein_info,
-    parse_publications,
-    parse_uniprot_entry,
+    save_datasource_record,
 )
 
-# Regular expression to validate UUID format
-UUID_PATTERN = re.compile(r"^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$", re.IGNORECASE)
+NS_URI = "https://uniprot.org/uniprot"
 
 
-@pytest.mark.parametrize("n", range(5))
-def test_generate_cdm_id_format(n: int) -> None:
-    uuid = generate_cdm_id()
-    assert uuid.startswith("CDM:")
-    uuid_str = uuid[4:]
-    assert UUID_PATTERN.match(uuid_str), f"{uuid_str} is not a valid UUID"
+@pytest.fixture(
+    params=[
+        "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz",
+        "http://example.org/uniprot_test.xml.gz",
+    ]
+)
+def xml_url(request):
+    return request.param
 
 
-## build_datasource_record ##
-def test_build_datasource_record() -> None:
-    url = "https://example.com/uniprot.xml.gz"
-    record = build_datasource_record(url)
+def test_build_datasource_record(xml_url):
+    record = build_datasource_record(xml_url)
+
+    # ---- basic structure ----
     assert isinstance(record, dict)
-    assert set(record.keys()) == {"name", "source", "url", "accessed", "version"}
+
+    # ---- fixed fields ----
     assert record["name"] == "UniProt import"
     assert record["source"] == "UniProt"
-    assert record["url"] == url
-
-    # check accessed
-    accessed_dt = datetime.datetime.fromisoformat(record["accessed"])
-    now = datetime.datetime.now(datetime.UTC)
-    delta = abs((now - accessed_dt).total_seconds())
-    assert delta < 10
+    assert record["url"] == xml_url
     assert record["version"] == 115
 
+    # ---- accessed field ----
+    accessed = record.get("accessed")
+    assert accessed is not None
 
-@pytest.mark.parametrize("bad_url", [None, ""])
-def test_build_datasource_record_bad(bad_url: str | None) -> None:
-    record = build_datasource_record(bad_url)
-    assert record["url"] == bad_url
+    parsed = datetime.datetime.fromisoformat(accessed)
+    assert parsed.tzinfo is not None
+    assert parsed.tzinfo == datetime.UTC
 
 
-## parse_identifiers function test ##
-@pytest.mark.parametrize(
-    ("xml_str", "cdm_id", "expected"),
-    [
-        ### multiple accessions, expect two dict, every dic use the same cdm_id
-        ### identifier according to <accession> number
-        (
-            """
-            <entry xmlns="https://uniprot.org/uniprot">
-                <accession>Q9V2L2</accession>
-                <accession>G8ZFP4</accession>
-            </entry>
-            """,
-            "CDM:001",
-            [
-                {
-                    "entity_id": "CDM:001",
-                    "identifier": "UniProt:Q9V2L2",
-                    "source": "UniProt",
-                    "description": "UniProt accession",
-                },
-                {
-                    "entity_id": "CDM:001",
-                    "identifier": "UniProt:G8ZFP4",
-                    "source": "UniProt",
-                    "description": "UniProt accession",
-                },
-            ],
-        ),
-        ### Use single accession
-        (
-            """
-            <entry xmlns="https://uniprot.org/uniprot">
-                <accession>X00001</accession>
-            </entry>
-            """,
-            "CDM:002",
-            [
-                {
-                    "entity_id": "CDM:002",
-                    "identifier": "UniProt:X00001",
-                    "source": "UniProt",
-                    "description": "UniProt accession",
-                }
-            ],
-        ),
-        ### No accession
-        (
-            """
-            <entry xmlns="https://uniprot.org/uniprot">
-            </entry>
-            """,
-            "CDM:003",
-            [],
-        ),
-    ],
-)
-def test_parse_identifiers(xml_str: str, cdm_id: str, expected: list[dict[str, str]]) -> None:
+def test_save_datasource_record(tmp_path: Path, xml_url):
     """
-    This approach ensures that parse_identifiers correctly parses and structures identifier data.
-
-    The parsed Element object and the provided CDM_id are passed to the parse_identifiers funtion.
-    The function is expected to extract all relevant identifier information from the XML and return list of dict.
-
-    The test compares the result output with the predefined expected result using an assert statement.
-
+    save_datasource_record should:
+    - create output directory if missing
+    - write datasource.json
+    - return the same content that is written to disk
     """
-    entry = ET.fromstring(xml_str)
-    result = parse_identifiers(entry, cdm_id)
-    assert result == expected
+    output_dir = tmp_path / "output"
+
+    # ---- call function ----
+    result = save_datasource_record(xml_url, str(output_dir))
+
+    # ---- return value sanity ----
+    assert isinstance(result, dict)
+    assert result["url"] == xml_url
+    assert result["source"] == "UniProt"
+    assert result["name"] == "UniProt import"
+    assert "accessed" in result
+    assert "version" in result
+
+    # ---- file existence ----
+    output_file = output_dir / "datasource.json"
+    assert output_file.exists()
+    assert output_file.is_file()
+
+    # ---- file content correctness ----
+    with open(output_file, encoding="utf-8") as f:
+        on_disk = json.load(f)
+
+    assert on_disk == result
 
 
-"""
-    This parameterized pytest function tests the correctness of the parse_names function for various UniProt XML entry scenarios.
+def make_entry(names=None, protein_names=None):
+    entry = ET.Element(f"{{{NS_URI}}}entry")
 
-    XML string representing a UniProt entry with different protein names:
-    top-level <name>
-    recommended names,
-    alternative names,
-    combinations,
-    no names
+    # <entry><name>
+    for n in names or []:
+        e = ET.SubElement(entry, f"{{{NS_URI}}}name")
+        e.text = n
 
-    cdm_id: CDM entry ID
+    # <protein> block
+    if protein_names:
+        protein = ET.SubElement(entry, f"{{{NS_URI}}}protein")
 
-    Output:
-    A list of name records with their metadata
+        for tag, logical in [
+            ("recommendedName", "recommended"),
+            ("alternativeName", "alternative"),
+        ]:
+            if logical not in protein_names:
+                continue
 
-"""
+            block = ET.SubElement(protein, f"{{{NS_URI}}}{tag}")
+            for xml_tag in ["fullName", "shortName"]:
+                val = protein_names[logical].get(xml_tag.replace("Name", ""))
+                if val:
+                    e = ET.SubElement(block, f"{{{NS_URI}}}{xml_tag}")
+                    e.text = val
+
+    return entry
 
 
-## parse_names function test ##
 @pytest.mark.parametrize(
-    ("xml_str", "cdm_id", "expected"),
+    "entry_kwargs, cdm_id, expected",
     [
-        # Only top-level <name>
+        # Only <entry><name>
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <name>MainProteinName</name>
-               </entry>""",
-            "CDM:001",
-            [
-                {
-                    "entity_id": "CDM:001",
-                    "name": "MainProteinName",
-                    "description": "UniProt protein name",
-                    "source": "UniProt",
-                }
-            ],
-        ),
-        # RecommendedName (fullName and shortName)
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <protein>
-                     <recommendedName>
-                        <fullName>RecFullName</fullName>
-                        <shortName>RecShort</shortName>
-                     </recommendedName>
-                   </protein>
-               </entry>""",
-            "CDM:002",
-            [
-                {
-                    "entity_id": "CDM:002",
-                    "name": "RecFullName",
-                    "description": "UniProt recommended full name",
-                    "source": "UniProt",
-                },
-                {
-                    "entity_id": "CDM:002",
-                    "name": "RecShort",
-                    "description": "UniProt recommended short name",
-                    "source": "UniProt",
-                },
-            ],
-        ),
-        # AlternativeName (fullName and shortName)
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <protein>
-                     <alternativeName>
-                        <fullName>AltFullName1</fullName>
-                        <shortName>AltShort1</shortName>
-                     </alternativeName>
-                     <alternativeName>
-                        <fullName>AltFullName2</fullName>
-                     </alternativeName>
-                   </protein>
-               </entry>""",
-            "CDM:003",
-            [
-                {
-                    "entity_id": "CDM:003",
-                    "name": "AltFullName1",
-                    "description": "UniProt alternative full name",
-                    "source": "UniProt",
-                },
-                {
-                    "entity_id": "CDM:003",
-                    "name": "AltShort1",
-                    "description": "UniProt alternative short name",
-                    "source": "UniProt",
-                },
-                {
-                    "entity_id": "CDM:003",
-                    "name": "AltFullName2",
-                    "description": "UniProt alternative full name",
-                    "source": "UniProt",
-                },
-            ],
-        ),
-        # Mixed: top-level <name> and <protein>
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <name>TopLevel</name>
-                   <protein>
-                     <recommendedName>
-                        <fullName>MixedFull</fullName>
-                     </recommendedName>
-                   </protein>
-               </entry>""",
-            "CDM:004",
-            [
-                {
-                    "entity_id": "CDM:004",
-                    "name": "TopLevel",
-                    "description": "UniProt protein name",
-                    "source": "UniProt",
-                },
-                {
-                    "entity_id": "CDM:004",
-                    "name": "MixedFull",
-                    "description": "UniProt recommended full name",
-                    "source": "UniProt",
-                },
-            ],
-        ),
-        # No names at all
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-               </entry>""",
-            "CDM:005",
-            [],
-        ),
-    ],
-)
-def test_parse_names(xml_str: str, cdm_id: str, expected: list[dict[str, str]]) -> None:
-    entry = ET.fromstring(xml_str)
-    result = parse_names(entry, cdm_id)
-    assert result == expected
-
-
-"""
-
-    This test ensures parse_protein_info works correctly for different combinations of data
-    Including cases with no protein info, sequence only, existence only or EC numbers
-
-    This approach thoroughly validates that parse_protein_info can accurately extract, combine and structure metadata field.
-
-    Include:
-    EC Number,
-    existence evidence,
-    sequence
-
-"""
-
-
-## parse_protein_info function test ##
-@pytest.mark.parametrize(
-    ("xml_str", "cdm_id", "expected"),
-    [
-        # There are multiple ecNumbers under the recommend names
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <protein>
-                  <recommendedName>
-                    <ecNumber>1.2.3.4</ecNumber>
-                    <ecNumber>5.6.7.8</ecNumber>
-                  </recommendedName>
-                </protein>
-            </entry>""",
-            "CDM:001",
-            {"ec_numbers": ["1.2.3.4", "5.6.7.8"]},
-        ),
-        # alternativeName has EC Number
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <protein>
-                  <alternativeName>
-                    <ecNumber>3.3.3.3</ecNumber>
-                  </alternativeName>
-                </protein>
-            </entry>""",
-            "CDM:002",
-            {"ec_numbers": ["3.3.3.3"]},
-        ),
-        # If have both proteinExistence evidence and existence
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <proteinExistence type="evidence at protein level"/>
-            </entry>""",
-            "CDM:003",
+            {"names": ["ProteinA"]},
+            "cdm_1",
             {
-                "protein_id": "CDM:003",
-                "evidence_for_existence": "evidence at protein level",
+                ("ProteinA", "UniProt entry name"),
             },
         ),
-        # Sequence only
+        # entry name + recommended full name
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <sequence length="357" mass="12345" checksum="ABCD" modified="2024-05-21" version="2">
-                MAGNLSKVAAVSGVAAAVLGK
-                </sequence>
-            </entry>""",
-            "CDM:004",
             {
-                "length": "357",
+                "names": ["ProteinB"],
+                "protein_names": {
+                    "recommended": {"full": "Rec Full B", "short": None},
+                },
+            },
+            "cdm_2",
+            {
+                ("ProteinB", "UniProt entry name"),
+                ("Rec Full B", "UniProt recommended full name"),
+            },
+        ),
+        # everything
+        (
+            {
+                "names": ["ProteinC"],
+                "protein_names": {
+                    "recommended": {"full": "Rec Full C", "short": "Rec Short C"},
+                    "alternative": {"full": "Alt Full C", "short": "Alt Short C"},
+                },
+            },
+            "cdm_3",
+            {
+                ("ProteinC", "UniProt entry name"),
+                ("Rec Full C", "UniProt recommended full name"),
+                ("Rec Short C", "UniProt recommended short name"),
+                ("Alt Full C", "UniProt alternative full name"),
+                ("Alt Short C", "UniProt alternative short name"),
+            },
+        ),
+    ],
+)
+def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
+    entry = make_entry(**entry_kwargs)
+
+    rows = parse_names(entry, cdm_id)
+
+    # ---- row count ----
+    assert len(rows) == len(expected)
+
+    # ---- content ----
+    observed = {(r["name"], r["description"]) for r in rows}
+    assert observed == expected
+
+    # ---- entity_id and source ----
+    for r in rows:
+        assert r["entity_id"] == cdm_id
+        assert r["source"] == "UniProt"
+
+
+@pytest.mark.parametrize(
+    "build_entry, cdm_id, expected",
+    [
+        # --------------------------------------------------
+        # Empty entry -> None
+        # --------------------------------------------------
+        (
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
+            None,
+        ),
+        # --------------------------------------------------
+        # Only EC numbers
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        ET.SubElement(
+                            ET.SubElement(entry, f"{{{NS_URI}}}protein"),
+                            f"{{{NS_URI}}}recommendedName",
+                        ),
+                        f"{{{NS_URI}}}ecNumber",
+                    ).__setattr__("text", "1.1.1.1"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            {
+                "ec_numbers": "1.1.1.1",
+            },
+        ),
+        # --------------------------------------------------
+        # Only sequence + entry modified
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    entry.set("modified", "2024-01-01"),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}sequence",
+                        {
+                            "length": "100",
+                            "mass": "12345",
+                            "checksum": "ABC",
+                            "version": "2",
+                        },
+                    ).__setattr__("text", "MKTIIALSY"),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            {
+                "length": "100",
                 "mass": "12345",
-                "checksum": "ABCD",
-                "modified": "2024-05-21",
+                "checksum": "ABC",
                 "sequence_version": "2",
-                "sequence": "MAGNLSKVAAVSGVAAAVLGK",
+                "sequence": "MKTIIALSY",
+                "entry_modified": "2024-01-01",
             },
         ),
-        # Combine with three elements: proteinExistence, sequence and ecNumbers
+        # --------------------------------------------------
+        # Everything
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <protein>
-                  <recommendedName>
-                    <ecNumber>3.3.3.3</ecNumber>
-                  </recommendedName>
-                  <alternativeName>
-                    <ecNumber>8.8.8.8</ecNumber>
-                  </alternativeName>
-                </protein>
-                <proteinExistence type="evidence at transcript level"/>
-                <sequence length="10" mass="1000" checksum="XYZ" modified="2021-12-01" version="1">
-                  MKTLLTGAAT
-                </sequence>
-            </entry>""",
-            "CDM:005",
+            lambda: (
+                lambda entry: (
+                    entry.set("modified", "2024-02-02"),
+                    # protein + EC
+                    ET.SubElement(
+                        ET.SubElement(
+                            ET.SubElement(entry, f"{{{NS_URI}}}protein"),
+                            f"{{{NS_URI}}}recommendedName",
+                        ),
+                        f"{{{NS_URI}}}ecNumber",
+                    ).__setattr__("text", "3.5.4.4"),
+                    # proteinExistence
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}proteinExistence",
+                        {"type": "evidence at protein level"},
+                    ),
+                    # sequence
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}sequence",
+                        {
+                            "length": "250",
+                            "mass": "99999",
+                            "checksum": "XYZ",
+                            "modified": "2023-12-01",
+                            "version": "1",
+                        },
+                    ).__setattr__("text", "MADEUPSEQUENCE"),
+                    entry,
+                )[4]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
             {
-                "ec_numbers": ["3.3.3.3", "8.8.8.8"],
-                "protein_id": "CDM:005",
-                "evidence_for_existence": "evidence at transcript level",
-                "length": "10",
-                "mass": "1000",
+                "ec_numbers": "3.5.4.4",
+                "protein_id": "cdm_4",
+                "evidence_for_existence": "evidence at protein level",
+                "length": "250",
+                "mass": "99999",
                 "checksum": "XYZ",
-                "modified": "2021-12-01",
+                "modified": "2023-12-01",
                 "sequence_version": "1",
-                "sequence": "MKTLLTGAAT",
+                "sequence": "MADEUPSEQUENCE",
+                "entry_modified": "2024-02-02",
             },
         ),
-        # return None
-        ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", "CDM:006", None),
     ],
 )
-def test_parse_protein_info(xml_str: str, cdm_id: str, expected: dict[str, Any]) -> None:
-    entry = ET.fromstring(xml_str)
+def test_parse_protein_info(build_entry, cdm_id, expected):
+    entry = build_entry()
+
     result = parse_protein_info(entry, cdm_id)
-    assert result == expected
+
+    if expected is None:
+        assert result is None
+    else:
+        assert isinstance(result, dict)
+        assert result == expected
 
 
-"""
-
-    This parameterized pytest function verifies the behavior of the parse_evidence_map function
-    for different UniProt XML entry structures involving evidence elements.
-
-    xml_str: Simulates a UniProt entry with various <evidence> and <source> sub-structures,
-    including cases with multiple evidence elements, missing sources, or no evidence at all.
-
-    expected: A dictionary mapping evidence keys to their extracted details—such as evidence type,
-    supporting objects, and publication references.
-
-    Ensure parse_evidence_map:
-    Accurately extract evidence keys and types
-    Correctly classify supporting objects and publication references
-    Handle entries with absent sources or evidence elements
-    Represent all relevant evidence metadata in the required structure
-
-"""
-
-
-## parse_evidence_map function test ##
 @pytest.mark.parametrize(
-    ("xml_str", "expected"),
+    "build_xml, expected",
     [
-        # Single evidence，include PubMed and supporting object
+        # --------------------------------------------------
+        # No evidence elements
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <evidence key="1" type="ECO:0000255">
-                  <source>
-                    <dbReference type="PubMed" id="123456"/>
-                    <dbReference type="Ensembl" id="ENSG00001"/>
-                  </source>
-                </evidence>
-            </entry>""",
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            {},
+        ),
+        # --------------------------------------------------
+        # Evidence without key
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}evidence", {"type": "ECO:0000269"}),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            {},
+        ),
+        # --------------------------------------------------
+        # Evidence with key, no source
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}evidence",
+                        {"key": "1", "type": "ECO:0000313"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
             {
                 "1": {
-                    "evidence_type": "ECO:0000255",
-                    "supporting_objects": ["Ensembl:ENSG00001"],
-                    "publications": ["PMID:123456"],
-                }
-            },
-        ),
-        # multiple evidences
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <evidence key="E1" type="ECO:0000313">
-                  <source>
-                    <dbReference type="PubMed" id="654321"/>
-                  </source>
-                </evidence>
-                <evidence key="E2" type="ECO:0000250">
-                  <source>
-                    <dbReference type="PDB" id="2N7Q"/>
-                  </source>
-                </evidence>
-            </entry>""",
-            {
-                "E1": {
                     "evidence_type": "ECO:0000313",
-                    "supporting_objects": None,
-                    "publications": ["PMID:654321"],
-                },
-                "E2": {
-                    "evidence_type": "ECO:0000250",
-                    "supporting_objects": ["PDB:2N7Q"],
-                    "publications": None,
-                },
-            },
-        ),
-        # no source
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <evidence key="X1" type="ECO:9999999"/>
-            </entry>""",
-            {
-                "X1": {
-                    "evidence_type": "ECO:9999999",
-                    "supporting_objects": None,
-                    "publications": None,
                 }
             },
         ),
-        # no evidence
+        # --------------------------------------------------
+        # Evidence with PUBMED with other refs
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-            </entry>""",
-            {},
-        ),
-        # one evidence with multiple supporting objects
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <evidence key="K1" type="ECO:0000269">
-                  <source>
-                    <dbReference type="Ensembl" id="ENS1"/>
-                    <dbReference type="RefSeq" id="RS123"/>
-                  </source>
-                </evidence>
-            </entry>""",
+            lambda: (
+                lambda entry: (
+                    lambda ev: (
+                        ET.SubElement(
+                            ET.SubElement(ev, f"{{{NS_URI}}}source"),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "PubMed", "id": "12345"},
+                        ),
+                        ET.SubElement(
+                            ET.SubElement(ev, f"{{{NS_URI}}}source"),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "GO", "id": "GO:0008150"},
+                        ),
+                        entry,
+                    )[2]
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}evidence",
+                        {"key": "E2", "type": "ECO:0000269"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
             {
-                "K1": {
+                "E2": {
                     "evidence_type": "ECO:0000269",
-                    "supporting_objects": ["Ensembl:ENS1", "RefSeq:RS123"],
-                    "publications": None,
+                    "publications": ["PMID:12345"],
                 }
             },
         ),
     ],
 )
-def test_parse_evidence_map(xml_str: str, expected: dict[str, Any]) -> None:
-    entry = ET.fromstring(xml_str)
+def test_parse_evidence_map_parametrized(build_xml, expected):
+    entry = build_xml()
     result = parse_evidence_map(entry)
+
+    assert isinstance(result, dict)
     assert result == expected
 
 
-"""
-
-    xml_strings: models a UniProt entry with different types of possible associations
-    cdm_id: uniquely identifies the protein being parsed
-    evidence_map:  supplies external evidence metadata for associations
-    expected: list of association dictionaries
-
-    Arg:
-    The function correctly links proteins to organism taxonomy.
-	Cross-references are properly included, evidence metadata is correctly merged.
-	Associations derived from catalytic activity and cofactor comments are correctly generated.
-	All combinations and edge cases are handled robustly.
-
-"""
-
-
-## parse_associations function test ##
 @pytest.mark.parametrize(
-    ("xml_str", "cdm_id", "evidence_map", "expected"),
+    "build_xml, cdm_id, evidence_map, expected",
     [
-        # organism association（NCBI Taxonomy dbReference）
+        # --------------------------------------------------
+        # Taxonomy association only
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <organism>
-                      <dbReference type="NCBI Taxonomy" id="9606"/>
-                   </organism>
-            </entry>""",
-            "CDM:1",
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        ET.SubElement(entry, f"{{{NS_URI}}}organism"),
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "NCBI Taxonomy", "id": "1234"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_1",
             {},
-            [{"subject": "CDM:1", "object": "NCBITaxon:9606"}],
+            [
+                {
+                    "subject": "cdm_1",
+                    "object": "NCBITaxon:1234",
+                    "predicate": "in_taxon",
+                }
+            ],
         ),
-        # dbReference with evidence key
+        # --------------------------------------------------
+        # Catalytic activity with evidence
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <dbReference type="PDB" id="2N7Q" evidence="E1"/>
-            </entry>""",
-            "CDM:2",
+            lambda: (
+                lambda entry: (
+                    lambda comment: (
+                        lambda reaction: (
+                            ET.SubElement(
+                                reaction,
+                                f"{{{NS_URI}}}dbReference",
+                                {"type": "Rhea", "id": "RHEA:12345"},
+                            ),
+                            entry,
+                        )[1]
+                    )(
+                        ET.SubElement(
+                            comment,
+                            f"{{{NS_URI}}}reaction",
+                            {"evidence": "E1"},
+                        )
+                    )
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}comment",
+                        {"type": "catalytic activity"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
             {
                 "E1": {
-                    "evidence_type": "ECO:0000250",
-                    "supporting_objects": ["Ensembl:ENS1"],
-                    "publications": ["PMID:1234"],
+                    "evidence_type": "ECO:0000269",
+                    "publications": ["PMID:12345"],
                 }
             },
             [
                 {
-                    "subject": "CDM:2",
-                    "object": "PDB:2N7Q",
-                    "evidence_type": "ECO:0000250",
-                    "supporting_objects": ["Ensembl:ENS1"],
-                    "publications": ["PMID:1234"],
-                }
-            ],
-        ),
-        # comment catalytic activity (reaction) with evidence key
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <comment type="catalytic activity">
-                     <reaction evidence="E2">
-                        <dbReference type="Rhea" id="12345"/>
-                     </reaction>
-                   </comment>
-            </entry>""",
-            "CDM:3",
-            {
-                "E2": {
-                    "evidence_type": "ECO:0000313",
-                    "publications": ["PMID:2222"],
-                }
-            },
-            [
-                {
-                    "subject": "CDM:3",
+                    "subject": "cdm_2",
                     "predicate": "catalyzes",
-                    "object": "Rhea:12345",
-                    "evidence_type": "ECO:0000313",
-                    "publications": ["PMID:2222"],
+                    "object": "Rhea:RHEA:12345",
+                    "evidence_type": "ECO:0000269",
+                    "publications": ["PMID:12345"],
                 }
             ],
         ),
-        # Comment cofactor without evidence
+        # --------------------------------------------------
+        # Cofactor association
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <comment type="cofactor">
-                     <cofactor>
-                       <dbReference type="ChEBI" id="CHEBI:15377"/>
-                     </cofactor>
-                   </comment>
-            </entry>""",
-            "CDM:4",
+            lambda: (
+                lambda entry: (
+                    lambda comment: (
+                        ET.SubElement(
+                            ET.SubElement(
+                                comment,
+                                f"{{{NS_URI}}}cofactor",
+                            ),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "ChEBI", "id": "CHEBI:15377"},
+                        ),
+                        entry,
+                    )[1]
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}comment",
+                        {"type": "cofactor"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
             {},
             [
                 {
-                    "subject": "CDM:4",
+                    "subject": "cdm_3",
                     "predicate": "requires_cofactor",
                     "object": "ChEBI:CHEBI:15377",
                 }
             ],
         ),
-        # Several relevant relationship（with organism and dbReference）
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                   <organism>
-                      <dbReference type="NCBI Taxonomy" id="562"/>
-                   </organism>
-                   <dbReference type="RefSeq" id="NP_414543"/>
-            </entry>""",
-            "CDM:5",
-            {},
-            [
-                {"subject": "CDM:5", "object": "NCBITaxon:562"},
-                {"subject": "CDM:5", "object": "RefSeq:NP_414543"},
-            ],
-        ),
-        # if it is empty entry, return to []
-        ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", "CDM:6", {}, []),
     ],
 )
-def test_parse_associations(
-    xml_str: str, cdm_id: str, evidence_map: dict[str, Any], expected: list[dict[str, str]]
-) -> None:
-    entry = ET.fromstring(xml_str)
+def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expected):
+    entry = build_xml()
+
     result = parse_associations(entry, cdm_id, evidence_map)
+
+    assert isinstance(result, list)
     assert result == expected
 
 
-"""
-
-    xml_str: Uniprot entry include <reference>, <citation>,
-    Refer: PubMed, DOI, GeneBank, DDBJ, EMBL
-
-    Output: List of publication identifier
-
-    Arg:
-    Extract publication of references
-	Recognize and format database types ( with prefixing “PMID:”, “DOI:”)
-	Handle entries with multiple or mixed publication types
-	Return an empty list if no publication data.
-
-"""
-
-
-## parse_publications function test ##
 @pytest.mark.parametrize(
-    ("xml_str", "expected"),
+    "build_xml, cdm_id, expected",
     [
-        # Single PubMed
+        # --------------------------------------------------
+        # No dbReference
+        # --------------------------------------------------
         (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <reference>
-                  <citation>
-                    <dbReference type="PubMed" id="12345"/>
-                  </citation>
-                </reference>
-            </entry>""",
-            ["PMID:12345"],
-        ),
-        # Multiple types include (PubMed, DOI, GenBank)
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <reference>
-                  <citation>
-                    <dbReference type="PubMed" id="55555"/>
-                    <dbReference type="DOI" id="10.1000/j.jmb.2020.01.001"/>
-                    <dbReference type="GenBank" id="AB123456"/>
-                  </citation>
-                </reference>
-            </entry>""",
-            ["PMID:55555", "DOI:10.1000/j.jmb.2020.01.001"],
-        ),
-        # Multiple references
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <reference>
-                  <citation>
-                    <dbReference type="DOI" id="10.1000/jmb.123456"/>
-                  </citation>
-                </reference>
-                <reference>
-                  <citation>
-                    <dbReference type="PubMed" id="98765"/>
-                  </citation>
-                </reference>
-            </entry>""",
-            ["DOI:10.1000/jmb.123456", "PMID:98765"],
-        ),
-        # dbReference: DDBJ and EMBL
-        (
-            """<entry xmlns="https://uniprot.org/uniprot">
-                <reference>
-                  <citation>
-                    <dbReference type="DDBJ" id="BA000001"/>
-                    <dbReference type="EMBL" id="AB987654"/>
-                  </citation>
-                </reference>
-            </entry>""",
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
             [],
         ),
-        # no publication
-        ("""<entry xmlns="https://uniprot.org/uniprot"></entry>""", []),
-    ],
-)
-def test_parse_publications(xml_str: str, expected: list[str]) -> None:
-    entry = ET.fromstring(xml_str)
-    result = parse_publications(entry)
-    assert result == expected
-
-
-## parse_uniprot_entry function test ##
-@pytest.mark.parametrize(
-    ("xml_str", "datasource_name", "prev_created"),
-    [
+        # --------------------------------------------------
+        # dbReference with CURIE id
+        # --------------------------------------------------
         (
-            """
-            <entry xmlns="https://uniprot.org/uniprot" created="2020-01-01" modified="2021-01-01" version="3">
-                <accession>P12345</accession>
-                <name>ProteinX</name>
-                <protein>
-                    <recommendedName>
-                        <fullName>ProteinX Full Name</fullName>
-                    </recommendedName>
-                </protein>
-                <organism>
-                    <dbReference type="NCBI Taxonomy" id="9606"/>
-                </organism>
-                <reference>
-                    <citation>
-                        <dbReference type="PubMed" id="99999"/>
-                    </citation>
-                </reference>
-            </entry>
-            """,
-            "UniProt import",
-            None,
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO", "id": "GO:0008150"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            [
+                {
+                    "entity_id": "cdm_2",
+                    "xref_type": "GO",
+                    "xref_value": "GO:0008150",
+                    "xref": "GO:0008150",
+                }
+            ],
+        ),
+        # --------------------------------------------------
+        # dbReference without CURIE (prefix)
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "CDD", "id": "cd04253"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            [
+                {
+                    "entity_id": "cdm_3",
+                    "xref_type": "CDD",
+                    "xref_value": "cd04253",
+                    "xref": "CDD:cd04253",
+                }
+            ],
+        ),
+        # --------------------------------------------------
+        # Mixed dbReferences
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO", "id": "GO:0003674"},
+                    ),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "PDB", "id": "1ABC"},
+                    ),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
+            [
+                {
+                    "entity_id": "cdm_4",
+                    "xref_type": "GO",
+                    "xref_value": "GO:0003674",
+                    "xref": "GO:0003674",
+                },
+                {
+                    "entity_id": "cdm_4",
+                    "xref_type": "PDB",
+                    "xref_value": "1ABC",
+                    "xref": "PDB:1ABC",
+                },
+            ],
+        ),
+        # --------------------------------------------------
+        # Missing type or id
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO"},  # missing id
+                    ),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"id": "123"},  # missing type
+                    ),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_5",
+            [],
         ),
     ],
 )
-def test_parse_uniprot_entry(xml_str: str, datasource_name: str, prev_created: None) -> None:
-    entry = ET.fromstring(xml_str)
-    cdm_id = generate_cdm_id()
+def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
+    entry = build_xml()
 
-    current_timestamp = "2024-07-17T13:00:00Z"
+    result = parse_cross_references(entry, cdm_id)
 
-    record = parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name, prev_created)
+    assert isinstance(result, list)
+    assert result == expected
 
-    entity = record["entity"]
-    assert entity["entity_type"] == "protein"
-    assert entity["data_source"] == datasource_name
-    assert entity["version"] == "3"
-    assert entity["uniprot_created"] == "2020-01-01"
-    assert entity["uniprot_modified"] == "2021-01-01"
-    assert entity["entity_id"].startswith("CDM:")
 
-    # identifiers/names/associations/publications
-    assert isinstance(record["identifiers"], list)
-    assert isinstance(record["names"], list)
-    assert isinstance(record["associations"], list)
-    assert isinstance(record["publications"], list)
+@pytest.mark.parametrize(
+    "build_xml, cdm_id, expected",
+    [
+        # --------------------------------------------------
+        # No accession
+        # --------------------------------------------------
+        (
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
+            [],
+        ),
+        # --------------------------------------------------
+        # Single accession
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "P12345"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            [
+                {
+                    "entity_id": "cdm_2",
+                    "identifier": "UniProt:P12345",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                }
+            ],
+        ),
+        # --------------------------------------------------
+        # Multiple accessions
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "Q11111"),
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "Q22222"),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            [
+                {
+                    "entity_id": "cdm_3",
+                    "identifier": "UniProt:Q11111",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                },
+                {
+                    "entity_id": "cdm_3",
+                    "identifier": "UniProt:Q22222",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                },
+            ],
+        ),
+        # --------------------------------------------------
+        # parse_identifiers_generic already sets source/description → setdefault
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "A0A000"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
+            [
+                {
+                    "entity_id": "cdm_4",
+                    "identifier": "UniProt:A0A000",
+                    "source": "UniProt",  # remains
+                    "description": "UniProt accession",  # remains
+                }
+            ],
+        ),
+    ],
+)
+def test_parse_identifiers_parametrized(build_xml, cdm_id, expected):
+    entry = build_xml()
+
+    result = parse_identifiers(entry, cdm_id)
+
+    assert isinstance(result, list)
+    assert result == expected

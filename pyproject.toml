@@ -149,6 +149,7 @@ ignore = [
 "tests/**/*.py" = ["S101", "T201"] # use of assert
 "**/__init__.py" = ["D104"]
 
+
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 15.
 max-complexity = 15
