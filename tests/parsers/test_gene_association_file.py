@@ -1,11 +1,13 @@
 import pandas as pd
 import pytest
-from src.parsers.gene_association_file import (
+from cdm_data_loader_utils.parsers.gene_association_file import (
     process_go_annotations,
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,
     normalize_dates,
-    process_predicates,)
+    process_predicates,
+)
+
 
 # --- Fixtures ---
 @pytest.fixture
@@ -21,34 +23,60 @@ def temp_csv_files(tmp_path):
         "UniProtKB,Q97823,ABC,NOT|enables,GO:0001234,GO_REF:0000001,ISS,UniProtKB:Q9ZP19,F,ABC_Protein,,protein,taxon:9606,20170101,UniProt,,\n"
         "UniProtKB,Q88219,XYZ,located_in,GO:0044464,,EXP,,F,XYZ Protein,,protein,taxon:9606,20210101,UniProt,,\n"
         "UniProtKB,Q79372,FOO,enables,GO:0000001,GO_REF:1234567,IMP,UniProtKB:P12345,F,FOO Protein,,protein,taxon:9606,20190101,UniProt,,\n"
-        )
+    )
 
     input_path.write_text(example_csv)
     return input_path, output_path
 
+
 @pytest.fixture
 def evidence_mapping_df():
     """Example evidence mapping DataFrame for testing."""
-    return pd.DataFrame([
-        {"Evidence_Code": "ISS", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000250"},
-        {"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"},
-        {"Evidence_Code": "IDA", "DB_Reference": "PMID:12345678", "evidence_type": "ECO:0000314"},
-        {"Evidence_Code": "EXP", "DB_Reference": "PMID:87654321", "evidence_type": "ECO:0000269"},
-        {"Evidence_Code": "IMP", "DB_Reference": "GO_REF:0000033", "evidence_type": "ECO:0000315"},])
+    return pd.DataFrame(
+        [
+            {
+                "Evidence_Code": "ISS",
+                "DB_Reference": "GO_REF:0000024",
+                "evidence_type": "ECO:0000250",
+            },
+            {"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"},
+            {
+                "Evidence_Code": "IDA",
+                "DB_Reference": "PMID:12345678",
+                "evidence_type": "ECO:0000314",
+            },
+            {
+                "Evidence_Code": "EXP",
+                "DB_Reference": "PMID:87654321",
+                "evidence_type": "ECO:0000269",
+            },
+            {
+                "Evidence_Code": "IMP",
+                "DB_Reference": "GO_REF:0000033",
+                "evidence_type": "ECO:0000315",
+            },
+        ]
+    )
+
 
 @pytest.fixture
 def annotation_df():
     """Fixture providing an example annotations DataFrame for testing evidence mapping."""
-    return pd.DataFrame([
-        {"Evidence_Code": "ISS", "publications": "GO_REF:0000024"}, # Direct match
-        {"Evidence_Code": "ND", "publications": "PMID:UNKNOWN"}, # Fallback match
-        {"Evidence_Code": "EXP", "publications": "GO_REF:0009999"}, # No match, no fallback
-        {"Evidence_Code": "IDA", "publications": "GO_REF:0000001|PMID:123456"}, # Multiple publications (explode test)
-        {"Evidence_Code": "IMP", "publications": None}, # Null publications
-    ])
+    return pd.DataFrame(
+        [
+            {"Evidence_Code": "ISS", "publications": "GO_REF:0000024"},  # Direct match
+            {"Evidence_Code": "ND", "publications": "PMID:UNKNOWN"},  # Fallback match
+            {"Evidence_Code": "EXP", "publications": "GO_REF:0009999"},  # No match, no fallback
+            {
+                "Evidence_Code": "IDA",
+                "publications": "GO_REF:0000001|PMID:123456",
+            },  # Multiple publications (explode test)
+            {"Evidence_Code": "IMP", "publications": None},  # Null publications
+        ]
+    )
+
 
 # --- Tests ---
-@pytest.mark.unit
 def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -59,7 +87,7 @@ def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
         f"Output columns do not match expected.\nExpected: {expected_cols}\nGot: {set(df.columns)}"
     )
 
-@pytest.mark.integration
+
 def test_io_behavior(temp_csv_files, evidence_mapping_df):
     """Integration test for I/O behavior of process_go_annotations."""
     input_path, output_path = temp_csv_files
@@ -71,7 +99,7 @@ def test_io_behavior(temp_csv_files, evidence_mapping_df):
     for col in ASSOCIATION_COL_TYPES.keys():
         assert col in df_out.columns, f"Column {col} missing in output."
 
-@pytest.mark.unit
+
 def test_column_types(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -82,7 +110,7 @@ def test_column_types(temp_csv_files, evidence_mapping_df):
             mismatches = ~not_null.map(lambda x: isinstance(x, expected_type))
             assert not mismatches.any(), f"Column {column} has incorrect types."
 
-@pytest.mark.unit
+
 def test_negated_logic(temp_csv_files, evidence_mapping_df):
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
@@ -90,8 +118,10 @@ def test_negated_logic(temp_csv_files, evidence_mapping_df):
     assert df["negated"].any(), "Expected at least one negated is True row, it present NOT|enables"
     assert (~df["negated"]).any(), "Expected at least one negated is False row, it present enables"
 
-# --- Helper function for evidence mapping test --- 
-@pytest.mark.unit
+
+# --- Helper function for evidence mapping test ---
+
+
 def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     """Test the evidence mapping merge and fallback logic."""
     merged = merge_evidence_mapping(annotation_df, evidence_mapping_df)
@@ -99,14 +129,18 @@ def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     assert merged.loc[1, "evidence_type"] == "ECO:0000307", "Fallback match failed."
     assert "DB_Reference" not in merged.columns, "'DB_Reference' should have been dropped after merge."
 
-@pytest.mark.unit
+
 def test_no_fallback():
     annotation_df = pd.DataFrame([{"Evidence_Code": "IEA", "publications": "PMID:999999"}])
-    evidence_df = pd.DataFrame([{"Evidence_Code": "EXP", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000269"}])
+    evidence_df = pd.DataFrame(
+        [{"Evidence_Code": "EXP", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000269"}]
+    )
     merged = merge_evidence_mapping(annotation_df, evidence_df)
-    assert pd.isna(merged.loc[0, "evidence_type"]), ("Expected evidence_type to be NaN when no match and no fallback are available.")
+    assert pd.isna(merged.loc[0, "evidence_type"]), (
+        "Expected evidence_type to be NaN when no match and no fallback are available."
+    )
 
-@pytest.mark.unit
+
 def test_fallback_after_explode():
     annotation_df = pd.DataFrame([{"Evidence_Code": "ND", "publications": ["PMID:111111", "PMID:222222"]}])
     evidence_df = pd.DataFrame([{"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"}])
@@ -114,7 +148,7 @@ def test_fallback_after_explode():
     assert len(merged) == 2, "Expected two rows after exploding publication list"
     assert all(merged["evidence_type"] == "ECO:0000307"), "Fallback evidence_type not correctly applied after explode"
 
-@pytest.mark.unit
+
 def test_normalize_dates():
     df = pd.DataFrame({"annotation_date": ["20200101", "20221301", "abcd1234", "20181231", None]})
     result = normalize_dates(df.copy())
@@ -126,11 +160,11 @@ def test_normalize_dates():
         else:
             assert a == e
 
-@pytest.mark.unit
+
 def test_process_predicates():
     df = pd.DataFrame({"predicate": ["NOT|enables", "involved_in", "NOT|located_in", "part_of"]})
     result = process_predicates(df.copy())
     assert result["negated"].tolist() == [True, False, True, False], "Negation detection incorrect."
-    assert result["predicate"].tolist() == ["enables", "involved_in", "located_in", "part_of"], "Predicate cleaning incorrect."
-
-# ### PYTHONPATH=. pytest tests/test_gene_association_file.py ###
+    assert result["predicate"].tolist() == ["enables", "involved_in", "located_in", "part_of"], (
+        "Predicate cleaning incorrect."
+    )

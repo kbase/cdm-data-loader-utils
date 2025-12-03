@@ -2,31 +2,29 @@
 name = "cdm-data-loader-utils"
 version = "0.1.0"
 description = "Data loaders and wranglers for the CDM."
-requires-python = ">= 3.12"
+requires-python = ">= 3.13"
 readme = "README.md"
 authors = [
     {name = "KBase developers", email = "engage@kbase.us"},
 ]
 
 dependencies = [
-    "biopython>=1.85",
-    "pandas",
-    "click",
+    "berdl-notebook-utils",
+    "biopython>=1.86",
+    "click>=8.3.1",
+    "ruff>=0.14.7",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.4",
-    "pytest-cov>=6.0.0",
-    "coverage",
-    "ruff>=0.11.5",
-    "gffutils>=0.13",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "pytest-env>=1.2.0",
 ]
 
 [tool.ruff]
-line-length = 100
-# Assume Python 3.12.
-target-version = "py312"
+line-length = 120
+target-version = "py313"
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
@@ -151,3 +149,33 @@ max-complexity = 15
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.pytest]
+pythonpath = ["src"]
+log_cli = true
+log_cli_level = "DEBUG"
+addopts = ["-v"]
+markers = ["requires_spark: must be run in an environment where spark is available"]
+
+# environment settings for running tests
+[tool.pytest_env]
+USER = "fake_user"
+KBASE_AUTH_TOKEN = "test-token-123"
+CDM_TASK_SERVICE_URL = "http://localhost:8080"
+MINIO_ENDPOINT_URL = "http://localhost:9000"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+MINIO_SECURE_FLAG = "false"
+BERDL_POD_IP = "192.168.1.100"
+SPARK_MASTER_URL = "spark://localhost:7077"
+BERDL_HIVE_METASTORE_URI = "thrift://localhost:9083"
+SPARK_CLUSTER_MANAGER_API_URL = "http://localhost:8000"
+GOVERNANCE_API_URL = "http://localhost:8000"
+DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
+
+[tool.uv.sources]
+berdl-notebook-utils = { git = "https://github.com/BERDataLakehouse/spark_notebook.git", subdirectory = "notebook_utils" }

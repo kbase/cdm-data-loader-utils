@@ -4,7 +4,7 @@ import gzip
 import hashlib
 from typing import Any
 
-from src.parsers.fasta import read_fasta
+from cdm_data_loader_utils.parsers.fasta import read_fasta
 
 
 def _hash_string(s: str) -> str:
@@ -46,9 +46,7 @@ def contig_set_hash(features) -> str:
 
 
 # TODO: check protein_id_map issue
-def compute_hash(
-    contigset_file: str, protein_file: str
-) -> tuple[str, dict[str, Any], dict[str, Any]]:
+def compute_hash(contigset_file: str, protein_file: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """
     Compute the hash of the entire contigset and contigs.
     """

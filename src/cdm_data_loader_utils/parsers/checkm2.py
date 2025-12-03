@@ -21,9 +21,7 @@ def get_checkm2_data(tsv_file_path: Path) -> dict[str, Any]:
 
             missing_cols = [col for col in REQUIRED_COLS if col not in reader.fieldnames]
             if missing_cols:
-                err_msg = (
-                    f"checkm2 output is missing the following columns: {', '.join(missing_cols)}"
-                )
+                err_msg = f"checkm2 output is missing the following columns: {', '.join(missing_cols)}"
                 raise ValueError(err_msg)
 
             # Loop through each row and extract the metrics
@@ -33,12 +31,8 @@ def get_checkm2_data(tsv_file_path: Path) -> dict[str, Any]:
                     continue
                 # Convert completeness and contamination to floats
                 checkm2_data[row["Name"]] = {
-                    "checkm2_completeness": float(row["Completeness"])
-                    if row["Completeness"]
-                    else None,
-                    "checkm2_contamination": float(row["Contamination"])
-                    if row["Contamination"]
-                    else None,
+                    "checkm2_completeness": float(row["Completeness"]) if row["Completeness"] else None,
+                    "checkm2_contamination": float(row["Contamination"]) if row["Contamination"] else None,
                 }
 
     except Exception as err:

@@ -1,0 +1,22 @@
+{
+    "mypy.checkNotebooks": true,
+    "mypy.enabled": false,
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.generateWithTypeAnnotation": true,
+    "python.analysis.include": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/src"
+    ],
+    "python.analysis.inlayHints.callArgumentNames": "partial",
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.typeEvaluation.deprecateTypingAliases": true,
+    "python.envFile": "${workspaceFolder}/.vscode/env",
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.terminal.activateEnvironment": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ]
+}

@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from src.parsers.bbmap_stats import get_bbmap_stats
+from cdm_data_loader_utils.parsers.bbmap_stats import get_bbmap_stats
 from tests.conftest import RESULTS
 
 
@@ -60,11 +60,7 @@ format_errors = {
     "empty": "no valid data found in stats_file",
 }
 
-err_types = {
-    err_id: RuntimeError
-    for err_id in format_errors
-    if format_errors[err_id] != err_msgs["not_dicts"]
-}
+err_types = {err_id: RuntimeError for err_id in format_errors if format_errors[err_id] != err_msgs["not_dicts"]}
 
 
 @pytest.mark.parametrize(

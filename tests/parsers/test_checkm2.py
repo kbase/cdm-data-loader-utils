@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.parsers.checkm2 import get_checkm2_data
+from cdm_data_loader_utils.parsers.checkm2 import get_checkm2_data
 from tests.conftest import RESULTS
 
 
@@ -73,9 +73,7 @@ def test_get_checkm2_data_missing_names(test_data_dir: Path) -> None:
     full_path = test_data_dir / "checkm2_file" / "missing_names.tsv"
     with pytest.raises(
         RuntimeError,
-        match=re.escape(
-            "errors found in checkm2_file:\nrow 2 has no Name value\nrow 3 has no Name value"
-        ),
+        match=re.escape("errors found in checkm2_file:\nrow 2 has no Name value\nrow 3 has no Name value"),
     ):
         get_checkm2_data(full_path)
 
