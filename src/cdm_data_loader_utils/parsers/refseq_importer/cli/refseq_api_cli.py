@@ -24,6 +24,7 @@ from refseq_importer.core.tables_finalize import finalize_tables, write_and_prev
 
 # ---------------- Helpers ----------------
 
+
 def parse_taxid_args(taxid_arg: Optional[str], taxid_file: Optional[str]) -> list[str]:
     """
     Parse and collect valid numeric TaxIDs from command-line arguments and file.
@@ -64,24 +65,36 @@ def parse_taxid_args(taxid_arg: Optional[str], taxid_file: Optional[str]) -> lis
 
 # ---------------- CLI ----------------
 @click.command()
-@click.option("--taxid", required=True,
-              help="Comma-separated NCBI TaxIDs, e.g. '224325,2741724'.")
-@click.option("--api-key", default=None,
-              help="Optional NCBI API key (increases rate limits).")
-@click.option("--database", default="refseq_api", show_default=True,
-              help="Delta schema/database.")
-@click.option("--mode", default="overwrite", type=click.Choice(["overwrite", "append"]), show_default=True,
-              help="Write mode for Delta tables.")
-@click.option("--debug/--no-debug", default=False, show_default=True,
-              help="Print per-record parsed fields for troubleshooting.")
-@click.option("--allow-genbank-date/--no-allow-genbank-date", default=False, show_default=True,
-              help="Allow using GenBank submissionDate as fallback for RefSeq created date.")
-@click.option("--unique-per-taxon/--all-assemblies", default=False, show_default=True,
-              help="Keep only one assembly per taxon (latest by release_date).")
-@click.option("--data-dir", required=True,
-              help="Base directory for Delta tables, e.g. /Users/yuewang/Documents/RefSeq/entities_data")
-
-
+@click.option("--taxid", required=True, help="Comma-separated NCBI TaxIDs, e.g. '224325,2741724'.")
+@click.option("--api-key", default=None, help="Optional NCBI API key (increases rate limits).")
+@click.option("--database", default="refseq_api", show_default=True, help="Delta schema/database.")
+@click.option(
+    "--mode",
+    default="overwrite",
+    type=click.Choice(["overwrite", "append"]),
+    show_default=True,
+    help="Write mode for Delta tables.",
+)
+@click.option(
+    "--debug/--no-debug", default=False, show_default=True, help="Print per-record parsed fields for troubleshooting."
+)
+@click.option(
+    "--allow-genbank-date/--no-allow-genbank-date",
+    default=False,
+    show_default=True,
+    help="Allow using GenBank submissionDate as fallback for RefSeq created date.",
+)
+@click.option(
+    "--unique-per-taxon/--all-assemblies",
+    default=False,
+    show_default=True,
+    help="Keep only one assembly per taxon (latest by release_date).",
+)
+@click.option(
+    "--data-dir",
+    required=True,
+    help="Base directory for Delta tables, e.g. /Users/yuewang/Documents/RefSeq/entities_data",
+)
 def cli(taxid, api_key, database, mode, debug, allow_genbank_date, unique_per_taxon, data_dir):
     main(
         taxid=taxid,
@@ -158,4 +171,3 @@ def main(
 
 if __name__ == "__main__":
     cli()
-

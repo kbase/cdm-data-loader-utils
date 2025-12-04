@@ -37,7 +37,6 @@ logging.basicConfig(
 
 
 def get_project_root() -> Path:
-    
     try:
         return Path(__file__).resolve().parents[2]
     except NameError:
@@ -115,7 +114,7 @@ def parse_tag_from_filename(path: Path) -> Optional[str]:
     "--output-dir",
     default=None,
     help="Directory to save CSV diff from detect_updates "
-         "(default: <project_root>/diff_results/<old_tag>_to_<new_tag>).",
+    "(default: <project_root>/diff_results/<old_tag>_to_<new_tag>).",
 )
 def main(
     database: str,
@@ -129,11 +128,9 @@ def main(
     data_dir: Optional[str],
     output_dir: Optional[str],
 ):
-    
     project_root = get_project_root()
     logger.info(f"[update] Project root resolved to: {project_root}")
 
-   
     bronze_dir = project_root / "bronze" / "refseq" / "indexes"
     bronze_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"[update] Using bronze index dir: {bronze_dir}")
@@ -144,14 +141,12 @@ def main(
         data_dir_path = project_root / "delta_data" / "refseq"
     logger.info(f"[update] Using Delta data dir: {data_dir_path}")
 
-   
     logger.info(f"[update] Downloading latest assembly index from: {REFSEQ_ASSEMBLY_SUMMARY_URL}")
     raw_txt = download_text(REFSEQ_ASSEMBLY_SUMMARY_URL)
     latest_txt = normalize_multiline_text(raw_txt)
     latest_sha = text_sha256(latest_txt)
     logger.info(f"[update] Latest remote index SHA256: {latest_sha}")
 
-  
     last_local = get_latest_local_index(bronze_dir)
     old_tag: Optional[str] = None
     old_sha: Optional[str] = None
@@ -168,35 +163,38 @@ def main(
     else:
         logger.info("[update] No previous local index found. This appears to be the first run.")
 
-  
     if old_sha is not None and old_sha == latest_sha and not force_snapshot:
         logger.info("[update] Remote index is identical to the last local index.")
         logger.info("[update] No snapshot will be created (use --force-snapshot to override).")
         return
 
- 
     new_tag = tag or datetime.utcnow().strftime("%Y%m%d")
     logger.info(f"[update] New snapshot tag will be: {new_tag}")
 
- 
     new_index_path = bronze_dir / f"assembly_summary_refseq.{new_tag}.tsv"
-
 
     new_index_path.write_text(latest_txt, encoding="utf-8")
     logger.info(f"[update] Saved latest index to: {new_index_path}")
 
-   
     logger.info("[update] Running snapshot_hashes to create new snapshot...")
 
     snapshot_args = [
-        "--database", database,
-        "--hash-table", hash_table,
-        "--tag", new_tag,
-        "--kind", kind,
-        "--index-path", str(new_index_path),
-        "--chunk-size", str(chunk_size),
-        "--max-workers", str(max_workers),
-        "--data-dir", str(data_dir_path),
+        "--database",
+        database,
+        "--hash-table",
+        hash_table,
+        "--tag",
+        new_tag,
+        "--kind",
+        kind,
+        "--index-path",
+        str(new_index_path),
+        "--chunk-size",
+        str(chunk_size),
+        "--max-workers",
+        str(max_workers),
+        "--data-dir",
+        str(data_dir_path),
     ]
     # fast-mode flag
     if fast_mode:
@@ -217,13 +215,18 @@ def main(
 
         logger.info("[update] Running detect_updates to compute snapshot diff")
         detect_args = [
-            "--database", database,
-            "--table", hash_table,
-            "--old-tag", old_tag,
-            "--new-tag", new_tag,
-            "--output", str(output_dir_path),
+            "--database",
+            database,
+            "--table",
+            hash_table,
+            "--old-tag",
+            old_tag,
+            "--new-tag",
+            new_tag,
+            "--output",
+            str(output_dir_path),
         ]
-        
+
         logger.info(f"[update] detect_updates args: {detect_args}")
         detect_updates.main(args=detect_args, standalone_mode=False)
         logger.info(f"[update] Diff CSV should be written under: {output_dir_path}")
@@ -235,6 +238,3 @@ def main(
 
 if __name__ == "__main__":
     main()
-    
-
-    

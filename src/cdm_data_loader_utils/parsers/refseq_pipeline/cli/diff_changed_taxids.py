@@ -17,12 +17,7 @@ from refseq_pipeline.core.refseq_io import load_refseq_assembly_index
 from refseq_pipeline.core.hashes_diff import diff_hash_and_get_changed_taxids
 
 
-def run_diff_changed_taxids(
-        database: str,
-        hash_table: str,
-        new_tag: str,
-        old_tag: str) -> list[str]:
-    
+def run_diff_changed_taxids(database: str, hash_table: str, new_tag: str, old_tag: str) -> list[str]:
     """
     Compare hash snapshots between two tags and return the list of changed TaxIDs.
     """
@@ -68,25 +63,17 @@ def run_diff_changed_taxids(
 
 
 @click.command()
+@click.option("--database", required=True, help="Spark database where the Delta table is stored.")
 @click.option(
-    "--database", required=True,
-    help="Spark database where the Delta table is stored."
+    "--hash-table", default="assembly_hashes", show_default=True, help="Delta table name containing hash snapshots."
 )
+@click.option("--new-tag", required=True, help="Tag for the newer snapshot (e.g., 20251014).")
+@click.option("--old-tag", required=True, help="Tag for the older snapshot (e.g., 20250930).")
 @click.option(
-    "--hash-table", default="assembly_hashes", show_default=True,
-    help="Delta table name containing hash snapshots."
-)
-@click.option(
-    "--new-tag", required=True,
-    help="Tag for the newer snapshot (e.g., 20251014)."
-)
-@click.option(
-    "--old-tag", required=True,
-    help="Tag for the older snapshot (e.g., 20250930)."
-)
-@click.option(
-    "--out-path", default=None, type=click.Path(),
-    help="Path to save changed TaxIDs JSON. If not supplied, auto-writes into compare_snapshot_data/<old>_vs_<new>/"
+    "--out-path",
+    default=None,
+    type=click.Path(),
+    help="Path to save changed TaxIDs JSON. If not supplied, auto-writes into compare_snapshot_data/<old>_vs_<new>/",
 )
 def main(database, hash_table, new_tag, old_tag, out_path):
     """CLI entrypoint for comparing snapshot hashes and exporting changed TaxIDs."""
@@ -138,4 +125,3 @@ python -m refseq_pipeline.cli.diff_changed_taxids \
   - assembly under taxid updated (hash changed)
 
 """
-

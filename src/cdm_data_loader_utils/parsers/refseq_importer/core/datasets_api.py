@@ -18,7 +18,7 @@ def fetch_reports_by_taxon(
     - Applies filters: RefSeq only / current assemblies only.
     - Handles pagination via `next_page_token`.
     - Yields report dicts for each assembly.
-    
+
     """
 
     # ---------------- API endpoint ----------------
@@ -28,11 +28,7 @@ def fetch_reports_by_taxon(
 
     # ---------------- Request params ----------------
     # metadata + assembly report text
-    params = {
-        "page_size": page_size,
-        "returned_content": "COMPLETE",
-        "filters.report_type": "assembly_report"
-    }
+    params = {"page_size": page_size, "returned_content": "COMPLETE", "filters.report_type": "assembly_report"}
 
     if current_only:
         params["filters.assembly_version"] = "current"
@@ -93,5 +89,3 @@ def fetch_reports_by_taxon(
         token = payload.get("next_page_token")
         if not token:
             break
-
-

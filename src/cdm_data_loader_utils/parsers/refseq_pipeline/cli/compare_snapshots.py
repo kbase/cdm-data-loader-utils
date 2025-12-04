@@ -9,7 +9,6 @@ PYTHONPATH=src/parsers python src/parsers/refseq_pipeline/cli/compare_snapshots.
 
 """
 
-
 import os
 import click
 from pathlib import Path
@@ -20,8 +19,7 @@ from refseq_pipeline.core.snapshot_utils import detect_updated_or_new_hashes_fro
 
 def build_spark_session(app_name="Compare Snapshot Hashes") -> SparkSession:
     builder = (
-        SparkSession.builder
-        .appName(app_name)
+        SparkSession.builder.appName(app_name)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
     )
@@ -61,7 +59,7 @@ def run_compare_snapshots(spark, delta_path: Path, old_tag: str, new_tag: str):
 
     print(f"[compare] Diff result count: {df_diff.count()}")
     df_diff.show(20, truncate=False)
-    
+
     return df_diff
 
 
@@ -71,8 +69,6 @@ def run_compare_snapshots(spark, delta_path: Path, old_tag: str, new_tag: str):
 @click.option("--old-tag", required=True, help="Snapshot tag for the previous state (20250930)")
 @click.option("--new-tag", required=True, help="Snapshot tag for the new state (20251001)")
 @click.option("--output-dir", default=None, help="Directory to save result CSV and TSV files")
-
-
 def main(database, table, old_tag, new_tag, output_dir):
     spark = build_spark_session()
 
@@ -120,5 +116,3 @@ def main(database, table, old_tag, new_tag, output_dir):
 
 if __name__ == "__main__":
     main()
-
-    

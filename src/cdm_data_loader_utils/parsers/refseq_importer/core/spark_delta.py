@@ -23,13 +23,8 @@ def build_spark(database: str) -> SparkSession:
 
 
 def write_delta(
-        spark: SparkSession,
-        df: DataFrame,
-        database: str,
-        table: str,
-        mode: str = "append",
-        data_dir: Optional[str] = None) -> None:
-    
+    spark: SparkSession, df: DataFrame, database: str, table: str, mode: str = "append", data_dir: Optional[str] = None
+) -> None:
     """
     Write Spark DataFrame to Delta.
     If data_dir is provided, writes to external LOCATION {data_dir}/{database}/{table}.
@@ -47,17 +42,19 @@ def write_delta(
 
     # Special schema case
     if table == "contig_collection":
-        schema = StructType([
-            StructField("collection_id", StringType(), True),
-            StructField("contig_collection_type", StringType(), True),
-            StructField("ncbi_taxon_id", StringType(), True),
-            StructField("gtdb_taxon_id", StringType(), True),
-        ])
+        schema = StructType(
+            [
+                StructField("collection_id", StringType(), True),
+                StructField("contig_collection_type", StringType(), True),
+                StructField("ncbi_taxon_id", StringType(), True),
+                StructField("gtdb_taxon_id", StringType(), True),
+            ]
+        )
         df = spark.createDataFrame(df.rdd, schema=schema)
 
     writer = df.write.format("delta").mode(mode)
     writer = writer.option("mergeSchema", "true") if mode == "append" else writer.option("overwriteSchema", "true")
-    
+
     full_table = f"{database}.{table}"
 
     if data_dir:
@@ -84,14 +81,9 @@ def write_delta(
     else:
         writer.saveAsTable(full_table)
         print(f"Saved managed table {full_table} (rows={df.count()})")
-        
 
 
-def preview_or_skip(spark: SparkSession, 
-                    database: str, 
-                    table: str, 
-                    limit: int = 20) -> None:
-    
+def preview_or_skip(spark: SparkSession, database: str, table: str, limit: int = 20) -> None:
     """
     Preview table if it exists.
     """
@@ -102,6 +94,3 @@ def preview_or_skip(spark: SparkSession,
         spark.sql(f"SELECT * FROM {full_table} LIMIT {limit}").show(truncate=False)
     else:
         print(f"Table {full_table} not found. Skipping preview.")
-
-
-

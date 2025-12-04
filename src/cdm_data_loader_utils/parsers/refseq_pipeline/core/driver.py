@@ -13,7 +13,7 @@ def process_and_write_reports(
     data_dir: str | None = None,
     prefer_spark: bool = True,
     optimize: bool = False,
-    vacuum: bool = False
+    vacuum: bool = False,
 ):
     """
     Parse a list of assembly reports and write them to Delta Lake.

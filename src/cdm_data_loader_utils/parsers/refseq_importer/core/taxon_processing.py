@@ -8,7 +8,7 @@ from .extractors import (
     extract_created_date,
     extract_assembly_name,
     extract_organism_name,
-    extract_assembly_accessions
+    extract_assembly_accessions,
 )
 
 from .cdm_builders import (
@@ -23,12 +23,7 @@ from .cdm_builders import (
 # Pure PySpark version
 # ----------------------------------------------------------
 def process_report(
-    spark: SparkSession,
-    rep: Dict[str, Any],
-    tx: str,
-    seen: Set[str],
-    debug: bool,
-    allow_genbank_date: bool
+    spark: SparkSession, rep: Dict[str, Any], tx: str, seen: Set[str], debug: bool, allow_genbank_date: bool
 ):
     from datetime import date
 
@@ -86,7 +81,7 @@ def process_taxon(
     debug: bool,
     allow_genbank_date: bool,
     unique_per_taxon: bool,
-    seen: Set[str]
+    seen: Set[str],
 ):
     """
     Process ONE TaxID → return lists of Spark DataFrames.
@@ -108,21 +103,13 @@ def process_taxon(
 
     # ===== keep only latest one per taxon =====
     if unique_per_taxon and reports:
-        reports.sort(
-            key=lambda r: extract_created_date(r, allow_genbank_date) or "0000-00-00",
-            reverse=True
-        )
+        reports.sort(key=lambda r: extract_created_date(r, allow_genbank_date) or "0000-00-00", reverse=True)
         reports = [reports[0]]
 
     # ===== parse each assembly =====
     for rep in reports:
         e, c, n, i = process_report(
-            spark=spark,
-            rep=rep,
-            tx=tx,
-            seen=seen,
-            debug=debug,
-            allow_genbank_date=allow_genbank_date
+            spark=spark, rep=rep, tx=tx, seen=seen, debug=debug, allow_genbank_date=allow_genbank_date
         )
 
         entities.extend(e)
@@ -131,4 +118,3 @@ def process_taxon(
         identifiers.extend(i)
 
     return entities, collections, names, identifiers
-

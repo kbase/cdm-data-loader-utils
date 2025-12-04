@@ -12,9 +12,8 @@ table = "assembly_hashes"
 delta_path = "/global_share/alinawang/cdm-data-loader-utils/delta_data/refseq/refseq_api/assembly_hashes"
 
 builder = (
-    SparkSession.builder
-    .appName("Delta Table Inspector")
-    .master("local[*]")  
+    SparkSession.builder.appName("Delta Table Inspector")
+    .master("local[*]")
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
 )
@@ -36,5 +35,3 @@ print(df.count())
 if "updated" in df.columns:
     print("\n[timestamp range]")
     df.selectExpr("min(updated)", "max(updated)").show()
-
-

@@ -7,23 +7,25 @@ from refseq_pipeline.core.cdm_parse import parse_reports
 
 
 # ----------  CDM Schema ----------
-CDM_SCHEMA = T.StructType([
-    T.StructField("cdm_id", T.StringType(), nullable=False),
-    T.StructField("taxid", T.StringType(), nullable=True),
-    T.StructField("n_contigs", T.LongType(), nullable=True),
-    T.StructField("contig_n50", T.LongType(), nullable=True),
-    T.StructField("contig_l50", T.LongType(), nullable=True),
-    T.StructField("n_scaffolds", T.LongType(), nullable=True),
-    T.StructField("scaffold_n50", T.LongType(), nullable=True),
-    T.StructField("scaffold_l50", T.LongType(), nullable=True),
-    T.StructField("n_component_sequences", T.LongType(), nullable=True),
-    T.StructField("gc_percent", T.DoubleType(), nullable=True),
-    T.StructField("n_chromosomes", T.DoubleType(), nullable=True),
-    T.StructField("contig_bp", T.LongType(), nullable=True),
-    T.StructField("checkm_completeness", T.DoubleType(), nullable=True),
-    T.StructField("checkm_contamination", T.DoubleType(), nullable=True),
-    T.StructField("checkm_version", T.StringType(), nullable=True)
-])
+CDM_SCHEMA = T.StructType(
+    [
+        T.StructField("cdm_id", T.StringType(), nullable=False),
+        T.StructField("taxid", T.StringType(), nullable=True),
+        T.StructField("n_contigs", T.LongType(), nullable=True),
+        T.StructField("contig_n50", T.LongType(), nullable=True),
+        T.StructField("contig_l50", T.LongType(), nullable=True),
+        T.StructField("n_scaffolds", T.LongType(), nullable=True),
+        T.StructField("scaffold_n50", T.LongType(), nullable=True),
+        T.StructField("scaffold_l50", T.LongType(), nullable=True),
+        T.StructField("n_component_sequences", T.LongType(), nullable=True),
+        T.StructField("gc_percent", T.DoubleType(), nullable=True),
+        T.StructField("n_chromosomes", T.DoubleType(), nullable=True),
+        T.StructField("contig_bp", T.LongType(), nullable=True),
+        T.StructField("checkm_completeness", T.DoubleType(), nullable=True),
+        T.StructField("checkm_contamination", T.DoubleType(), nullable=True),
+        T.StructField("checkm_version", T.StringType(), nullable=True),
+    ]
+)
 
 
 def cast_df_to_schema(df, schema: T.StructType):
@@ -39,14 +41,13 @@ def cast_df_to_schema(df, schema: T.StructType):
 @click.command()
 @click.option("--database", required=True, help="Target Spark database name.")
 @click.option("--table", default="assembly_stats", show_default=True, help="Target table name.")
-@click.option("--taxids-json", required=True, type=click.Path(exists=True),
-              help="Path to JSON file containing list of taxids.")
-@click.option("--mode", type=click.Choice(["append", "overwrite"]), default="append",
-              show_default=True, help="Delta write mode.")
-@click.option("--prefer-spark", is_flag=True,
-              help="Prefer Spark parsing instead of pandas → Spark conversion.")
-
-
+@click.option(
+    "--taxids-json", required=True, type=click.Path(exists=True), help="Path to JSON file containing list of taxids."
+)
+@click.option(
+    "--mode", type=click.Choice(["append", "overwrite"]), default="append", show_default=True, help="Delta write mode."
+)
+@click.option("--prefer-spark", is_flag=True, help="Prefer Spark parsing instead of pandas → Spark conversion.")
 def main(database, table, taxids_json, mode, prefer_spark):
     """
     Fetch assembly reports from NCBI Datasets API by taxids and write to a Spark Delta table.
@@ -89,14 +90,7 @@ def main(database, table, taxids_json, mode, prefer_spark):
             print("[debug] Preview of full dataframe before writing:")
             sdf.select(*CDM_SCHEMA.fieldNames()).show(5, truncate=False)
 
-            write_delta_table(
-                sdf,
-                spark,
-                database,
-                table,
-                mode=mode,
-                data_dir=DATA_DIR
-            )
+            write_delta_table(sdf, spark, database, table, mode=mode, data_dir=DATA_DIR)
             num_success += 1
 
         except Exception as e:
@@ -118,7 +112,6 @@ if __name__ == "__main__":
     main()
 
 
-
 """
 
 PYTHONPATH=src/parsers \
@@ -130,4 +123,3 @@ python -m refseq_pipeline.cli.fetch_taxon_reports \
   --prefer-spark
     
 """
-
