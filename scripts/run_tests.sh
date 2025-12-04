@@ -9,4 +9,4 @@ cd "$SCRIPT_DIR"
 uv venv docker_venv
 source docker_venv/bin/activate
 
-uv run pytest --cov=src --cov-report=xml
+uv run --active pytest --cov=src --cov-report=xml
