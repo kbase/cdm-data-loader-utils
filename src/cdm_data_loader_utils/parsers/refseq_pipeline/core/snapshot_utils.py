@@ -29,25 +29,21 @@ def get_removed_accessions(spark: SparkSession, delta_path: str, old_tag: str, n
     removed_only = df_old.join(df_new, on="accession", how="left_anti")
     return [row["accession"] for row in removed_only.select("accession").collect()]
 
+
 # ========== For CLI detect_updates.py ==========
 
+
 def detect_updated_or_new_hashes_from_path(
-    spark: SparkSession,
-    delta_path: str,
-    old_tag: str,
-    new_tag: str) -> DataFrame:
+    spark: SparkSession, delta_path: str, old_tag: str, new_tag: str
+) -> DataFrame:
     """
     Return a unified DataFrame of changes between two snapshots (new or updated accessions),
     using Delta table path instead of database.table.
     """
     df = spark.read.format("delta").load(delta_path).select("accession", "content_sha256", "tag")
 
-    df_old = df.filter(F.col("tag") == old_tag).selectExpr(
-        "accession as acc", "content_sha256 as old_sha256"
-    )
-    df_new = df.filter(F.col("tag") == new_tag).selectExpr(
-        "accession as acc", "content_sha256 as new_sha256"
-    )
+    df_old = df.filter(F.col("tag") == old_tag).selectExpr("accession as acc", "content_sha256 as old_sha256")
+    df_new = df.filter(F.col("tag") == new_tag).selectExpr("accession as acc", "content_sha256 as new_sha256")
 
     joined = df_new.join(df_old, on="acc", how="outer")
 
@@ -55,11 +51,10 @@ def detect_updated_or_new_hashes_from_path(
         joined.withColumn(
             "change_type",
             F.when(F.col("old_sha256").isNull(), F.lit("new"))
-             .when(F.col("new_sha256").isNull(), F.lit("deleted"))
-             .when(F.col("old_sha256") != F.col("new_sha256"), F.lit("updated"))
-             .otherwise(F.lit("unchanged"))
+            .when(F.col("new_sha256").isNull(), F.lit("deleted"))
+            .when(F.col("old_sha256") != F.col("new_sha256"), F.lit("updated"))
+            .otherwise(F.lit("unchanged")),
         )
         .filter("change_type in ('new', 'updated')")
         .selectExpr("acc as accession", "change_type", "old_sha256", "new_sha256")
     )
-

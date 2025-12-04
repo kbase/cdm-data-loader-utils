@@ -14,7 +14,7 @@ def diff_hash_and_get_changed_taxids(
     acc_index: Dict[str, Dict[str, str]],
     tag_new: Optional[str] = None,
     tag_old: Optional[str] = None,
-    debug: bool = False
+    debug: bool = False,
 ) -> List[str]:
     """
     Compare hash snapshots and return taxon IDs whose assemblies have changed.
@@ -47,10 +47,7 @@ def diff_hash_and_get_changed_taxids(
         cond_old = F.col("tag") == tag_old
         logger.info(f"[diff] Using tag comparison: old='{tag_old}', new='{tag_new}'")
     else:
-        ts = [
-            r["retrieved_at"]
-            for r in hash_df.select("retrieved_at").distinct().orderBy("retrieved_at").tail(2)
-        ]
+        ts = [r["retrieved_at"] for r in hash_df.select("retrieved_at").distinct().orderBy("retrieved_at").tail(2)]
         if len(ts) < 2:
             logger.warning(f"[diff] Only one snapshot available: {ts}")
             return []
@@ -76,11 +73,7 @@ def diff_hash_and_get_changed_taxids(
     # --- Detect changed or missing hashes ---
     changed_df = (
         new_df.join(old_df, on=["accession", "kind"], how="fullouter")
-        .where(
-            (F.col("old_sha").isNull())
-            | (F.col("new_sha").isNull())
-            | (F.col("old_sha") != F.col("new_sha"))
-        )
+        .where((F.col("old_sha").isNull()) | (F.col("new_sha").isNull()) | (F.col("old_sha") != F.col("new_sha")))
         .select("accession")
         .distinct()
     )
@@ -114,6 +107,3 @@ def diff_hash_and_get_changed_taxids(
 
     logger.info(f"[diff] {len(accessions)} changed accessions → {len(changed_taxids)} unique taxids")
     return changed_taxids
-
-
-

@@ -9,14 +9,16 @@ from refseq_pipeline.core.config import DEFAULT_HASH_TABLE
 
 
 # Delta schema for hash snapshots
-HASH_SCHEMA = StructType([
-    StructField("accession", StringType(), True),
-    StructField("ftp_path", StringType(), True),
-    StructField("kind", StringType(), True),
-    StructField("content_sha256", StringType(), True),
-    StructField("retrieved_at", StringType(), True),
-    StructField("tag", StringType(), True),
-])
+HASH_SCHEMA = StructType(
+    [
+        StructField("accession", StringType(), True),
+        StructField("ftp_path", StringType(), True),
+        StructField("kind", StringType(), True),
+        StructField("content_sha256", StringType(), True),
+        StructField("retrieved_at", StringType(), True),
+        StructField("tag", StringType(), True),
+    ]
+)
 
 
 def snapshot_hashes_for_accessions(
@@ -25,7 +27,7 @@ def snapshot_hashes_for_accessions(
     kind: str = "auto",
     timeout: int = 30,
     spark: SparkSession = None,
-    fast_mode: bool = False
+    fast_mode: bool = False,
 ):
     """
     Build a Spark DataFrame of hash snapshots for given accessions.
@@ -35,7 +37,7 @@ def snapshot_hashes_for_accessions(
         acc_index: accession→metadata mapping (ftp_path, taxid, etc.)
         kind: "annotation", "md5", or "auto".
         timeout: Timeout for fetching FTP files.
-        spark: SparkSession 
+        spark: SparkSession
         fast_mode: If True, only fetch md5 to reduce time.
 
     Returns:
@@ -86,14 +88,16 @@ def snapshot_hashes_for_accessions(
             failed += 1
             continue
 
-        rows.append({
-            "accession": acc,
-            "ftp_path": ftp,
-            "kind": actual_kind,
-            "content_sha256": text_sha256(content),
-            "retrieved_at": ts,
-            "tag": None,
-        })
+        rows.append(
+            {
+                "accession": acc,
+                "ftp_path": ftp,
+                "kind": actual_kind,
+                "content_sha256": text_sha256(content),
+                "retrieved_at": ts,
+                "tag": None,
+            }
+        )
         success += 1
 
     print(f"[hash] Finished snapshot: total={total}, success={success}, failed={failed}")
@@ -110,7 +114,7 @@ def write_hash_snapshot(
     database: str,
     table: str = DEFAULT_HASH_TABLE,
     mode: str = "append",
-    data_dir: str | None = None
+    data_dir: str | None = None,
 ):
     """
     Write the hash snapshot Spark DataFrame into Delta table.
@@ -122,6 +126,7 @@ def write_hash_snapshot(
 
     if "tag" not in sdf.columns:
         from pyspark.sql import functions as F
+
         sdf = sdf.withColumn("tag", F.lit(None))
 
     try:
@@ -129,4 +134,3 @@ def write_hash_snapshot(
     except Exception as e:
         print(f"[hash] Failed to write hash snapshot to {database}.{table}: {e}")
         raise
-

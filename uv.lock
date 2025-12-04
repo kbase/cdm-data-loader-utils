@@ -377,6 +377,7 @@ dependencies = [
     { name = "berdl-notebook-utils" },
     { name = "biopython" },
     { name = "click" },
+    { name = "requests" },
     { name = "ruff" },
 ]
 
@@ -392,6 +393,7 @@ requires-dist = [
     { name = "berdl-notebook-utils", git = "https://github.com/BERDataLakehouse/spark_notebook.git?subdirectory=notebook_utils" },
     { name = "biopython", specifier = ">=1.86" },
     { name = "click", specifier = ">=8.3.1" },
+    { name = "requests" },
     { name = "ruff", specifier = ">=0.14.7" },
 ]
 
