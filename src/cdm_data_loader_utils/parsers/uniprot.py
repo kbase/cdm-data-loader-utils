@@ -1,6 +1,4 @@
-"""
-UniProt XML Delta Lake Ingestion Pipeline
-=========================================
+"""UniProt XML Delta Lake Ingestion Pipeline.
 
 This script parses UniProt XML (.xml.gz) file and ingests the data into structured Delta Lake tables.
 
@@ -42,28 +40,22 @@ Typical scenario:
 
 """
 
-import os
-import click
 import datetime
-import json
-import requests
 import gzip
+import json
+import os
 import uuid
 import xml.etree.ElementTree as ET
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
-from pyspark.sql.types import ArrayType, StringType, StructType, StructField
-from shared_identifiers import parse_identifiers_generic
 from typing import Optional
 
-from xml_utils import (
-    get_attr,
-    get_text,
-    find_all_text,
-    clean_dict,
-    parse_db_references
-)
+import click
+import requests
+from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
+from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
+from cdm_data_loader_utils.parsers.xml_utils import clean_dict, find_all_text, get_attr, get_text, parse_db_references
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
 NS = {"ns": "https://uniprot.org/uniprot"}
@@ -112,17 +104,12 @@ def build_datasource_record(xml_url):
         "source": "UniProt",
         "url": xml_url,
         "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "version": 115
+        "version": 115,
     }
 
 
 def parse_identifiers(entry, cdm_id):
-    out = parse_identifiers_generic(
-        entry=entry,
-        xpath="ns:accession",
-        prefix="UniProt",
-        ns=NS
-    )
+    out = parse_identifiers_generic(entry=entry, xpath="ns:accession", prefix="UniProt", ns=NS)
     for row in out:
         row["entity_id"] = cdm_id
     return out
@@ -212,7 +199,6 @@ def parse_protein_info(entry, cdm_id):
     # Extract EC numbers (recommended + alternative names)
     protein = entry.find("ns:protein", NS)
     if protein is not None:
-
         # full list of EC number search paths
         ec_paths = [
             "ns:recommendedName/ns:ecNumber",
@@ -459,7 +445,6 @@ def parse_publications(entry):
 
 
 def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None):
-
     if prev_created:
         entity_created = prev_created
         entity_updated = current_timestamp
@@ -619,21 +604,17 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
         # Determine write mode based on directory presence
         mode = "append" if os.path.exists(delta_dir) else "overwrite"
 
-        print(f"[DEBUG] Saving table '{namespace}.{table_name}' to {delta_dir} "
-              f"with mode={mode}, record count={len(records)}"
-              )
+        print(
+            f"[DEBUG] Saving table '{namespace}.{table_name}' to {delta_dir} "
+            f"with mode={mode}, record count={len(records)}"
+        )
 
         try:
             # Convert to Spark DataFrame
             df = spark.createDataFrame(records, schema)
 
             # Write to Delta directory
-            (
-                df.write.format("delta")
-                .mode(mode)
-                .option("overwriteSchema", "true")
-                .save(delta_dir)
-            )
+            (df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir))
 
             # Register using Spark SQL
             spark.sql(f"""
@@ -696,22 +677,14 @@ def load_existing_entity(spark, output_dir, namespace):
     This mapping is used to support upserts and idempotent writes.
     """
     old_created_dict = {}
-    entities_table_path = os.path.abspath(
-        os.path.join(output_dir, f"{namespace}_entities_delta")
-    )
+    entities_table_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_entities_delta"))
     if os.path.exists(entities_table_path):
         try:
             # Read only the required columns for efficiency
-            old_df = (
-                spark.read.format("delta")
-                .load(entities_table_path)
-                .select("entity_id", "created")
-            )
+            old_df = spark.read.format("delta").load(entities_table_path).select("entity_id", "created")
             for row in old_df.collect():
                 old_created_dict[row["entity_id"]] = row["created"]
-            print(
-                f"Loaded {len(old_created_dict)} existing entity_id records for upsert."
-            )
+            print(f"Loaded {len(old_created_dict)} existing entity_id records for upsert.")
         except Exception as e:
             print(f"Couldn't load previous entities delta table: {e}")
     else:
@@ -719,16 +692,7 @@ def load_existing_entity(spark, output_dir, namespace):
     return old_created_dict
 
 
-def parse_entries(
-    local_xml_path,
-    target_date,
-    batch_size,
-    spark,
-    tables,
-    output_dir,
-    namespace,
-    current_timestamp
-):
+def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp):
     """
     Parse UniProt XML entries, write to Delta Lake in batches
     Return (processed_entry_count, skipped_entry_count)
@@ -781,8 +745,7 @@ def parse_entries(
                 tables["proteins"][0].append(record["protein"])
             tables["associations"][0].extend(record["associations"])
             tables["publications"][0].extend(
-                {"entity_id": record["entity"]["entity_id"], "publication": pub}
-                for pub in record["publications"]
+                {"entity_id": record["entity"]["entity_id"], "publication": pub} for pub in record["publications"]
             )
 
             entry_count += 1
@@ -801,7 +764,6 @@ def parse_entries(
     # write remaining records
     save_batches_to_delta(spark, tables, output_dir, namespace)
     return entry_count, skipped
-
 
 
 def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
@@ -837,18 +799,9 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
 
     # Main cycle processing, transfer to current timestamp
     entry_count, skipped = parse_entries(
-        local_xml_path,
-        target_date,
-        batch_size,
-        spark,
-        tables,
-        output_dir,
-        namespace,
-        current_timestamp
+        local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp
     )
-    print(
-        f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables."
-    )
+    print(f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables.")
     spark.sql(f"SHOW TABLES IN {namespace}").show()
     spark.sql(f"SELECT COUNT(*) FROM {namespace}.entities").show()
 
@@ -857,16 +810,12 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
 
     spark.stop()
 
-    print(
-        f"All Delta tables are created and registered in Spark SQL under `{namespace}`."
-    )
+    print(f"All Delta tables are created and registered in Spark SQL under `{namespace}`.")
 
 
 @click.command()
 @click.option("--xml-url", required=True, help="URL to UniProt XML (.xml.gz)")
-@click.option(
-    "--output-dir", default="output", help="Output directory for Delta tables"
-)
+@click.option("--output-dir", default="output", help="Output directory for Delta tables")
 @click.option("--namespace", default="uniprot_db", help="Delta Lake database name")
 @click.option(
     "--target-date",
@@ -874,8 +823,6 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     help="Only process entries modified/updated since this date (YYYY-MM-DD)",
 )
 @click.option("--batch-size", default=5000, help="Batch size for writing Delta tables")
-
-
 def main(xml_url, output_dir, namespace, target_date, batch_size):
     ingest_uniprot(
         xml_url=xml_url,
@@ -884,6 +831,7 @@ def main(xml_url, output_dir, namespace, target_date, batch_size):
         target_date=target_date,
         batch_size=int(batch_size),
     )
+
 
 if __name__ == "__main__":
     main()
