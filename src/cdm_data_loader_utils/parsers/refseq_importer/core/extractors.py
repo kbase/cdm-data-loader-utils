@@ -83,9 +83,7 @@ def _deep_collect_regex(obj: Any, pattern: re.Pattern) -> List[str]:
     return sorted(results)
 
 
-def extract_created_date(rep: Dict[str, Any], 
-                         allow_genbank_date: bool = False, 
-                         debug: bool = False) -> Optional[str]:
+def extract_created_date(rep: Dict[str, Any], allow_genbank_date: bool = False, debug: bool = False) -> Optional[str]:
     """
     Extract creation/release date for a genome assembly.
 
@@ -104,9 +102,15 @@ def extract_created_date(rep: Dict[str, Any],
     # Collect candidate dates
     candidates: Dict[str, str] = {}
     for src in (assem_data, rep.get("assembly") or {}, rep):
-        for key in ["releaseDate", "assemblyDate", "submissionDate",
-                    "release_date", "assembly_date", "submission_date"]:
-            v = src.get(key)  # safely fetch the value 
+        for key in [
+            "releaseDate",
+            "assemblyDate",
+            "submissionDate",
+            "release_date",
+            "assembly_date",
+            "submission_date",
+        ]:
+            v = src.get(key)  # safely fetch the value
 
             # Only accept non-empty string values
             if isinstance(v, str) and v.strip():
@@ -140,7 +144,7 @@ def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
     Supports:
       - assemblyInfo.assemblyName
       - assembly.assemblyName
-      - assembly.display_name / displayName  
+      - assembly.display_name / displayName
       - rep.assemblyName
       - deep search fallback
     """
@@ -152,20 +156,15 @@ def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
     v = _coalesce(
         assembly_info.get("assemblyName"),
         a.get("assemblyName"),
-        a.get("display_name"),   
-        a.get("displayName"),    
-        rep.get("assemblyName")
+        a.get("display_name"),
+        a.get("displayName"),
+        rep.get("assemblyName"),
     )
     if v:
         return v.strip()
 
     # Fallback deep search for assemblyName or display_name
-    return _deep_find_str(rep, {
-        "assemblyName",
-        "assembly_name",
-        "display_name",    
-        "displayName"      
-    })
+    return _deep_find_str(rep, {"assemblyName", "assembly_name", "display_name", "displayName"})
 
 
 def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
@@ -177,20 +176,20 @@ def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
         org_top.get("organismName"),
         org_top.get("scientificName"),
         org_top.get("taxName"),
-        org_top.get("name"),   
+        org_top.get("name"),
         (assembly_info.get("organism") or {}).get("organismName")
-            if isinstance(assembly_info.get("organism"), dict) else None,
-        (a.get("organism") or {}).get("organismName")
-            if isinstance(a.get("organism"), dict) else None
+        if isinstance(assembly_info.get("organism"), dict)
+        else None,
+        (a.get("organism") or {}).get("organismName") if isinstance(a.get("organism"), dict) else None,
     ]
 
     for v in candidates:
         if isinstance(v, str) and v.strip():
             return v.strip()
 
-    return _deep_find_str(rep,
-                          {"organismName", "scientificName", "sciName",
-                           "taxName", "displayName", "organism_name", "name"})
+    return _deep_find_str(
+        rep, {"organismName", "scientificName", "sciName", "taxName", "displayName", "organism_name", "name"}
+    )
 
 
 def extract_taxid(rep: Dict[str, Any]) -> Optional[str]:
@@ -240,7 +239,7 @@ def extract_biosample_ids(rep: Dict[str, Any]) -> list[str]:
     for path in [
         rep.get("assemblyInfo", {}).get("biosample"),
         rep.get("assembly", {}).get("biosample"),
-        rep.get("biosample")
+        rep.get("biosample"),
     ]:
         if isinstance(path, dict):
             v = path.get("accession") or path.get("biosampleAccession")
@@ -293,7 +292,7 @@ def extract_assembly_accessions(rep: Dict[str, Any]) -> tuple[list[str], list[st
     gcf, gca = set(), set()
 
     def _add(acc):
-        if not isinstance(acc, str): 
+        if not isinstance(acc, str):
             return
         acc = acc.strip()
         if acc.startswith("GCF_"):

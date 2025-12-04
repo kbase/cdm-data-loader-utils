@@ -3,7 +3,7 @@ from refseq_pipeline.core.refseq_io import load_refseq_assembly_index
 from refseq_pipeline.core.spark_delta import build_spark
 from pyspark.sql import functions as F
 
-## python -m refseq_pipeline.core.debug_snapshot ## 
+## python -m refseq_pipeline.core.debug_snapshot ##
 
 # --- Setup ---
 spark = build_spark("refseq_debug")
@@ -12,18 +12,12 @@ acc_index = load_refseq_assembly_index()
 # Sample accessions to test
 sample_accs = [
     "GCF_000001405.40",  # human
-    "GCF_000001635.27"   # mouse
+    "GCF_000001635.27",  # mouse
 ]
 tag = "debug_test"
 
 # --- Run snapshot hash fetch ---
-sdf = snapshot_hashes_for_accessions(
-    sample_accs,
-    acc_index=acc_index,
-    kind="auto",
-    spark=spark,
-    fast_mode=False
-)
+sdf = snapshot_hashes_for_accessions(sample_accs, acc_index=acc_index, kind="auto", spark=spark, fast_mode=False)
 
 # Add tag column
 sdf = sdf.withColumn("tag", F.lit(tag))
@@ -34,11 +28,7 @@ sdf.show(truncate=False)
 
 # --- Write to Delta (optional) ---
 write_hash_snapshot(
-    spark=spark,
-    sdf=sdf,
-    database="refseq_debug",
-    table="assembly_hashes_test",
-    data_dir="output_delta"
+    spark=spark, sdf=sdf, database="refseq_debug", table="assembly_hashes_test", data_dir="output_delta"
 )
 
 # --- Query from Delta to verify ---
@@ -49,6 +39,3 @@ spark.sql(f"""
     FROM assembly_hashes_test
     WHERE tag = '{tag}'
 """).show(truncate=False)
-
-
-

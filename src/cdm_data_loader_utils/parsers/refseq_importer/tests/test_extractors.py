@@ -10,7 +10,7 @@ from refseq_importer.core.extractors import (
     extract_biosample_ids,
     extract_bioproject_ids,
     extract_assembly_accessions,
-    PAT_BIOSAMPLE
+    PAT_BIOSAMPLE,
 )
 
 
@@ -189,4 +189,3 @@ def test_extract_assembly_accessions(rep, expected_gcf, expected_gca):
     gcf, gca = extract_assembly_accessions(rep)
     assert gcf == expected_gcf
     assert gca == expected_gca
-

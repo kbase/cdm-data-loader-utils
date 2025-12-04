@@ -32,6 +32,8 @@ class AssemblyMeta(TypedDict):
 # Shared requests session with retry
 # ----------------------------------------
 _session = None
+
+
 def get_session() -> requests.Session:
     """
     Return a shared session with retry logic for stable downloads.
@@ -40,12 +42,10 @@ def get_session() -> requests.Session:
     global _session
     if _session is None:
         from requests.adapters import HTTPAdapter, Retry
+
         s = requests.Session()
         retries = Retry(
-            total=3,
-            backoff_factor=0.5,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET"]
+            total=3, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"]
         )
         adapter = HTTPAdapter(max_retries=retries, pool_connections=16, pool_maxsize=16)
         s.mount("http://", adapter)
@@ -65,6 +65,7 @@ def download_text(url: str, timeout: int = 60, session: Optional[requests.Sessio
     r = s.get(url, timeout=timeout)
     r.raise_for_status()
     return r.text
+
 
 def normalize_multiline_text(txt: str) -> str:
     """
@@ -100,6 +101,7 @@ def parse_assembly_summary(content: str) -> Dict[str, AssemblyMeta]:
             }
     return acc2meta
 
+
 def load_refseq_assembly_index(url: Optional[str] = None) -> Dict[str, AssemblyMeta]:
     """
     Load and parse the RefSeq assembly summary file.
@@ -123,25 +125,54 @@ def load_local_refseq_assembly_index_spark(path: str, spark: SparkSession) -> Da
     """
     try:
         df = (
-            spark.read
-            .option("sep", "\t")
+            spark.read.option("sep", "\t")
             .option("header", False)
             .option("comment", "#")
             .option("inferSchema", True)
             .csv(path)
         )
         df = df.toDF(
-            "assembly_accession", "bioproject", "biosample", "wgs_master", "refseq_category",
-            "taxid", "species_taxid", "organism_name", "infraspecific_name", "isolate",
-            "version_status", "assembly_level", "release_type", "genome_rep", "seq_rel_date",
-            "asm_name", "submitter", "gbrs_paired_asm", "paired_asm_comp", "ftp_path",
-            "excluded_from_refseq", "relation_to_type_material", "asm_not_live_date", "assembly_type",
-            "group", "genome_size", "genome_size_ungapped", "gc_percent", "replicon_count",
-            "scaffold_count", "contig_count", "annotation_provider", "annotation_name",
-            "annotation_date", "total_gene_count", "protein_coding_gene_count",
-            "non_coding_gene_count", "pubmed_id")
+            "assembly_accession",
+            "bioproject",
+            "biosample",
+            "wgs_master",
+            "refseq_category",
+            "taxid",
+            "species_taxid",
+            "organism_name",
+            "infraspecific_name",
+            "isolate",
+            "version_status",
+            "assembly_level",
+            "release_type",
+            "genome_rep",
+            "seq_rel_date",
+            "asm_name",
+            "submitter",
+            "gbrs_paired_asm",
+            "paired_asm_comp",
+            "ftp_path",
+            "excluded_from_refseq",
+            "relation_to_type_material",
+            "asm_not_live_date",
+            "assembly_type",
+            "group",
+            "genome_size",
+            "genome_size_ungapped",
+            "gc_percent",
+            "replicon_count",
+            "scaffold_count",
+            "contig_count",
+            "annotation_provider",
+            "annotation_name",
+            "annotation_date",
+            "total_gene_count",
+            "protein_coding_gene_count",
+            "non_coding_gene_count",
+            "pubmed_id",
+        )
         return df
-    
+
     except Exception as e:
         logger.error(f"Failed to load local TSV with Spark: {path} → {e}")
         raise
@@ -162,6 +193,7 @@ def fetch_annotation_hash(ftp_path: str, timeout: int = 30) -> Optional[str]:
     except Exception as e:
         logger.warning(f"[fetch] Failed to fetch {url}: {e}")
         return None
+
 
 @lru_cache(maxsize=None)
 def fetch_md5_checksums(ftp_path: str, timeout: int = 30) -> Optional[str]:
@@ -191,22 +223,18 @@ def text_sha256(s: str) -> str:
 if __name__ == "__main__":
     print("Downloading and parsing RefSeq index..")
     acc2meta = load_refseq_assembly_index()
-    
+
     print(f"Total accessions parsed: {len(acc2meta)}")
 
     # Sample print
-    for acc, meta in list(acc2meta.items())[:10]:  
+    for acc, meta in list(acc2meta.items())[:10]:
         print(f"- {acc}: {meta}")
 
     # Spark local test
     try:
         print("\nLoading local TSV with Spark:")
         spark = SparkSession.builder.appName("RefSeqIO").getOrCreate()
-        df = load_local_refseq_assembly_index_spark(
-            "bronze/refseq/indexes/assembly_summary_refseq.20250930.tsv", spark
-        )
+        df = load_local_refseq_assembly_index_spark("bronze/refseq/indexes/assembly_summary_refseq.20250930.tsv", spark)
         df.select("assembly_accession", "taxid", "organism_name", "ftp_path").show(5, truncate=False)
     except Exception as e:
         print(f"Spark test failed: {e}")
-
-

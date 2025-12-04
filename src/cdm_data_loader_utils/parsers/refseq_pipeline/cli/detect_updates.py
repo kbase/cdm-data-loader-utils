@@ -30,8 +30,6 @@ Usage:
 @click.option("--old-tag", required=True, help="Previous snapshot tag to compare.")
 @click.option("--new-tag", required=True, help="Current snapshot tag to compare.")
 @click.option("--output", default=None, help="CSV output directory.")
-
-
 def main(database, table, old_tag, new_tag, output):
     """
     Compare two Delta snapshot tags (ex: 20200930 VS 20251001)
@@ -50,20 +48,19 @@ def main(database, table, old_tag, new_tag, output):
     except Exception as e:
         print(f"[WARN] Could not preview registered table tags: {e}")
 
-
     # --- Build Delta path ---
-    #project_root = Path(__file__).resolve().parents[2]  
-    #delta_path = project_root / "delta_data" / "refseq" / database / table
+    # project_root = Path(__file__).resolve().parents[2]
+    # delta_path = project_root / "delta_data" / "refseq" / database / table
 
     project_root = Path("/global_share/alinawang/cdm-data-loader-utils")
     delta_path = project_root / "delta_data" / "refseq" / "refseq_api" / "assembly_hashes"
-    
+
     print(f"[detect] Using Delta path: {delta_path}")
 
     if not delta_path.exists():
         print(f"[ERROR] Delta path not found: {delta_path}")
         raise SystemExit(1)
-    
+
     # --- Debugging block to inspect Delta contents ---
     try:
         print("\n[debug] Loading Delta table from path...")
@@ -85,7 +82,6 @@ def main(database, table, old_tag, new_tag, output):
         print(df_all.filter(df_all["tag"] == old_tag).count())
     except Exception as e:
         print(f"[WARN] Debug block failed: {e}")
-
 
     # --- Run comparison ---
     df = detect_updated_or_new_hashes_from_path(spark, str(delta_path), old_tag, new_tag)
@@ -109,5 +105,3 @@ def main(database, table, old_tag, new_tag, output):
 
 if __name__ == "__main__":
     main()
-
-

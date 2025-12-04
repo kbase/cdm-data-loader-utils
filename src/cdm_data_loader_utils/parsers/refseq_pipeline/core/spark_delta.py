@@ -13,8 +13,7 @@ def build_spark(database: str, master: str = "local[*]") -> SparkSession:
     from delta import configure_spark_with_delta_pip
 
     builder = (
-        SparkSession.builder
-        .appName("RefSeq Pipeline")
+        SparkSession.builder.appName("RefSeq Pipeline")
         .master(master)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -26,12 +25,7 @@ def build_spark(database: str, master: str = "local[*]") -> SparkSession:
 
 
 def write_delta_table(
-    sdf,
-    spark: SparkSession,
-    database: str,
-    table: str,
-    mode: str = "append",
-    data_dir: str | None = None
+    sdf, spark: SparkSession, database: str, table: str, mode: str = "append", data_dir: str | None = None
 ):
     """
     Write a Spark DataFrame to either external or managed Delta table.
@@ -107,7 +101,7 @@ def cleanup_after_write(
     do_optimize=False,
     do_vacuum=False,
     vacuum_hours=168,
-    zorder_by=("cdm_id",)
+    zorder_by=("cdm_id",),
 ):
     """
     Clean and deduplicate a Delta table by CDM ID after write.
@@ -128,10 +122,7 @@ def cleanup_after_write(
     # --- Clean invalid checkm_version patterns ---
     cv = F.col("checkm_version")
     for pat in bad_checkm_patterns:
-        src = src.withColumn(
-            "checkm_version",
-            F.when(cv.like(pat), F.lit(None)).otherwise(F.col("checkm_version"))
-        )
+        src = src.withColumn("checkm_version", F.when(cv.like(pat), F.lit(None)).otherwise(F.col("checkm_version")))
 
     # --- Deduplication rule ---
     weight_exprs = [F.when(F.col(c).isNull(), 1).otherwise(0) for c in prefer_cols]
@@ -146,19 +137,13 @@ def cleanup_after_write(
     cleaned = src.withColumn("rn", F.row_number().over(w)).filter("rn = 1").drop("rn")
 
     # --- Overwrite the original table location ---
-    (
-        cleaned.write
-        .format("delta")
-        .mode("overwrite")
-        .option("overwriteSchema", "true")
-        .saveAsTable(full)
-    )
+    (cleaned.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(full))
 
     # --- OPTIMIZE ---
     if do_optimize:
         try:
             z = ", ".join([f"`{c}`" for c in zorder_by]) if zorder_by else ""
-            spark.sql(f"OPTIMIZE {full_sql} {'ZORDER BY ('+z+')' if z else ''}")
+            spark.sql(f"OPTIMIZE {full_sql} {'ZORDER BY (' + z + ')' if z else ''}")
         except Exception as e:
             print("OPTIMIZE skipped:", e)
 
@@ -197,5 +182,3 @@ def read_delta_table(spark: SparkSession, database: str, table: str):
         return spark.table(full)
     else:
         raise ValueError(f"Table {full} not found in catalog.")
-    
-    

@@ -13,6 +13,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Shared requests session
 # -------------------------------
 _session = None
+
+
 def get_session():
     """
     Return shared requests.Session with retries for stability.
@@ -20,17 +22,17 @@ def get_session():
     global _session
     if _session is None:
         from requests.adapters import HTTPAdapter, Retry
+
         s = requests.Session()
         retries = Retry(
-            total=3, backoff_factor=0.5,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET"]
+            total=3, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"]
         )
         adapter = HTTPAdapter(max_retries=retries, pool_connections=16, pool_maxsize=16)
         s.mount("http://", adapter)
         s.mount("https://", adapter)
         _session = s
     return _session
+
 
 # -------------------------------
 # NCBI Datasets API fetcher
@@ -43,7 +45,7 @@ def fetch_reports_by_taxon(
     refseq_only: bool = True,
     current_only: bool = True,
     debug: bool = False,
-    max_pages: Optional[int] = None
+    max_pages: Optional[int] = None,
 ) -> Iterable[Dict[str, Any]]:
     """
     Generator that yields genome dataset reports for a given NCBI taxon ID.
@@ -123,5 +125,3 @@ def fetch_reports_by_taxon(
         if max_pages is not None and page_idx >= max_pages:
             logger.info(f"[datasets] Reached max_pages={max_pages}; stopping.")
             break
-
-

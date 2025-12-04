@@ -25,28 +25,20 @@ def save_assembly_index(destination_path: str) -> bool:
 
         print(f"[index] saved to: {destination_path}")
         return True
-    
+
     except Exception as e:
         print(f"[index] failed to download or save: {e}")
         return False
 
 
 @click.command()
-
-@click.option(
-    "--out-dir",
-    required=True,
-    help="Directory to save the downloaded RefSeq assembly index."
-    )
-
+@click.option("--out-dir", required=True, help="Directory to save the downloaded RefSeq assembly index.")
 @click.option(
     "--tag",
     default=datetime.today().strftime("%Y%m%d"),
     show_default=True,
-    help="Filename tag used to version the saved index."
-    )
-
-
+    help="Filename tag used to version the saved index.",
+)
 def main(out_dir: str, tag: str):
     """
     CLI entrypoint to download and save RefSeq assembly index.
@@ -56,7 +48,7 @@ def main(out_dir: str, tag: str):
             --out-dir bronze/refseq/indexes \
             --tag 20250930
     """
-    
+
     # Ensure output directory exists
     os.makedirs(out_dir, exist_ok=True)
 
@@ -73,4 +65,3 @@ def main(out_dir: str, tag: str):
 
 if __name__ == "__main__":
     main()
-

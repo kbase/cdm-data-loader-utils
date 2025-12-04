@@ -8,7 +8,7 @@ from refseq_importer.core.cdm_builders import (
     build_cdm_identifier_rows,
 )
 
-### pytest refseq_importer/tests/test_cdm_builders.py ### 
+### pytest refseq_importer/tests/test_cdm_builders.py ###
 
 
 # -------------------------------------------------------------
@@ -16,12 +16,7 @@ from refseq_importer.core.cdm_builders import (
 # -------------------------------------------------------------
 @pytest.fixture(scope="session")
 def spark():
-    spark = (
-        SparkSession.builder
-        .master("local[1]")
-        .appName("refseq_importer_tests")
-        .getOrCreate()
-    )
+    spark = SparkSession.builder.master("local[1]").appName("refseq_importer_tests").getOrCreate()
     yield spark
     spark.stop()
 
@@ -29,14 +24,11 @@ def spark():
 # =============================================================
 #                TEST build_entity_id
 # =============================================================
-@pytest.mark.parametrize(
-    "input_key",
-    ["abc", "   hello  ", "", "123", "GCF_0001"]
-)
+@pytest.mark.parametrize("input_key", ["abc", "   hello  ", "", "123", "GCF_0001"])
 def test_build_entity_id_prefix(input_key):
     eid = build_entity_id(input_key)
     assert eid.startswith("CDM:")
-    assert len(eid) > 10   # UUID v5 non-empty
+    assert len(eid) > 10  # UUID v5 non-empty
     assert isinstance(eid, str)
 
 
@@ -44,11 +36,7 @@ def test_build_entity_id_prefix(input_key):
 #                TEST build_cdm_entity
 # =============================================================
 def test_build_cdm_entity_basic(spark):
-    df, eid = build_cdm_entity(
-        spark,
-        key_for_uuid="ABC123",
-        created_date="2020-01-01"
-    )
+    df, eid = build_cdm_entity(spark, key_for_uuid="ABC123", created_date="2020-01-01")
 
     row = df.collect()[0]
     assert row.entity_id == eid
@@ -60,20 +48,9 @@ def test_build_cdm_entity_basic(spark):
 # =============================================================
 #           TEST build_cdm_contig_collection
 # =============================================================
-@pytest.mark.parametrize(
-    "taxid, expected",
-    [
-        ("1234", "NCBITaxon:1234"),
-        (None, None),
-        ("999", "NCBITaxon:999")
-    ]
-)
+@pytest.mark.parametrize("taxid, expected", [("1234", "NCBITaxon:1234"), (None, None), ("999", "NCBITaxon:999")])
 def test_build_cdm_contig_collection_param(spark, taxid, expected):
-    df = build_cdm_contig_collection(
-        spark,
-        entity_id="CDM:xyz",
-        taxid=taxid
-    )
+    df = build_cdm_contig_collection(spark, entity_id="CDM:xyz", taxid=taxid)
     row = df.collect()[0]
     assert row.collection_id == "CDM:xyz"
     assert row.ncbi_taxon_id == expected
@@ -83,10 +60,7 @@ def test_build_cdm_contig_collection_param(spark, taxid, expected):
 #               TEST build_cdm_name_rows
 # =============================================================
 def test_build_cdm_name_rows(spark):
-    rep = {
-        "organism": {"name": "Escherichia coli"},
-        "assembly": {"display_name": "GCF_test_assembly"}
-    }
+    rep = {"organism": {"name": "Escherichia coli"}, "assembly": {"display_name": "GCF_test_assembly"}}
 
     df = build_cdm_name_rows(spark, "CDM:abc", rep)
     rows = df.collect()
@@ -108,36 +82,30 @@ def test_build_cdm_name_rows(spark):
             "123",
             {"Biosample:BS1", "BioProject:BP1", "NCBITaxon:123"},
         ),
-
         # Case 2 – only taxid
         (
             {"biosample": [], "bioproject": [], "taxid": "999"},
             "999",
             {"NCBITaxon:999"},
         ),
-
         # Case 3 – fallback taxid used
         (
             {"biosample": ["X"], "bioproject": [], "taxid": None},
             "888",
             {"Biosample:X", "NCBITaxon:888"},
         ),
-
         # Case 4 – GCF/GCA accessions
         (
             {
                 "biosample": ["BS"],
                 "bioproject": [],
                 "taxid": "555",
-                "assembly": {
-                    "assembly_accession": ["GCF_0001"],
-                    "insdc_assembly_accession": ["GCA_0002"]
-                }
+                "assembly": {"assembly_accession": ["GCF_0001"], "insdc_assembly_accession": ["GCA_0002"]},
             },
             "555",
             {"Biosample:BS", "NCBITaxon:555", "ncbi.assembly:GCF_0001", "insdc.gca:GCA_0002"},
         ),
-    ]
+    ],
 )
 def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifiers):
     # Convert mock representation into what extract_assembly_accessions expects
@@ -152,4 +120,3 @@ def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifier
     identifiers = {r["identifier"] for r in rows}
 
     assert identifiers == expected_identifiers
-
