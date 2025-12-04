@@ -1,13 +1,14 @@
-import pytest
-from pyspark.sql import SparkSession
-from pyspark.sql import Row
-import shutil
 import os
-from pyspark.sql.types import StructType, StructField, StringType
-from refseq_importer.core.spark_delta import (
+import shutil
+
+import pytest
+from pyspark.sql import Row, SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
+
+from cdm_data_loader_utils.parsers.refseq_importer.core.spark_delta import (
     build_spark,
-    write_delta,
     preview_or_skip,
+    write_delta,
 )
 
 
@@ -32,6 +33,7 @@ def spark():
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_build_spark_creates_database(tmp_path):
     db = "testdb"
     spark = build_spark(db)
@@ -44,6 +46,7 @@ def test_build_spark_creates_database(tmp_path):
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_write_delta_managed_table(spark):
     db = "writetest"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -73,6 +76,7 @@ def test_write_delta_managed_table(spark):
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_write_delta_external_location(spark, tmp_path):
     db = "externaldb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -102,6 +106,7 @@ def test_write_delta_external_location(spark, tmp_path):
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_write_delta_contig_collection_schema(spark):
     db = "cdmdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -142,6 +147,7 @@ def test_write_delta_contig_collection_schema(spark):
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_write_delta_empty_df(spark, capsys):
     db = "emptydb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -167,6 +173,7 @@ def test_write_delta_empty_df(spark, capsys):
 # =============================================================
 
 
+@pytest.mark.requires_spark
 def test_preview_or_skip_existing(spark, capsys):
     db = "previewdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -190,6 +197,7 @@ def test_preview_or_skip_existing(spark, capsys):
     assert "hello" in captured
 
 
+@pytest.mark.requires_spark
 def test_preview_or_skip_missing(spark, capsys):
     db = "missingdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")

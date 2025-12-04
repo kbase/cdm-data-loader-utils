@@ -2,25 +2,26 @@
 Example usage:
 
 PYTHONPATH=src/parsers \
-python -m refseq_importer.cli.refseq_api_cli \
+python -m cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli \
   --taxid "224325, 2741724, 193567" \
   --database refseq_api \
   --mode overwrite \
   --debug \
   --unique-per-taxon \
-  --data-dir /global_share/alinawang/cdm-data-loader-utils/output/taxon_data 
+  --data-dir /global_share/alinawang/cdm-data-loader-utils/output/taxon_data
 
 """
 
 import os
 import re
 from typing import Optional
-import click
-from refseq_importer.core.spark_delta import build_spark, write_delta
-from refseq_importer.core.cdm_builders import build_cdm_datasource
-from refseq_importer.core.taxon_processing import process_taxon
-from refseq_importer.core.tables_finalize import finalize_tables, write_and_preview
 
+import click
+
+from cdm_data_loader_utils.parsers.refseq_importer.core.cdm_builders import build_cdm_datasource
+from cdm_data_loader_utils.parsers.refseq_importer.core.spark_delta import build_spark, write_delta
+from cdm_data_loader_utils.parsers.refseq_importer.core.tables_finalize import finalize_tables, write_and_preview
+from cdm_data_loader_utils.parsers.refseq_importer.core.taxon_processing import process_taxon
 
 # ---------------- Helpers ----------------
 

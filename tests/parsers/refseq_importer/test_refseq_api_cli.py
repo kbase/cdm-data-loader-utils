@@ -1,10 +1,11 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from click.testing import CliRunner
 
-from refseq_importer.cli.refseq_api_cli import (
-    parse_taxid_args,
-    main,
+from cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli import (
     cli,
+    main,
+    parse_taxid_args,
 )
 
 # -------------------------------------------------
@@ -30,11 +31,11 @@ def test_parse_taxid_args_file(tmp_path):
 # -------------------------------------------------
 
 
-@patch("refseq_importer.cli.refseq_api_cli.write_and_preview")
-@patch("refseq_importer.cli.refseq_api_cli.finalize_tables")
-@patch("refseq_importer.cli.refseq_api_cli.process_taxon")
-@patch("refseq_importer.cli.refseq_api_cli.write_delta")
-@patch("refseq_importer.cli.refseq_api_cli.build_spark")
+@patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.write_and_preview")
+@patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.finalize_tables")
+@patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.process_taxon")
+@patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.write_delta")
+@patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.build_spark")
 def test_main_end_to_end(
     mock_build,
     mock_write_delta,
@@ -70,7 +71,7 @@ def test_main_end_to_end(
 
 
 def test_cli_invocation():
-    with patch("refseq_importer.cli.refseq_api_cli.main") as mock_main:
+    with patch("cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli.main") as mock_main:
         runner = CliRunner()
         result = runner.invoke(
             cli,

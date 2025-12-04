@@ -1,14 +1,15 @@
 import pytest
 from pyspark.sql import SparkSession
-from refseq_importer.core.cdm_builders import (
-    build_entity_id,
-    build_cdm_entity,
+
+from cdm_data_loader_utils.parsers.refseq_importer.core.cdm_builders import (
     build_cdm_contig_collection,
-    build_cdm_name_rows,
+    build_cdm_entity,
     build_cdm_identifier_rows,
+    build_cdm_name_rows,
+    build_entity_id,
 )
 
-### pytest refseq_importer/tests/test_cdm_builders.py ###
+### pytest cdm_data_loader_utils.parsers.refseq_importer/tests/test_cdm_builders.py ###
 
 
 # -------------------------------------------------------------
@@ -16,7 +17,11 @@ from refseq_importer.core.cdm_builders import (
 # -------------------------------------------------------------
 @pytest.fixture(scope="session")
 def spark():
-    spark = SparkSession.builder.master("local[1]").appName("refseq_importer_tests").getOrCreate()
+    spark = (
+        SparkSession.builder.master("local[1]")
+        .appName("cdm_data_loader_utils.parsers.refseq_importer_tests")
+        .getOrCreate()
+    )
     yield spark
     spark.stop()
 
@@ -24,6 +29,7 @@ def spark():
 # =============================================================
 #                TEST build_entity_id
 # =============================================================
+@pytest.mark.requires_spark
 @pytest.mark.parametrize("input_key", ["abc", "   hello  ", "", "123", "GCF_0001"])
 def test_build_entity_id_prefix(input_key):
     eid = build_entity_id(input_key)
@@ -35,6 +41,7 @@ def test_build_entity_id_prefix(input_key):
 # =============================================================
 #                TEST build_cdm_entity
 # =============================================================
+@pytest.mark.requires_spark
 def test_build_cdm_entity_basic(spark):
     df, eid = build_cdm_entity(spark, key_for_uuid="ABC123", created_date="2020-01-01")
 
@@ -48,6 +55,7 @@ def test_build_cdm_entity_basic(spark):
 # =============================================================
 #           TEST build_cdm_contig_collection
 # =============================================================
+@pytest.mark.requires_spark
 @pytest.mark.parametrize("taxid, expected", [("1234", "NCBITaxon:1234"), (None, None), ("999", "NCBITaxon:999")])
 def test_build_cdm_contig_collection_param(spark, taxid, expected):
     df = build_cdm_contig_collection(spark, entity_id="CDM:xyz", taxid=taxid)
@@ -59,6 +67,7 @@ def test_build_cdm_contig_collection_param(spark, taxid, expected):
 # =============================================================
 #               TEST build_cdm_name_rows
 # =============================================================
+@pytest.mark.requires_spark
 def test_build_cdm_name_rows(spark):
     rep = {"organism": {"name": "Escherichia coli"}, "assembly": {"display_name": "GCF_test_assembly"}}
 
