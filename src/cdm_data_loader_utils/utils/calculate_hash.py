@@ -4,7 +4,7 @@ import gzip
 import hashlib
 from typing import Any
 
-from src.parsers.fasta import read_fasta
+from cdm_data_loader_utils.parsers.fasta import read_fasta
 
 
 def _hash_string(s: str) -> str:
