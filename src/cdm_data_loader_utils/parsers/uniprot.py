@@ -1,6 +1,4 @@
-"""
-UniProt XML Delta Lake Ingestion Pipeline.
-=========================================
+"""UniProt XML Delta Lake Ingestion Pipeline.
 
 This script parses UniProt XML (.xml.gz) file and ingests the data into structured Delta Lake tables.
 
@@ -55,16 +53,16 @@ import json
 import os
 import uuid
 import xml.etree.ElementTree as ET
+from typing import Optional
 
 import click
 import requests
 from delta import configure_spark_with_delta_pip
-from pyspark.sql.types import ArrayType, StringType, StructType, StructField
-from shared_identifiers import parse_identifiers_generic
-from typing import Optional
+from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
-from xml_utils import get_attr, get_text, find_all_text, clean_dict, parse_db_references
-
+from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
+from cdm_data_loader_utils.parsers.xml_utils import clean_dict, find_all_text, get_attr, get_text, parse_db_references
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
 NS = {"ns": "https://uniprot.org/uniprot"}

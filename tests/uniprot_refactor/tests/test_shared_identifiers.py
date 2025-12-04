@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from shared_identifiers import parse_identifiers_generic
+from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
 
 
 def test_parse_identifiers_generic_basic():
@@ -32,5 +32,3 @@ def test_parse_identifiers_generic_basic():
     assert rows[1]["identifier"] == "UniProt:Q99999"
     assert rows[0]["source"] == "UniProt"
     assert rows[0]["description"] == "UniProt accession"
-
-    
