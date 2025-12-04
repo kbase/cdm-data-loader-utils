@@ -1,16 +1,17 @@
+from unittest.mock import MagicMock, patch
 
-from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 
-from refseq_importer.cli.refseq_api_cli import (
-    parse_taxid_args,
-    main,
+from cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli import (
     cli,
+    main,
+    parse_taxid_args,
 )
 
 # -------------------------------------------------
 # test_parse_taxid_args
 # -------------------------------------------------
+
 
 def test_parse_taxid_args_basic():
     taxids = parse_taxid_args("123, 456x, abc789", None)
@@ -28,6 +29,7 @@ def test_parse_taxid_args_file(tmp_path):
 # -------------------------------------------------
 # test main()
 # -------------------------------------------------
+
 
 @patch("refseq_importer.cli.refseq_api_cli.write_and_preview")
 @patch("refseq_importer.cli.refseq_api_cli.finalize_tables")
@@ -67,15 +69,18 @@ def test_main_end_to_end(
 # test cli() wrapper
 # -------------------------------------------------
 
+
 def test_cli_invocation():
     with patch("refseq_importer.cli.refseq_api_cli.main") as mock_main:
         runner = CliRunner()
         result = runner.invoke(
             cli,
             [
-                "--taxid", "123",
-                "--data-dir", "/tmp",
-            ]
+                "--taxid",
+                "123",
+                "--data-dir",
+                "/tmp",
+            ],
         )
         assert result.exit_code == 0
         mock_main.assert_called_once()

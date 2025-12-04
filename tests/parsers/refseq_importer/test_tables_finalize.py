@@ -1,13 +1,8 @@
 import pytest
 from pyspark.sql import Row, SparkSession
-from pyspark.sql.types import (
-    StructType, StructField, StringType
-)
+from pyspark.sql.types import StringType, StructField, StructType
 
-from refseq_importer.core.tables_finalize import (
-    list_of_dicts_to_spark,
-    finalize_tables
-)
+from cdm_data_loader_utils.parsers.refseq_importer.core.tables_finalize import finalize_tables, list_of_dicts_to_spark
 
 
 # -------------------------------------------------------------------
@@ -15,12 +10,7 @@ from refseq_importer.core.tables_finalize import (
 # -------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def spark():
-    spark = (
-        SparkSession.builder
-        .master("local[*]")
-        .appName("test-tables-finalize")
-        .getOrCreate()
-    )
+    spark = SparkSession.builder.master("local[*]").appName("test-tables-finalize").getOrCreate()
     yield spark
     spark.stop()
 
@@ -29,10 +19,12 @@ def spark():
 # Test list_of_dicts_to_spark
 # -------------------------------------------------------------------
 def test_list_of_dicts_to_spark(spark):
-    schema = StructType([
-        StructField("a", StringType(), True),
-        StructField("b", StringType(), True),
-    ])
+    schema = StructType(
+        [
+            StructField("a", StringType(), True),
+            StructField("b", StringType(), True),
+        ]
+    )
 
     rows = [{"a": "1", "b": "x"}, {"a": "2", "b": "y"}]
     df = list_of_dicts_to_spark(spark, rows, schema)
@@ -45,34 +37,35 @@ def test_list_of_dicts_to_spark(spark):
 # Test finalize_tables end-to-end
 # -------------------------------------------------------------------
 def test_finalize_tables_basic(spark):
-
     # ---------- entity ----------
-    e_schema = StructType([
-        StructField("entity_id", StringType(), True),
-        StructField("entity_type", StringType(), True),
-        StructField("data_source", StringType(), True),
-        StructField("created", StringType(), True),
-        StructField("updated", StringType(), True),
-    ])
+    e_schema = StructType(
+        [
+            StructField("entity_id", StringType(), True),
+            StructField("entity_type", StringType(), True),
+            StructField("data_source", StringType(), True),
+            StructField("created", StringType(), True),
+            StructField("updated", StringType(), True),
+        ]
+    )
 
     e1 = spark.createDataFrame(
-        [Row(entity_id="E1", entity_type="genome",
-             data_source="RefSeq", created="2020", updated="2021")],
-        schema=e_schema
+        [Row(entity_id="E1", entity_type="genome", data_source="RefSeq", created="2020", updated="2021")],
+        schema=e_schema,
     )
     e2 = spark.createDataFrame(
-        [Row(entity_id="E2", entity_type="genome",
-             data_source="RefSeq", created="2020", updated="2021")],
-        schema=e_schema
+        [Row(entity_id="E2", entity_type="genome", data_source="RefSeq", created="2020", updated="2021")],
+        schema=e_schema,
     )
 
     # ---------- contig_collection (schema REQUIRED due to None!) ----------
-    coll_schema = StructType([
-        StructField("collection_id", StringType(), True),
-        StructField("contig_collection_type", StringType(), True),
-        StructField("ncbi_taxon_id", StringType(), True),
-        StructField("gtdb_taxon_id", StringType(), True),
-    ])
+    coll_schema = StructType(
+        [
+            StructField("collection_id", StringType(), True),
+            StructField("contig_collection_type", StringType(), True),
+            StructField("ncbi_taxon_id", StringType(), True),
+            StructField("gtdb_taxon_id", StringType(), True),
+        ]
+    )
 
     c1 = spark.createDataFrame(
         [
@@ -83,7 +76,7 @@ def test_finalize_tables_basic(spark):
                 gtdb_taxon_id=None,
             )
         ],
-        schema=coll_schema
+        schema=coll_schema,
     )
 
     c2 = spark.createDataFrame(
@@ -95,7 +88,7 @@ def test_finalize_tables_basic(spark):
                 gtdb_taxon_id=None,
             )
         ],
-        schema=coll_schema
+        schema=coll_schema,
     )
 
     # ---------- name ----------
@@ -110,13 +103,7 @@ def test_finalize_tables_basic(spark):
         {"entity_id": "E2", "identifier": "BioSample:2", "source": "RefSeq", "description": "bs"},
     ]
 
-    df_entity, df_coll, df_name, df_ident = finalize_tables(
-        spark,
-        [e1, e2],
-        [c1, c2],
-        names,
-        identifiers
-    )
+    df_entity, df_coll, df_name, df_ident = finalize_tables(spark, [e1, e2], [c1, c2], names, identifiers)
 
     # ---------- Assertions ----------
     assert df_entity.count() == 2
@@ -128,5 +115,3 @@ def test_finalize_tables_basic(spark):
     assert set(r.collection_id for r in df_coll.collect()) == {"E1", "E2"}
     assert set(r.name for r in df_name.collect()) == {"A", "B"}
     assert set(r.identifier for r in df_ident.collect()) == {"BioSample:1", "BioSample:2"}
-
-    

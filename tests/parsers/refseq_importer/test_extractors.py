@@ -1,16 +1,17 @@
 import pytest
-from refseq_importer.core.extractors import (
+
+from cdm_data_loader_utils.parsers.refseq_importer.core.extractors import (
+    PAT_BIOSAMPLE,
     _coalesce,
-    _deep_find_str,
     _deep_collect_regex,
-    extract_created_date,
+    _deep_find_str,
+    extract_assembly_accessions,
     extract_assembly_name,
+    extract_bioproject_ids,
+    extract_biosample_ids,
+    extract_created_date,
     extract_organism_name,
     extract_taxid,
-    extract_biosample_ids,
-    extract_bioproject_ids,
-    extract_assembly_accessions,
-    PAT_BIOSAMPLE
 )
 
 
@@ -189,4 +190,3 @@ def test_extract_assembly_accessions(rep, expected_gcf, expected_gca):
     gcf, gca = extract_assembly_accessions(rep)
     assert gcf == expected_gcf
     assert gca == expected_gca
-

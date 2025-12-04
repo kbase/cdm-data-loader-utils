@@ -1,15 +1,15 @@
-import pytest
-from pyspark.sql import SparkSession
-from pyspark.sql import Row
-import shutil
 import os
-from pyspark.sql.types import StructType, StructField, StringType
-from refseq_importer.core.spark_delta import (
-    build_spark,
-    write_delta,
-    preview_or_skip,
-)
+import shutil
 
+import pytest
+from pyspark.sql import Row, SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
+
+from cdm_data_loader_utils.parsers.refseq_importer.core.spark_delta import (
+    build_spark,
+    preview_or_skip,
+    write_delta,
+)
 
 
 # =============================================================
@@ -18,8 +18,7 @@ from refseq_importer.core.spark_delta import (
 @pytest.fixture(scope="session")
 def spark():
     spark = (
-        SparkSession.builder
-        .master("local[1]")
+        SparkSession.builder.master("local[1]")
         .appName("spark-delta-test")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -33,6 +32,7 @@ def spark():
 # build_spark
 # =============================================================
 
+
 def test_build_spark_creates_database(tmp_path):
     db = "testdb"
     spark = build_spark(db)
@@ -43,6 +43,7 @@ def test_build_spark_creates_database(tmp_path):
 # =============================================================
 # write_delta (managed table)
 # =============================================================
+
 
 def test_write_delta_managed_table(spark):
     db = "writetest"
@@ -72,6 +73,7 @@ def test_write_delta_managed_table(spark):
 # write_delta with external LOCATION
 # =============================================================
 
+
 def test_write_delta_external_location(spark, tmp_path):
     db = "externaldb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
@@ -100,21 +102,22 @@ def test_write_delta_external_location(spark, tmp_path):
 # write_delta special schema: contig_collection
 # =============================================================
 
+
 def test_write_delta_contig_collection_schema(spark):
     db = "cdmdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
-    schema = StructType([
-        StructField("collection_id", StringType(), True),
-        StructField("contig_collection_type", StringType(), True),
-        StructField("ncbi_taxon_id", StringType(), True),
-        StructField("gtdb_taxon_id", StringType(), True),
-    ])
+    schema = StructType(
+        [
+            StructField("collection_id", StringType(), True),
+            StructField("contig_collection_type", StringType(), True),
+            StructField("ncbi_taxon_id", StringType(), True),
+            StructField("gtdb_taxon_id", StringType(), True),
+        ]
+    )
 
     df = spark.createDataFrame(
-        [
-            ("C1", "isolate", "NCBITaxon:123", None)
-        ],
+        [("C1", "isolate", "NCBITaxon:123", None)],
         schema=schema,
     )
 
@@ -134,9 +137,11 @@ def test_write_delta_contig_collection_schema(spark):
     assert result["ncbi_taxon_id"] == "NCBITaxon:123"
     assert result["gtdb_taxon_id"] is None
 
+
 # =============================================================
 # write_delta skip when empty
 # =============================================================
+
 
 def test_write_delta_empty_df(spark, capsys):
     db = "emptydb"
@@ -161,6 +166,7 @@ def test_write_delta_empty_df(spark, capsys):
 # =============================================================
 # preview_or_skip
 # =============================================================
+
 
 def test_preview_or_skip_existing(spark, capsys):
     db = "previewdb"
@@ -193,4 +199,3 @@ def test_preview_or_skip_missing(spark, capsys):
 
     out = capsys.readouterr().out
     assert "Skipping preview" in out
-
