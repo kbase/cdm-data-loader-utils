@@ -1,8 +1,8 @@
 import pytest
 from pyspark.sql import Row, SparkSession
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StringType, StructField, StructType
 
-from refseq_importer.core.tables_finalize import list_of_dicts_to_spark, finalize_tables
+from cdm_data_loader_utils.parsers.refseq_importer.core.tables_finalize import finalize_tables, list_of_dicts_to_spark
 
 
 # -------------------------------------------------------------------
@@ -18,6 +18,7 @@ def spark():
 # -------------------------------------------------------------------
 # Test list_of_dicts_to_spark
 # -------------------------------------------------------------------
+@pytest.mark.requires_spark
 def test_list_of_dicts_to_spark(spark):
     schema = StructType(
         [
@@ -36,6 +37,7 @@ def test_list_of_dicts_to_spark(spark):
 # -------------------------------------------------------------------
 # Test finalize_tables end-to-end
 # -------------------------------------------------------------------
+@pytest.mark.requires_spark
 def test_finalize_tables_basic(spark):
     # ---------- entity ----------
     e_schema = StructType(
