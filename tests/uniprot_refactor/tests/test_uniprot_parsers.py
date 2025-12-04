@@ -1,8 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from uniprot import (
-    parse_protein_info,
-    parse_evidence_map)
+from cdm_data_loader_utils.parsers.uniprot import parse_protein_info, parse_evidence_map
 
 UNIPROT_NS = "https://uniprot.org/uniprot"
 NSMAP = {"ns": UNIPROT_NS}
@@ -102,4 +100,3 @@ def test_parse_evidence_map_with_pubmed_and_other():
 
     # we want PubMed normalized to PMID
     assert "PMID:12345" in (ev["publications"] or [])
-

@@ -10,13 +10,13 @@ This module centralizes common operations:
 - Deduplicating lists
 """
 
-from typing import Optional, List, Dict, Any
 import xml.etree.ElementTree as ET
-
+from typing import Any, Dict, List, Optional
 
 # ============================================================
 # Basic Safe Accessors
 # ============================================================
+
 
 def get_text(elem: Optional[ET.Element], default: Optional[str] = None) -> Optional[str]:
     """Return elem.text if exists and non-empty."""
@@ -39,6 +39,7 @@ def get_attr(elem: Optional[ET.Element], name: str, default: Optional[str] = Non
 # ============================================================
 # List / Node Finders
 # ============================================================
+
 
 def find_one(elem: ET.Element, xpath: str, ns: Dict[str, str]):
     """Return first element matching xpath or None."""
@@ -69,6 +70,7 @@ def safe_list(x) -> List[Any]:
 # dbReference / property parsing (shared by UniProt + UniRef)
 # ============================================================
 
+
 def parse_properties(dbref: Optional[ET.Element], ns: Dict[str, str]) -> Dict[str, str]:
     """
     Extract key/value pairs from <property type="..." value="..."> blocks.
@@ -84,11 +86,7 @@ def parse_properties(dbref: Optional[ET.Element], ns: Dict[str, str]) -> Dict[st
     return props
 
 
-def parse_db_references(
-    elem: ET.Element,
-    ns: Dict[str, str],
-    pub_types=("PubMed", "DOI")
-):
+def parse_db_references(elem: ET.Element, ns: Dict[str, str], pub_types=("PubMed", "DOI")):
     """
     Generic dbReference parser:
     - Identify publication IDs (PubMed, DOI)
@@ -115,6 +113,7 @@ def parse_db_references(
 # ============================================================
 # Dict Cleaning
 # ============================================================
+
 
 def clean_dict(d: Dict[str, Any]) -> Dict[str, Any]:
     """
