@@ -1,12 +1,16 @@
+from datetime import UTC, datetime
 from typing import Any
-from datetime import datetime, timezone
+
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StringType, StructField, StructType
 
-from refseq_pipeline.core.refseq_io import fetch_annotation_hash, fetch_md5_checksums, text_sha256
-from refseq_pipeline.core.spark_delta import write_delta_table
-from refseq_pipeline.core.config import DEFAULT_HASH_TABLE
-
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.config import DEFAULT_HASH_TABLE
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.refseq_io import (
+    fetch_annotation_hash,
+    fetch_md5_checksums,
+    text_sha256,
+)
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.spark_delta import write_delta_table
 
 # Delta schema for hash snapshots
 HASH_SCHEMA = StructType(
@@ -46,7 +50,7 @@ def snapshot_hashes_for_accessions(
     if spark is None:
         raise ValueError("You must pass a SparkSession to snapshot_hashes_for_accessions().")
 
-    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    ts = datetime.now(UTC).isoformat(timespec="seconds")
     rows: list[dict[str, Any]] = []
 
     total, success, failed = 0, 0, 0

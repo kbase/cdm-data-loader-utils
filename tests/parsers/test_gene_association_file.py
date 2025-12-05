@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+
 from cdm_data_loader_utils.parsers.gene_association_file import (
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,

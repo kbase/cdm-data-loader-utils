@@ -1,21 +1,20 @@
-from typing import Any, Dict, List, Set
-from pyspark.sql import SparkSession, DataFrame
-from .datasets_api import fetch_reports_by_taxon
+from typing import Any
 
-
-from .extractors import (
-    _coalesce,
-    extract_created_date,
-    extract_assembly_name,
-    extract_organism_name,
-    extract_assembly_accessions,
-)
+from pyspark.sql import DataFrame, SparkSession
 
 from .cdm_builders import (
-    build_cdm_entity,
     build_cdm_contig_collection,
-    build_cdm_name_rows,
+    build_cdm_entity,
     build_cdm_identifier_rows,
+    build_cdm_name_rows,
+)
+from .datasets_api import fetch_reports_by_taxon
+from .extractors import (
+    _coalesce,
+    extract_assembly_accessions,
+    extract_assembly_name,
+    extract_created_date,
+    extract_organism_name,
 )
 
 
@@ -23,7 +22,7 @@ from .cdm_builders import (
 # Pure PySpark version
 # ----------------------------------------------------------
 def process_report(
-    spark: SparkSession, rep: Dict[str, Any], tx: str, seen: Set[str], debug: bool, allow_genbank_date: bool
+    spark: SparkSession, rep: dict[str, Any], tx: str, seen: set[str], debug: bool, allow_genbank_date: bool
 ):
     from datetime import date
 
@@ -81,7 +80,7 @@ def process_taxon(
     debug: bool,
     allow_genbank_date: bool,
     unique_per_taxon: bool,
-    seen: Set[str],
+    seen: set[str],
 ):
     """
     Process ONE TaxID → return lists of Spark DataFrames.
@@ -92,11 +91,10 @@ def process_taxon(
         names:        List[Spark DF]
         identifiers:  List[Spark DF]
     """
-
-    entities: List[DataFrame] = []
-    collections: List[DataFrame] = []
-    names: List[DataFrame] = []
-    identifiers: List[DataFrame] = []
+    entities: list[DataFrame] = []
+    collections: list[DataFrame] = []
+    names: list[DataFrame] = []
+    identifiers: list[DataFrame] = []
 
     # ===== fetch reports from NCBI API =====
     reports = list(fetch_reports_by_taxon(taxon=tx, api_key=api_key))

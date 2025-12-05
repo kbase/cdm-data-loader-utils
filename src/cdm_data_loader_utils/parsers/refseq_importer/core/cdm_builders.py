@@ -1,19 +1,18 @@
 import uuid
-from datetime import datetime, date
-from typing import Any, Dict, Literal, Tuple, Optional, List
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType
+from datetime import date, datetime
+from typing import Any, Literal
 
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
 
 from .extractors import (
-    extract_organism_name,
-    extract_assembly_name,
-    extract_biosample_ids,
-    extract_bioproject_ids,
-    extract_taxid,
     extract_assembly_accessions,
+    extract_assembly_name,
+    extract_bioproject_ids,
+    extract_biosample_ids,
+    extract_organism_name,
+    extract_taxid,
 )
-
 
 # ============================================================
 #                      CDM DATASOURCE
@@ -60,11 +59,11 @@ def build_entity_id(key: str) -> str:
 def build_cdm_entity(
     spark: SparkSession,
     key_for_uuid: str,
-    created_date: Optional[str],
+    created_date: str | None,
     *,
     entity_type: Literal["contig_collection", "genome", "protein", "gene"] = "contig_collection",
     data_source: str = "RefSeq",
-) -> Tuple[DataFrame, str]:
+) -> tuple[DataFrame, str]:
     entity_id = build_entity_id(key_for_uuid)
 
     schema = StructType(
@@ -94,7 +93,7 @@ def build_cdm_entity(
 
 
 def build_cdm_contig_collection(
-    spark: SparkSession, entity_id: str, taxid: Optional[str] = None, collection_type: str = "isolate"
+    spark: SparkSession, entity_id: str, taxid: str | None = None, collection_type: str = "isolate"
 ) -> DataFrame:
     schema = StructType(
         [
@@ -120,7 +119,7 @@ def build_cdm_contig_collection(
 # ============================================================
 
 
-def build_cdm_name_rows(spark: SparkSession, entity_id: str, rep: Dict[str, Any]) -> Optional[DataFrame]:
+def build_cdm_name_rows(spark: SparkSession, entity_id: str, rep: dict[str, Any]) -> DataFrame | None:
     schema = StructType(
         [
             StructField("entity_id", StringType(), False),
@@ -164,14 +163,13 @@ IDENTIFIER_PREFIXES = {
 
 
 def build_cdm_identifier_rows(
-    entity_id: str, rep: Dict[str, Any], request_taxid: Optional[str]
-) -> List[Dict[str, Any]]:
+    entity_id: str, rep: dict[str, Any], request_taxid: str | None
+) -> list[dict[str, Any]]:
     """
     Identifiers remain as list[dict].
     Spark conversion happens later in finalize_tables.
 
     """
-
     rows = []
 
     # ---- BioSample IDs ----

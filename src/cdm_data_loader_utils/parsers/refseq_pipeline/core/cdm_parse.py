@@ -1,7 +1,9 @@
 import uuid
+from typing import TYPE_CHECKING, Any
+
 from pyspark.sql import Row
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
-from refseq_pipeline.core.config import CDM_NAMESPACE, CDM_SCHEMA, EXPECTED_COLS
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.config import CDM_NAMESPACE, CDM_SCHEMA, EXPECTED_COLS
 
 if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDF
@@ -10,21 +12,21 @@ if TYPE_CHECKING:
 # === Safe type conversions ===
 
 
-def safe_int(v: Any) -> Optional[int]:
+def safe_int(v: Any) -> int | None:
     try:
         return int(str(v).replace(",", "").strip()) if v not in (None, "") else None
     except Exception:
         return None
 
 
-def safe_float(v: Any) -> Optional[float]:
+def safe_float(v: Any) -> float | None:
     try:
         return float(str(v).replace(",", "").strip()) if v not in (None, "") else None
     except Exception:
         return None
 
 
-def percent_to_fraction_strict(v: Any) -> Optional[float]:
+def percent_to_fraction_strict(v: Any) -> float | None:
     f = safe_float(v)
     return f / 100.0 if f is not None else None
 
@@ -52,7 +54,7 @@ def _get_accession_for_cdm(report: dict) -> str:
 # === CDM ID ===
 
 
-def generate_cdm_id(accession: str, report: Dict[str, Any]) -> str:
+def generate_cdm_id(accession: str, report: dict[str, Any]) -> str:
     if not accession:
         return f"CDM:{uuid.uuid4()}"
     info = report.get("assembly_info") or report.get("assemblyInfo") or {}
@@ -67,7 +69,7 @@ def generate_cdm_id(accession: str, report: Dict[str, Any]) -> str:
 # === Parse single report to dict  ===
 
 
-def parse_report_to_row(report: Dict[str, Any]) -> Dict[str, Any]:
+def parse_report_to_row(report: dict[str, Any]) -> dict[str, Any]:
     asm = pick_section(report, "assembly_stats", "assemblyStats")
     chk = pick_section(report, "checkm_info", "checkmInfo")
 
@@ -94,7 +96,7 @@ def parse_report_to_row(report: Dict[str, Any]) -> Dict[str, Any]:
 # === Spark version ===
 
 
-def parse_reports(reports: List[Dict[str, Any]], *, return_spark: bool = True, spark=None) -> "SparkDF":
+def parse_reports(reports: list[dict[str, Any]], *, return_spark: bool = True, spark=None) -> "SparkDF":
     """
     Pure Spark parser. Replaces the previous pandas-based workflow.
 
@@ -106,7 +108,6 @@ def parse_reports(reports: List[Dict[str, Any]], *, return_spark: bool = True, s
         Spark DataFrame with schema = CDM_SCHEMA
 
     """
-
     if spark is None:
         raise ValueError("SparkSession must be provided when return_spark=True")
 

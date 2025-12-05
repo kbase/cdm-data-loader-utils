@@ -1,10 +1,10 @@
-from typing import Optional
+
 import requests
 
 
 def fetch_reports_by_taxon(
     taxon: str,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     page_size: int = 500,
     refseq_only: bool = True,
     current_only: bool = True,
@@ -20,7 +20,6 @@ def fetch_reports_by_taxon(
     - Yields report dicts for each assembly.
 
     """
-
     # ---------------- API endpoint ----------------
     # Base URL for NCBI Datasets REST API v2
     base = "https://api.ncbi.nlm.nih.gov/datasets/v2"

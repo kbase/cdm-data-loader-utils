@@ -1,11 +1,12 @@
-import requests
 import hashlib
 import logging
-from typing import Optional, TypedDict, Dict
-from functools import lru_cache
-from refseq_pipeline.core.config import REFSEQ_ASSEMBLY_SUMMARY_URL
-from pyspark.sql import SparkSession, DataFrame
+from functools import cache
+from typing import TypedDict
 
+import requests
+from pyspark.sql import DataFrame, SparkSession
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.config import REFSEQ_ASSEMBLY_SUMMARY_URL
 
 """
 python -m refseq_pipeline.core.refseq_io
@@ -57,7 +58,7 @@ def get_session() -> requests.Session:
 # ----------------------------------------
 # Download + normalization helpers
 # ----------------------------------------
-def download_text(url: str, timeout: int = 60, session: Optional[requests.Session] = None) -> str:
+def download_text(url: str, timeout: int = 60, session: requests.Session | None = None) -> str:
     """
     Download raw text from a URL using retry-enabled session.
     """
@@ -77,12 +78,12 @@ def normalize_multiline_text(txt: str) -> str:
 # ----------------------------------------
 # RefSeq Assembly Summary Parser
 # ----------------------------------------
-def parse_assembly_summary(content: str) -> Dict[str, AssemblyMeta]:
+def parse_assembly_summary(content: str) -> dict[str, AssemblyMeta]:
     """
     Parse assembly_summary_refseq.txt contents into a structured dict.
     Returns accession → metadata dictionary.
     """
-    acc2meta: Dict[str, AssemblyMeta] = {}
+    acc2meta: dict[str, AssemblyMeta] = {}
     for line in content.splitlines():
         if not line or line.startswith("#"):
             continue
@@ -102,7 +103,7 @@ def parse_assembly_summary(content: str) -> Dict[str, AssemblyMeta]:
     return acc2meta
 
 
-def load_refseq_assembly_index(url: Optional[str] = None) -> Dict[str, AssemblyMeta]:
+def load_refseq_assembly_index(url: str | None = None) -> dict[str, AssemblyMeta]:
     """
     Load and parse the RefSeq assembly summary file.
     Downloads from default URL unless a custom URL is provided.
@@ -181,8 +182,8 @@ def load_local_refseq_assembly_index_spark(path: str, spark: SparkSession) -> Da
 # ----------------------------------------
 # Fetch file hashes from annotation FTP
 # ----------------------------------------
-@lru_cache(maxsize=None)
-def fetch_annotation_hash(ftp_path: str, timeout: int = 30) -> Optional[str]:
+@cache
+def fetch_annotation_hash(ftp_path: str, timeout: int = 30) -> str | None:
     """
     Retrieve and normalize the contents of annotation_hashes.txt under a given FTP path.
     Uses LRU cache to avoid redundant network calls.
@@ -195,8 +196,8 @@ def fetch_annotation_hash(ftp_path: str, timeout: int = 30) -> Optional[str]:
         return None
 
 
-@lru_cache(maxsize=None)
-def fetch_md5_checksums(ftp_path: str, timeout: int = 30) -> Optional[str]:
+@cache
+def fetch_md5_checksums(ftp_path: str, timeout: int = 30) -> str | None:
     """
     Retrieve and normalize the contents of md5checksums.txt under a given FTP path.
     Uses LRU cache to avoid redundant network calls.

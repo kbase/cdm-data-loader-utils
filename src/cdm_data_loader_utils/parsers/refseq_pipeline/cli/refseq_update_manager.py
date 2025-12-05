@@ -1,16 +1,15 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+
 import click
 
-from refseq_pipeline.core.refseq_io import (
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.config import REFSEQ_ASSEMBLY_SUMMARY_URL
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.refseq_io import (
     download_text,
     normalize_multiline_text,
     text_sha256,
 )
-
-from refseq_pipeline.core.config import REFSEQ_ASSEMBLY_SUMMARY_URL
 
 """
 
@@ -23,11 +22,11 @@ python src/parsers/refseq_pipeline/cli/refseq_update_manager.py \
   --max-workers 12 \
   --fast-mode \
   --data-dir delta_data/refseq
-  
+
 """
 
 
-from refseq_pipeline.cli import snapshot_hashes, detect_updates
+from cdm_data_loader_utils.parsers.refseq_pipeline.cli import detect_updates, snapshot_hashes
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -43,12 +42,12 @@ def get_project_root() -> Path:
         return Path.cwd()
 
 
-def get_latest_local_index(bronze_dir: Path) -> Optional[Path]:
+def get_latest_local_index(bronze_dir: Path) -> Path | None:
     files = sorted(bronze_dir.glob("assembly_summary_refseq.*.tsv"))
     return files[-1] if files else None
 
 
-def parse_tag_from_filename(path: Path) -> Optional[str]:
+def parse_tag_from_filename(path: Path) -> str | None:
     name = path.name  # assembly_summary_refseq.20250930.tsv
     parts = name.split(".")
     if len(parts) >= 3:
@@ -120,13 +119,13 @@ def main(
     database: str,
     hash_table: str,
     kind: str,
-    tag: Optional[str],
+    tag: str | None,
     force_snapshot: bool,
     chunk_size: int,
     max_workers: int,
     fast_mode: bool,
-    data_dir: Optional[str],
-    output_dir: Optional[str],
+    data_dir: str | None,
+    output_dir: str | None,
 ):
     project_root = get_project_root()
     logger.info(f"[update] Project root resolved to: {project_root}")
@@ -148,8 +147,8 @@ def main(
     logger.info(f"[update] Latest remote index SHA256: {latest_sha}")
 
     last_local = get_latest_local_index(bronze_dir)
-    old_tag: Optional[str] = None
-    old_sha: Optional[str] = None
+    old_tag: str | None = None
+    old_sha: str | None = None
 
     if last_local and last_local.exists():
         logger.info(f"[update] Found existing local index: {last_local}")

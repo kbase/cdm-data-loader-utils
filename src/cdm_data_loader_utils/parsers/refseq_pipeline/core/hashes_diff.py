@@ -1,6 +1,7 @@
 import logging
-from typing import Optional, Dict, List
-from pyspark.sql import SparkSession, DataFrame, functions as F
+
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -11,11 +12,11 @@ def diff_hash_and_get_changed_taxids(
     spark: SparkSession,
     database: str,
     hash_table: str,
-    acc_index: Dict[str, Dict[str, str]],
-    tag_new: Optional[str] = None,
-    tag_old: Optional[str] = None,
+    acc_index: dict[str, dict[str, str]],
+    tag_new: str | None = None,
+    tag_old: str | None = None,
     debug: bool = False,
-) -> List[str]:
+) -> list[str]:
     """
     Compare hash snapshots and return taxon IDs whose assemblies have changed.
 

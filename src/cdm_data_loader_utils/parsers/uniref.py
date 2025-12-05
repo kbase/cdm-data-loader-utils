@@ -29,16 +29,17 @@ python src/parsers/uniref.py \
 
 """
 
-import os
 import gzip
+import os
 import uuid
-import click
 import xml.etree.ElementTree as ET
-from urllib.request import urlretrieve, URLError
-from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
 from datetime import datetime
+from urllib.request import URLError, urlretrieve
+
+import click
+from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
 
 
 # Generate a unique CDM entity_id based on accession
@@ -170,7 +171,6 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
     Returns:
         dict: Dictionary with lists for each CDM table
     """
-
     ns = {"ns": "http://uniprot.org/uniref"}  # Namespace for XML parsing
     entry_count = 0
 

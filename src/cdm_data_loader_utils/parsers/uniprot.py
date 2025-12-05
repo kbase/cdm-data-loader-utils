@@ -35,18 +35,18 @@ Typical scenario:
 
 """
 
-import os
-import click
 import datetime
-import json
-import requests
 import gzip
+import json
+import os
 import uuid
 import xml.etree.ElementTree as ET
-from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
-from pyspark.sql.types import ArrayType, StringType, StructType, StructField
 
+import click
+import requests
+from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
 ## XML namespace mapping for UniProt entries (used for all XPath queries)
 NS = {"u": "https://uniprot.org/uniprot"}
@@ -60,7 +60,6 @@ def load_existing_identifiers(spark, output_dir, namespace):
     Returns:
         dict: {accession: entity_id}
     """
-
     access_to_cdm_id = {}
     id_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_identifiers_delta"))
     if os.path.exists(id_path):
@@ -94,7 +93,7 @@ def build_datasource_record(xml_url):
         "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
         "version": 115,
     }
 
@@ -617,7 +616,6 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
     Return (processed_entry_count, skipped_entry_count)
 
     """
-
     target_date_dt = None
 
     # Convert target_date string to datetime for comparison if provided
@@ -687,7 +685,7 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
 
 def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
     # Generate the timestamp for the current run
-    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
     # Prepare local XML
     local_xml_path = prepare_local_xml(xml_url, output_dir)

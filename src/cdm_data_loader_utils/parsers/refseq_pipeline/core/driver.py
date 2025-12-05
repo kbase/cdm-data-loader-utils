@@ -1,12 +1,14 @@
-from typing import List, Dict, Any
+from typing import Any
+
 from pyspark.sql import SparkSession
-from refseq_pipeline.core.cdm_parse import parse_reports
-from refseq_pipeline.core.spark_delta import write_delta_table, cleanup_after_write
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.cdm_parse import parse_reports
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.spark_delta import cleanup_after_write, write_delta_table
 
 
 def process_and_write_reports(
     spark: SparkSession,
-    reports: List[Dict[str, Any]],
+    reports: list[dict[str, Any]],
     database: str,
     table: str = "assembly_stats",
     mode: str = "append",

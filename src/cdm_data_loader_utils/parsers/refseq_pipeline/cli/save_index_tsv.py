@@ -1,8 +1,10 @@
 import os
-import click
 from datetime import datetime
-from refseq_pipeline.core.config import REFSEQ_ASM_REPORTS
-from refseq_pipeline.core.refseq_io import download_text
+
+import click
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.config import REFSEQ_ASM_REPORTS
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.refseq_io import download_text
 
 
 def save_assembly_index(destination_path: str) -> bool:
@@ -48,7 +50,6 @@ def main(out_dir: str, tag: str):
             --out-dir bronze/refseq/indexes \
             --tag 20250930
     """
-
     # Ensure output directory exists
     os.makedirs(out_dir, exist_ok=True)
 
