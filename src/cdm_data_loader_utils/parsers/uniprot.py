@@ -1,5 +1,5 @@
 """
-UniProt XML Delta Lake Ingestion Pipeline
+UniProt XML Delta Lake Ingestion Pipeline.
 =========================================
 
 This script parses UniProt XML (.xml.gz) file and ingests the data into structured Delta Lake tables.
@@ -55,7 +55,7 @@ NS = {"u": "https://uniprot.org/uniprot"}
 def load_existing_identifiers(spark, output_dir, namespace):
     """
     Load the existing 'identifiers' Delta table and build a mapping from UniProt accession to CDM entity ID.
-    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows
+    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows.
 
     Returns:
         dict: {accession: entity_id}
@@ -77,7 +77,7 @@ def load_existing_identifiers(spark, output_dir, namespace):
     return access_to_cdm_id
 
 
-def generate_cdm_id():
+def generate_cdm_id() -> str:
     """
     Generate a CDM entity_id directly from UniProt accession, using 'CDM:' prefix
     Ensures that each accession is mapped to stable and unique CDM entity ID, making it easy to join across different tables by accession.
@@ -100,7 +100,7 @@ def build_datasource_record(xml_url):
 
 def parse_identifiers(entry, cdm_id):
     """
-    Extract all accession numbers in the UniProt entry and format them into a CDM identifier structure
+    Extract all accession numbers in the UniProt entry and format them into a CDM identifier structure.
     """
     return [
         {
@@ -117,7 +117,7 @@ def parse_names(entry, cdm_id):
     """
     Extract all protein names from a UniProt <entry> element, including
     - Top-level <name> elements (generic names)
-    - <recommendedName> and <alternativeName> blocks within <protein> (full and short names)
+    - <recommendedName> and <alternativeName> blocks within <protein> (full and short names).
     """
     names = []
 
@@ -158,7 +158,7 @@ def parse_names(entry, cdm_id):
 
 def parse_protein_info(entry, cdm_id):
     """
-    Extract protein-level metadata from a UniProt XML <entry> element
+    Extract protein-level metadata from a UniProt XML <entry> element.
     """
     protein_info = {}
     ec_numbers = []
@@ -209,7 +209,7 @@ def parse_protein_info(entry, cdm_id):
 def parse_evidence_map(entry):
     """
     Parse all <evidence> elements from a UniProt XML entry and build a mapping
-    from evidence key to metadata (type, supporting objects, publications)
+    from evidence key to metadata (type, supporting objects, publications).
     """
     evidence_map = {}
 
@@ -347,7 +347,7 @@ def parse_associations(entry, cdm_id, evidence_map):
 def parse_publications(entry):
     """
     Extract all publication references from a UniProt XML <entry>
-    Returns a list of standardized publication IDs (PMID and DOI)
+    Returns a list of standardized publication IDs (PMID and DOI).
     """
     publications = []
 
@@ -400,7 +400,7 @@ def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniPr
     }
 
 
-def download_file(url, output_path, chunk_size=8192, overwrite=False):
+def download_file(url, output_path, chunk_size=8192, overwrite=False) -> None:
     """
     Download a file from a given URL to a local output path.
     """
@@ -435,7 +435,7 @@ def stream_uniprot_xml(filepath):
     with gzip.open(filepath, "rb") as f:
         # Use iterparse to process XML incrementally, triggering on element end events
         context = ET.iterparse(f, events=("end",))
-        for event, element in context:
+        for _event, element in context:
             # Check tag name, ignoring namespace
             if element.tag.endswith("entry"):
                 yield element
@@ -513,7 +513,7 @@ schema_publications = StructType(
 )
 
 
-def save_batches_to_delta(spark, tables, output_dir, namespace):
+def save_batches_to_delta(spark, tables, output_dir, namespace) -> None:
     """
     Persist batches of parsed records for each CDM table into Delta Lake format.
 
@@ -613,7 +613,7 @@ def load_existing_entity(spark, output_dir, namespace):
 def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp):
     """
     Parse UniProt XML entries, write to Delta Lake in batches
-    Return (processed_entry_count, skipped_entry_count)
+    Return (processed_entry_count, skipped_entry_count).
 
     """
     target_date_dt = None
@@ -683,7 +683,7 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
     return entry_count, skipped
 
 
-def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
+def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000) -> None:
     # Generate the timestamp for the current run
     current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
@@ -740,7 +740,7 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
     help="Only process entries modified/updated since this date (YYYY-MM-DD)",
 )
 @click.option("--batch-size", default=5000, help="Batch size for writing Delta tables")
-def main(xml_url, output_dir, namespace, target_date, batch_size):
+def main(xml_url, output_dir, namespace, target_date, batch_size) -> None:
     ingest_uniprot(
         xml_url=xml_url,
         output_dir=output_dir,

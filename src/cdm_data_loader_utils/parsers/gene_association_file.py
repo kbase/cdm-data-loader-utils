@@ -137,15 +137,16 @@ ECO_MAPPING_URL = "http://purl.obolibrary.org/obo/eco/gaf-eco-mapping.txt"
 ECO_MAPPING_COLUMNS = [EVIDENCE_CODE, DB_REF, EVIDENCE_TYPE]
 
 
-def load_eco_mapping():
+def load_eco_mapping() -> pd.DataFrame:
     try:
-        eco_mapping_df = pd.read_csv(ECO_MAPPING_URL, sep="\t", comment="#", header=None, names=ECO_MAPPING_COLUMNS)
+        return pd.read_csv(ECO_MAPPING_URL, sep="\t", comment="#", header=None, names=ECO_MAPPING_COLUMNS)
     except Exception as e:
-        raise ConnectionError(f"Failed to load ECO mapping from {ECO_MAPPING_URL}: {e}")
+        msg = f"Failed to load ECO mapping from {ECO_MAPPING_URL}: {e}"
+        raise ConnectionError(msg) from e
 
 
 # --- Helper Functions ---
-def validate_annotation_schema(df: pd.DataFrame):
+def validate_annotation_schema(df: pd.DataFrame) -> None:
     """
     Validate that the DataFrame matches the required annotation schema.
 
@@ -157,7 +158,8 @@ def validate_annotation_schema(df: pd.DataFrame):
     # Find missing columns in the DataFrame
     missing_cols = set(ASSOCIATION_COL_TYPES.keys()) - set(df.columns)
     if missing_cols:
-        raise ValueError(f"Missing required columns: {missing_cols}")
+        msg = f"Missing required columns: {missing_cols}"
+        raise ValueError(msg)
 
     for column, expected_type in ASSOCIATION_COL_TYPES.items():
         """
@@ -165,7 +167,8 @@ def validate_annotation_schema(df: pd.DataFrame):
         Throw an exception if any of the elements in a column are wrong type
         """
         if not df[column].map(type).eq(expected_type).all():
-            raise ValueError(f"Invalid type in column '{column}': expected {expected_type}")
+            msg = f"Invalid type in column '{column}': expected {expected_type}"
+            raise ValueError(msg)
 
 
 def check_header_data(df, header_names=GAF_COLUMNS):
@@ -231,7 +234,7 @@ def normalize_dates(df):
 def process_predicates(df):
     """
     Detect negative relationships in 'predicate' (starting with 'NOT|')
-    Clean the 'predicate' field into canonical GO relationship names
+    Clean the 'predicate' field into canonical GO relationship names.
     """
     predicates = df[PREDICATE].astype(str)
     df[NEGATED] = predicates.str.startswith("NOT|")
@@ -251,7 +254,7 @@ def transform_go_data(df):
     - Ensures all required columns are present (inserting None where missing).
     - Reorders the columns to match the expected output format.
     """
-    df.rename(
+    df = df.rename(
         columns={
             QUALIFIER: PREDICATE,
             GO_ID: OBJECT,
@@ -260,7 +263,6 @@ def transform_go_data(df):
             DATE: ANNOTATION_DATE,
             ASSIGNED_BY: PRIMARY_KNOWLEDGE_SOURCE,
         },
-        inplace=True,
     )
 
     df = normalize_dates(df)
@@ -301,7 +303,8 @@ def transform_go_data(df):
     # Validate predicates
     invalid_predicates = ~df[PREDICATE].isin(ALLOWED_PREDICATES)
     if invalid_predicates.any():
-        raise ValueError(f"Invalid predicates found: {df.loc[invalid_predicates, PREDICATE].unique()}")
+        msg = f"Invalid predicates found: {df.loc[invalid_predicates, PREDICATE].unique()}"
+        raise ValueError(msg)
 
     df[SUBJECT] = df[DB].astype(str) + ":" + df[DB_OBJ_ID].astype(str)
 
@@ -413,9 +416,9 @@ def process_go_annotations(
     namespace="go_annotations",
     table_name="annotations",
     debug=False,
-):
+) -> None:
     """
-    Output: Delta Table Only
+    Output: Delta Table Only.
     """
     try:
         raw_df = load_go_file(input_path)
@@ -490,7 +493,7 @@ def process_go_annotations(
 @click.option("--namespace", default="go_annotations", help="Delta Lake database name (for Delta output)")
 @click.option("--table-name", default="annotations", help="Delta Lake table name (for Delta output)")
 @click.option("--debug", is_flag=True, default=False, help="Print debug info")
-def main(input, output, namespace, table_name, debug):
+def main(input, output, namespace, table_name, debug) -> None:
     """CLI entry point to process GO annotations."""
     # Valid input file
     if not os.path.isfile(input):

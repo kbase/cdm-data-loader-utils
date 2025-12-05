@@ -1,5 +1,5 @@
 """
-UniRef XML Cluster ETL Pipeline
+UniRef XML Cluster ETL Pipeline.
 
 This script downloads a UniRef100 XML file, parses cluster and member information, and writes the extracted data into Delta Lake tables for downstream analysis.
 
@@ -43,7 +43,7 @@ from pyspark.sql.types import StringType, StructField, StructType
 
 
 # Generate a unique CDM entity_id based on accession
-def cdm_entity_id(accession):
+def cdm_entity_id(accession) -> str | None:
     if not accession:
         return None
     uuid_part = uuid.uuid5(uuid.NAMESPACE_OID, accession)
@@ -51,7 +51,7 @@ def cdm_entity_id(accession):
 
 
 # Download a file from the specified URL to the local path if it does not already exist
-def download_file(url, local_path):
+def download_file(url, local_path) -> None:
     """
     If the file is already present at local, the function does nothing.
     If the download fails, any partially downloaded file will be removed.
@@ -103,10 +103,7 @@ def get_timestamps(uniref_id, existing_created, now=None):
     now_dt = now or datetime.now()
     formatted_now = now_dt.strftime("%Y-%m-%dT%H:%M:%S")
     created = existing_created.get(uniref_id)
-    if created:
-        created_time = created.split(".")[0] if "." in created else created
-    else:
-        created_time = formatted_now
+    created_time = (created.split(".")[0] if "." in created else created) if created else formatted_now
     return formatted_now, created_time
 
 
@@ -128,7 +125,7 @@ def get_accession_and_seed(dbref, ns):
 
 
 # Add both representative and other cluster members into cluster_member_data list
-def add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns):
+def add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns) -> None:
     dbrefs = []
     if repr_db is not None:
         dbrefs.append((repr_db, True))
@@ -145,7 +142,7 @@ def add_cluster_members(cluster_id, repr_db, elem, cluster_member_data, ns):
 
 
 # Extract cross-references (UniRef90/50/UniParc) from a dbReference element
-def extract_cross_refs(dbref, cross_reference_data, ns):
+def extract_cross_refs(dbref, cross_reference_data, ns) -> None:
     if dbref is None:
         return
     props = {p.attrib["type"]: p.attrib["value"] for p in dbref.findall("ns:property", ns)}
@@ -244,7 +241,7 @@ def parse_uniref_xml(local_gz, batch_size, existing_created):
 ##### -------------- Save dalta table and print the preview --------------- #####
 
 
-def save_delta_tables(spark, output_dir, data_dict):
+def save_delta_tables(spark, output_dir, data_dict) -> None:
     # Cluster
     cluster_schema = StructType(
         [
@@ -340,7 +337,7 @@ def build_spark_session():
 @click.option("--ftp-url", required=True, help="FTP URL to UniRef100 XML file")
 @click.option("--output-dir", required=True, help="Output directory for Delta table")
 @click.option("--batch-size", default=1000, help="Number of UniRef entries to parse (limit)")
-def main(ftp_url, output_dir, batch_size):
+def main(ftp_url, output_dir, batch_size) -> None:
     # Set local path for downloaded gzipped XML file
     local_gz = os.path.join("/tmp", os.path.basename(ftp_url))
 
