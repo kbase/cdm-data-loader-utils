@@ -45,7 +45,6 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import StringType
 
-# ---------------------- Logging Setup ----------------------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ def load_annotation(spark, input_path):
 
     df = df.select(DB, DB_OBJ_ID, QUALIFIER, GO_ID, DB_REF, EVIDENCE_CODE, WITH_FROM, DATE, ASSIGNED_BY)
 
-    df = (
+    return (
         df.withColumn(PREDICATE, col(QUALIFIER))
         .withColumn(OBJECT, col(GO_ID))
         .withColumn(PUBLICATIONS, split(trim(when(col(DB_REF).isNotNull(), col(DB_REF)).otherwise(lit(""))), "\\|"))
@@ -119,15 +118,12 @@ def load_annotation(spark, input_path):
         .withColumn(PRIMARY_KNOWLEDGE_SOURCE, col(ASSIGNED_BY))
     )
 
-    return df
-
 
 def normalize_dates(df):
     """Normalize annotation dates to yyyy-MM-dd format if 8-digit string."""
-    df = df.withColumn(
+    return df.withColumn(
         ANNOTATION_DATE, when(col(ANNOTATION_DATE).rlike("^[0-9]{8}$"), to_date(col(ANNOTATION_DATE), "yyyyMMdd"))
     )
-    return df
 
 
 def process_predicates(df):
@@ -139,7 +135,8 @@ def process_predicates(df):
     invalid = df.filter(~col(PREDICATE).isin(ALLOWED_PREDICATES))
     if invalid.count() > 0:
         invalid_values = [r[PREDICATE] for r in invalid.select(PREDICATE).distinct().collect()]
-        raise ValueError(f"Invalid predicate found {invalid_values}")
+        msg = f"Invalid predicate(s) found: {invalid_values}"
+        raise ValueError(msg)
     return df
 
 
@@ -154,9 +151,8 @@ def add_metadata(df):
 
 def load_eco_mapping(spark, local_path="gaf-eco-mapping.txt"):
     """Download and load ECO evidence mapping table."""
-
     if not os.path.exists(local_path):
-        print(f"Downloading ECO mapping file to: {local_path}")
+        logger.info("Downloading ECO mapping file to %s", local_path)
         urllib.request.urlretrieve(ECO_MAPPING_URL, local_path)
 
     df = spark.read.csv(local_path, sep="\t", comment="#", header=False)
@@ -191,13 +187,11 @@ def merge_evidence(df, eco):
         .withColumnRenamed(EVIDENCE_TYPE, "fallback")
     )
 
-    merged = (
+    return (
         merged.join(fallback, on=EVIDENCE_CODE, how="left")
         .withColumn(EVIDENCE_TYPE, when(col(EVIDENCE_TYPE).isNull(), col("fallback")).otherwise(col(EVIDENCE_TYPE)))
         .drop("fallback")
     )
-
-    return merged
 
 
 def reorder_columns(df):
@@ -228,13 +222,13 @@ def reorder_columns(df):
     return df.select([col(c) for c in final_cols])
 
 
-def write_output(df, output_path, mode="overwrite"):
+def write_output(df, output_path, mode="overwrite") -> None:
     df.write.format("delta").mode(mode).save(output_path)
 
 
-def register_table(spark, output_path, table_name="normalized_annotation", permanent=True):
+def register_table(spark, output_path, table_name="normalized_annotation", permanent=True) -> None:
     if permanent:
-        logger.info(f"Registering Delta table as permanent table {table_name}")
+        logger.info("Registering Delta table as permanent table %s", table_name)
 
         spark.sql(f"""
             CREATE TABLE IF NOT EXISTS {table_name}
@@ -243,7 +237,7 @@ def register_table(spark, output_path, table_name="normalized_annotation", perma
         """)
 
     else:
-        logger.info(f"Registering Delta table as temporary view: {table_name}")
+        logger.info("Registering Delta table as temporary view %s", table_name)
         df = spark.read.format("delta").load(output_path)
         df.createOrReplaceTempView(table_name)
 
@@ -256,7 +250,7 @@ def run(
     permanent=True,
     dry_run=False,
     mode="overwrite",
-):
+) -> None:
     spark = None
     try:
         spark = get_spark()
@@ -275,12 +269,12 @@ def run(
             df.show(5, truncate=False)
         else:
             write_output(df, output_path, mode=mode)
-            logger.info(f"Data written to {output_path}")
+            logger.info("Data written to %s", output_path)
             if register:
                 register_table(spark, output_path, table_name=table_name, permanent=permanent)
 
     except Exception as e:
-        logger.error(f"Pipeline failed: {e}")
+        logger.exception("Pipeline failed")
         sys.exit(1)
     finally:
         if spark:
@@ -297,9 +291,9 @@ def run(
     "--mode", default="overwrite", type=click.Choice(["overwrite", "append", "ignore"]), help="Delta write mode"
 )
 @click.option("--dry-run", is_flag=True, help="Dry run without writing output")
-def main(input, output, register, table_name, temp, mode, dry_run):
+def main(input, output, register, table_name, temp, mode, dry_run) -> None:
     if not os.path.isfile(input):
-        logger.error(f"Input file does not exist: {input}")
+        logger.error("Input file does not exist: %s", input)
         sys.exit(1)
     run(input, output, register=register, table_name=table_name, permanent=not temp, dry_run=dry_run, mode=mode)
 

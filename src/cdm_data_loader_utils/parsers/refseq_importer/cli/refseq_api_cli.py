@@ -14,7 +14,6 @@ python -m cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli \
 
 import os
 import re
-from typing import Optional
 
 import click
 
@@ -26,11 +25,10 @@ from cdm_data_loader_utils.parsers.refseq_importer.core.taxon_processing import 
 # ---------------- Helpers ----------------
 
 
-def parse_taxid_args(taxid_arg: Optional[str], taxid_file: Optional[str]) -> list[str]:
+def parse_taxid_args(taxid_arg: str | None, taxid_file: str | None) -> list[str]:
     """
     Parse and collect valid numeric TaxIDs from command-line arguments and file.
     """
-
     # empty list to collect taxids，avoid the duplicate TaxIDs
     taxids: list[str] = []
 
@@ -47,7 +45,7 @@ def parse_taxid_args(taxid_arg: Optional[str], taxid_file: Optional[str]) -> lis
     if taxid_file:
         if not os.path.exists(taxid_file):
             raise click.BadParameter(f"Path '{taxid_file}' does not exist.", param_hint="--taxid-file")
-        with open(taxid_file, "r", encoding="utf-8") as f:
+        with open(taxid_file, encoding="utf-8") as f:
             for line in f:
                 id = re.sub(r"\D+", "", line.strip())
                 if id:

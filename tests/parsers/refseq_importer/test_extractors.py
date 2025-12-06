@@ -19,7 +19,7 @@ from cdm_data_loader_utils.parsers.refseq_importer.core.extractors import (
 # _coalesce
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "vals, expected",
+    ("vals", "expected"),
     [
         (["", "   ", "abc"], "abc"),
         (["  x ", None, ""], "x"),
@@ -27,14 +27,14 @@ from cdm_data_loader_utils.parsers.refseq_importer.core.extractors import (
         (["A", "B"], "A"),
     ],
 )
-def test_coalesce(vals, expected):
+def test_coalesce(vals, expected) -> None:
     assert _coalesce(*vals) == expected
 
 
 # ---------------------------------------------
 # _deep_find_str
 # ---------------------------------------------
-def test_deep_find_str():
+def test_deep_find_str() -> None:
     obj = {
         "level1": {
             "target": "VALUE",
@@ -48,7 +48,7 @@ def test_deep_find_str():
 # ---------------------------------------------
 # _deep_collect_regex
 # ---------------------------------------------
-def test_deep_collect_regex():
+def test_deep_collect_regex() -> None:
     obj = {
         "a": "SAMN123",
         "b": ["xxx SAMN999 yyy", {"k": "SAMN555"}],
@@ -60,7 +60,7 @@ def test_deep_collect_regex():
 # ---------------------------------------------
 # extract_created_date
 # ---------------------------------------------
-def test_extract_created_date_refseq():
+def test_extract_created_date_refseq() -> None:
     rep = {
         "assembly_info": {
             "sourceDatabase": "SOURCE_DATABASE_REFSEQ",
@@ -72,7 +72,7 @@ def test_extract_created_date_refseq():
     assert extract_created_date(rep) == "2020-01-01"
 
 
-def test_extract_created_date_genbank():
+def test_extract_created_date_genbank() -> None:
     rep = {
         "assembly_info": {
             "sourceDatabase": "SOURCE_DATABASE_GENBANK",
@@ -86,7 +86,7 @@ def test_extract_created_date_genbank():
 # extract_assembly_name
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected",
+    ("rep", "expected"),
     [
         ({"assemblyInfo": {"assemblyName": "ASM1"}}, "ASM1"),
         ({"assembly": {"assemblyName": "ASM2"}}, "ASM2"),
@@ -95,7 +95,7 @@ def test_extract_created_date_genbank():
         ({"assembly": {"nested": {"display_name": "ASM5"}}}, "ASM5"),
     ],
 )
-def test_extract_assembly_name(rep, expected):
+def test_extract_assembly_name(rep, expected) -> None:
     assert extract_assembly_name(rep) == expected
 
 
@@ -103,7 +103,7 @@ def test_extract_assembly_name(rep, expected):
 # extract_organism_name
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected",
+    ("rep", "expected"),
     [
         ({"organism": {"scientificName": "E. coli"}}, "E. coli"),
         ({"organism": {"name": "Bacteria X"}}, "Bacteria X"),
@@ -111,7 +111,7 @@ def test_extract_assembly_name(rep, expected):
         ({"nested": {"organismName": "NNN"}}, "NNN"),
     ],
 )
-def test_extract_organism_name(rep, expected):
+def test_extract_organism_name(rep, expected) -> None:
     assert extract_organism_name(rep) == expected
 
 
@@ -119,7 +119,7 @@ def test_extract_organism_name(rep, expected):
 # extract_taxid
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected",
+    ("rep", "expected"),
     [
         ({"organism": {"taxId": 123}}, "123"),
         ({"organism": {"taxid": "456"}}, "456"),
@@ -127,7 +127,7 @@ def test_extract_organism_name(rep, expected):
         ({"nested": {"deep": {"taxid": 999}}}, "999"),
     ],
 )
-def test_extract_taxid(rep, expected):
+def test_extract_taxid(rep, expected) -> None:
     assert extract_taxid(rep) == expected
 
 
@@ -135,7 +135,7 @@ def test_extract_taxid(rep, expected):
 # extract_biosample_ids
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected",
+    ("rep", "expected"),
     [
         ({"biosample": ["BS1", "BS2"]}, ["BS1", "BS2"]),
         ({"assemblyInfo": {"biosample": {"accession": "BS3"}}}, ["BS3"]),
@@ -143,7 +143,7 @@ def test_extract_taxid(rep, expected):
         ({"text": "random SAMN111 text"}, ["SAMN111"]),
     ],
 )
-def test_extract_biosample_ids(rep, expected):
+def test_extract_biosample_ids(rep, expected) -> None:
     assert extract_biosample_ids(rep) == expected
 
 
@@ -151,7 +151,7 @@ def test_extract_biosample_ids(rep, expected):
 # extract_bioproject_ids
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected",
+    ("rep", "expected"),
     [
         ({"bioproject": ["BP1"]}, ["BP1"]),
         ({"assemblyInfo": {"bioproject": {"accession": "BP2"}}}, ["BP2"]),
@@ -159,7 +159,7 @@ def test_extract_biosample_ids(rep, expected):
         ({"text": "abc PRJNA999 xyz"}, ["PRJNA999"]),
     ],
 )
-def test_extract_bioproject_ids(rep, expected):
+def test_extract_bioproject_ids(rep, expected) -> None:
     assert extract_bioproject_ids(rep) == expected
 
 
@@ -167,7 +167,7 @@ def test_extract_bioproject_ids(rep, expected):
 # extract_assembly_accessions
 # ---------------------------------------------
 @pytest.mark.parametrize(
-    "rep, expected_gcf, expected_gca",
+    ("rep", "expected_gcf", "expected_gca"),
     [
         (
             {"assembly": {"assembly_accession": ["GCF_0001.1"], "insdc_assembly_accession": ["GCA_0002.1"]}},
@@ -186,7 +186,7 @@ def test_extract_bioproject_ids(rep, expected):
         ),
     ],
 )
-def test_extract_assembly_accessions(rep, expected_gcf, expected_gca):
+def test_extract_assembly_accessions(rep, expected_gcf, expected_gca) -> None:
     gcf, gca = extract_assembly_accessions(rep)
     assert gcf == expected_gcf
     assert gca == expected_gca

@@ -1,9 +1,11 @@
 import os
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
+
 from delta.tables import DeltaTable
-from pyspark.sql import SparkSession, functions as F, Window
+from pyspark.sql import SparkSession, Window
+from pyspark.sql import functions as F
 
 
 def build_spark(database: str, master: str = "local[*]") -> SparkSession:
@@ -180,5 +182,4 @@ def read_delta_table(spark: SparkSession, database: str, table: str):
     full = f"{database}.{table}"
     if spark.catalog.tableExists(full):
         return spark.table(full)
-    else:
-        raise ValueError(f"Table {full} not found in catalog.")
+    raise ValueError(f"Table {full} not found in catalog.")

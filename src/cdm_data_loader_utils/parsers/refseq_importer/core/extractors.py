@@ -1,6 +1,5 @@
 import re
-from typing import Any, List, Dict, Optional
-
+from typing import Any
 
 # ---------------- Robust extractors set up ----------------
 
@@ -11,7 +10,7 @@ PAT_GCF = re.compile(r"\bGCF_\d{9}\.\d+\b")
 PAT_GCA = re.compile(r"\bGCA_\d{9}\.\d+\b")
 
 
-def _coalesce(*vals: Any) -> Optional[str]:
+def _coalesce(*vals: Any) -> str | None:
     """
     Return the first non-empty, non-whitespace string from a list of inputs.
     """
@@ -23,11 +22,10 @@ def _coalesce(*vals: Any) -> Optional[str]:
     return None
 
 
-def _deep_find_str(obj: Any, target_keys: set[str]) -> Optional[str]:
+def _deep_find_str(obj: Any, target_keys: set[str]) -> str | None:
     """
     Recursively search a nested dict/list structure for the first non-empty string value under any of the target_keys.
     """
-
     # If the object is a dictionary
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -48,7 +46,7 @@ def _deep_find_str(obj: Any, target_keys: set[str]) -> Optional[str]:
     return None
 
 
-def _deep_collect_regex(obj: Any, pattern: re.Pattern) -> List[str]:
+def _deep_collect_regex(obj: Any, pattern: re.Pattern) -> list[str]:
     """
     Recursively collect all unique regex matches from a nested structure
 
@@ -59,7 +57,6 @@ def _deep_collect_regex(obj: Any, pattern: re.Pattern) -> List[str]:
     Returns:
         A sorted list of unique regex matches found anywhere inside the object.
     """
-
     results = set()  # Use a set to avoid duplicate matches
 
     def _walk(x):
@@ -83,7 +80,7 @@ def _deep_collect_regex(obj: Any, pattern: re.Pattern) -> List[str]:
     return sorted(results)
 
 
-def extract_created_date(rep: Dict[str, Any], allow_genbank_date: bool = False, debug: bool = False) -> Optional[str]:
+def extract_created_date(rep: dict[str, Any], allow_genbank_date: bool = False, debug: bool = False) -> str | None:
     """
     Extract creation/release date for a genome assembly.
 
@@ -94,13 +91,12 @@ def extract_created_date(rep: Dict[str, Any], allow_genbank_date: bool = False, 
     Returns None if no valid date is found.
 
     """
-
     # Normalize assembly info
     assem_data = rep.get("assembly_info") or rep.get("assemblyInfo") or {}
     src_db = rep.get("source_database") or assem_data.get("sourceDatabase")
 
     # Collect candidate dates
-    candidates: Dict[str, str] = {}
+    candidates: dict[str, str] = {}
     for src in (assem_data, rep.get("assembly") or {}, rep):
         for key in [
             "releaseDate",
@@ -138,7 +134,7 @@ def extract_created_date(rep: Dict[str, Any], allow_genbank_date: bool = False, 
     return None
 
 
-def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
+def extract_assembly_name(rep: dict[str, Any]) -> str | None:
     """
     Extract the assembly name from a genome report record.
     Supports:
@@ -148,7 +144,6 @@ def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
       - rep.assemblyName
       - deep search fallback
     """
-
     assembly_info = rep.get("assemblyInfo") or {}
     a = rep.get("assembly") or {}
 
@@ -167,7 +162,7 @@ def extract_assembly_name(rep: Dict[str, Any]) -> Optional[str]:
     return _deep_find_str(rep, {"assemblyName", "assembly_name", "display_name", "displayName"})
 
 
-def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
+def extract_organism_name(rep: dict[str, Any]) -> str | None:
     assembly_info = rep.get("assemblyInfo") or {}
     a = rep.get("assembly") or {}
     org_top = rep.get("organism") or {}
@@ -192,7 +187,7 @@ def extract_organism_name(rep: Dict[str, Any]) -> Optional[str]:
     )
 
 
-def extract_taxid(rep: Dict[str, Any]) -> Optional[str]:
+def extract_taxid(rep: dict[str, Any]) -> str | None:
     """
     Extract the NCBI Taxonomy ID (taxid) from a genome assembly report.
     """
@@ -228,7 +223,7 @@ def extract_taxid(rep: Dict[str, Any]) -> Optional[str]:
     return _deep_find_taxid(rep)
 
 
-def extract_biosample_ids(rep: Dict[str, Any]) -> list[str]:
+def extract_biosample_ids(rep: dict[str, Any]) -> list[str]:
     accs = set()
 
     direct_bs = rep.get("biosample")
@@ -258,7 +253,7 @@ def extract_biosample_ids(rep: Dict[str, Any]) -> list[str]:
     return sorted(accs)
 
 
-def extract_bioproject_ids(rep: Dict[str, Any]) -> list[str]:
+def extract_bioproject_ids(rep: dict[str, Any]) -> list[str]:
     accs = set()
 
     direct_bp = rep.get("bioproject")
@@ -288,7 +283,7 @@ def extract_bioproject_ids(rep: Dict[str, Any]) -> list[str]:
     return sorted(accs)
 
 
-def extract_assembly_accessions(rep: Dict[str, Any]) -> tuple[list[str], list[str]]:
+def extract_assembly_accessions(rep: dict[str, Any]) -> tuple[list[str], list[str]]:
     gcf, gca = set(), set()
 
     def _add(acc):

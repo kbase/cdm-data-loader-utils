@@ -1,17 +1,19 @@
 import os
-import click
 from pathlib import Path
-from refseq_pipeline.core.spark_delta import build_spark
-from refseq_pipeline.core.snapshot_utils import detect_updated_or_new_hashes_from_path
+
+import click
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.snapshot_utils import detect_updated_or_new_hashes_from_path
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.spark_delta import build_spark
 
 """
-We implemented a snapshot comparison tool for RefSeq assemblies. 
-By comparing SHA256 hashes from two Delta table tags 
-We identified several genomes that were either updated or newly added. 
+We implemented a snapshot comparison tool for RefSeq assemblies.
+By comparing SHA256 hashes from two Delta table tags
+We identified several genomes that were either updated or newly added.
 This diff was saved as a CSV file containing accession IDs, change types, and old/new checksums for downstream processing or API calls.
 
 
-Usage: 
+Usage:
 
   PYTHONPATH=src/parsers \
   python src/parsers/refseq_pipeline/cli/detect_updates.py \
@@ -35,7 +37,6 @@ def main(database, table, old_tag, new_tag, output):
     Compare two Delta snapshot tags (ex: 20200930 VS 20251001)
     Detect genomes that are new or updated between the two versions
     """
-
     print(f"\n[detect] Comparing snapshot tags: {old_tag} → {new_tag}")
 
     # --- Initialize Spark ---

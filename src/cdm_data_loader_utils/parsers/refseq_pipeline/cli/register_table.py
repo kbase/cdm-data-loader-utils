@@ -1,6 +1,8 @@
-import click
 from pathlib import Path
-from refseq_pipeline.core.spark_delta import build_spark
+
+import click
+
+from cdm_data_loader_utils.parsers.refseq_pipeline.core.spark_delta import build_spark
 
 
 @click.command()
