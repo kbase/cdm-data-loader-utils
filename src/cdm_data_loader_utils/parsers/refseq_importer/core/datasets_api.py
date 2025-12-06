@@ -1,5 +1,9 @@
+import logging
 
 import requests
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def fetch_reports_by_taxon(
@@ -50,14 +54,14 @@ def fetch_reports_by_taxon(
             resp = requests.get(url, params=params, headers=headers, timeout=60)
             resp.raise_for_status()
             payload = resp.json()
-        except (requests.RequestException, ValueError) as e:
-            print(f"Request failed for taxon {taxon}: {e}")
+        except (requests.RequestException, ValueError):
+            logger.exception("Request failed for taxon %s", taxon)
             break
 
         # ---- Extract reports ----
         reports = payload.get("reports", [])
         if not reports:
-            print(f"No reports returned for taxon {taxon}")
+            logger.warning("No reports returned for taxon %s", taxon)
             break
 
         # ---------------- Filter loop ----------------
@@ -72,14 +76,14 @@ def fetch_reports_by_taxon(
             # Print source info if debugging
             if debug:
                 if src_db is None:
-                    print(f"[DEBUG] accession={rep.get('accession')} has no sourceDatabase field")
+                    logger.debug("accession=%s has no sourceDatabase field", rep.get("accession"))
                 else:
-                    print(f"[DEBUG] accession={rep.get('accession')} sourceDatabase={src_db}")
+                    logger.debug("accession=%s sourceDatabase=%s", rep.get("accession"), src_db)
 
                 # Print the first 200 chars of assemblyReport for inspection
                 if info.get("assemblyReport"):
                     snippet = info["assemblyReport"][:200].replace("\n", " ")
-                    print(f"[DEBUG] {snippet}")
+                    logger.debug(snippet)
 
             # Yield one assembly report to caller
             yield rep
