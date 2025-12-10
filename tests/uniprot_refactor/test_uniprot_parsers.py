@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from cdm_data_loader_utils.parsers.uniprot import parse_protein_info, parse_evidence_map
+from cdm_data_loader_utils.parsers.uniprot import parse_evidence_map, parse_protein_info
 
 UNIPROT_NS = "https://uniprot.org/uniprot"
 NSMAP = {"ns": UNIPROT_NS}

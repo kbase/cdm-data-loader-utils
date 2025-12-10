@@ -17,13 +17,6 @@ python3 uniprot.py \
   --namespace "uniprot_archaea_db" \
   --batch-size 5000
 
-Use it in the local computer as:
-python3 uniprot.py \
-  --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
-  --output-dir "./output_archaea" \
-  --namespace "uniprot_archaea_db" \
-  --batch-size 5000
-
 Arguments:
 ----------
 --xml-url:      URL to the UniProt XML .gz file
@@ -53,7 +46,7 @@ import json
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from typing import Optional
+from typing import Any
 
 import click
 import requests
@@ -338,7 +331,7 @@ def _make_association(
     obj: str,
     predicate: str | None = None,
     evidence_key: str | None = None,
-    evidence_map: dict | None = None,
+    evidence_map: dict[str, Any] | None = None,
 ):
     """
     Helper to construct a CDM association dict and merge evidence fields from evidence_map.
