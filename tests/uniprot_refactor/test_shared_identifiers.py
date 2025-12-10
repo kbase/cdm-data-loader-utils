@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
 
 
-def test_parse_identifiers_generic_basic():
+def test_parse_identifiers_generic_basic() -> None:
     # <entry>
     #   <accession>P12345</accession>
     #   <accession>Q99999</accession>

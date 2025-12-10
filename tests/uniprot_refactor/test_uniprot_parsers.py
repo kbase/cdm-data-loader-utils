@@ -22,7 +22,7 @@ def make_entry(inner_xml: str):
     return root.find("ns:entry", NSMAP)
 
 
-def test_parse_protein_info_full():
+def test_parse_protein_info_full() -> None:
     entry = make_entry(
         """
         <protein>
@@ -62,7 +62,7 @@ def test_parse_protein_info_full():
     assert info["entry_modified"] == "2020-01-02"
 
 
-def test_parse_protein_info_without_sequence():
+def test_parse_protein_info_without_sequence() -> None:
     entry = make_entry(
         """
         <proteinExistence type="evidence at transcript level" />
@@ -78,7 +78,7 @@ def test_parse_protein_info_without_sequence():
     assert "length" not in info
 
 
-def test_parse_evidence_map_with_pubmed_and_other():
+def test_parse_evidence_map_with_pubmed_and_other() -> None:
     entry = make_entry(
         """
         <evidence key="E1" type="ECO:0000255">

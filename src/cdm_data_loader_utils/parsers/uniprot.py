@@ -146,7 +146,6 @@ def parse_names(entry, cdm_id):
           - description
           - source
     """
-
     names = []
 
     # Use `find_all_text` to automatically perform strip and deduplication
@@ -199,7 +198,6 @@ def parse_protein_info(entry, cdm_id):
     Extract protein-level metadata from a UniProt XML <entry> element
     using shared XML utilities.
     """
-
     protein_info = {}
 
     # Extract EC numbers (recommended + alternative names)
@@ -255,7 +253,6 @@ def parse_evidence_map(entry):
         { evidence_key : { evidence_type, supporting_objects, publications } }
     Using shared XML helpers for dbReference parsing and dict cleaning.
     """
-
     evidence_map = {}
 
     # Iterate over <evidence> elements
@@ -339,9 +336,9 @@ def parse_cofactor_association(cofactor, cdm_id):
 def _make_association(
     cdm_id: str,
     obj: str,
-    predicate: Optional[str] = None,
-    evidence_key: Optional[str] = None,
-    evidence_map: Optional[dict] = None,
+    predicate: str | None = None,
+    evidence_key: str | None = None,
+    evidence_map: dict | None = None,
 ):
     """
     Helper to construct a CDM association dict and merge evidence fields from evidence_map.
@@ -596,7 +593,6 @@ def save_batches_to_delta(spark, tables, output_dir, namespace) -> None:
     and register them into Spark SQL as managed Delta tables under {namespace}.
 
     """
-
     # Ensure the namespace(database) exists
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
 
