@@ -162,9 +162,7 @@ IDENTIFIER_PREFIXES = {
 }
 
 
-def build_cdm_identifier_rows(
-    entity_id: str, rep: dict[str, Any], request_taxid: str | None
-) -> list[dict[str, Any]]:
+def build_cdm_identifier_rows(entity_id: str, rep: dict[str, Any], request_taxid: str | None) -> list[dict[str, Any]]:
     """
     Identifiers remain as list[dict].
     Spark conversion happens later in finalize_tables.
