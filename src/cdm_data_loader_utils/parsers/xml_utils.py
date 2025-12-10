@@ -11,14 +11,14 @@ This module centralizes common operations:
 """
 
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ============================================================
 # Basic Safe Accessors
 # ============================================================
 
 
-def get_text(elem: Optional[ET.Element], default: Optional[str] = None) -> Optional[str]:
+def get_text(elem: ET.Element | None, default: str | None = None) -> str | None:
     """Return elem.text if exists and non-empty."""
     if elem is None:
         return default
@@ -28,7 +28,7 @@ def get_text(elem: Optional[ET.Element], default: Optional[str] = None) -> Optio
     return text if text else default
 
 
-def get_attr(elem: Optional[ET.Element], name: str, default: Optional[str] = None) -> Optional[str]:
+def get_attr(elem: ET.Element | None, name: str, default: str | None = None) -> str | None:
     """Return elem.get(name) safely."""
     if elem is None:
         return default
@@ -41,13 +41,13 @@ def get_attr(elem: Optional[ET.Element], name: str, default: Optional[str] = Non
 # ============================================================
 
 
-def find_one(elem: ET.Element, xpath: str, ns: Dict[str, str]):
+def find_one(elem: ET.Element, xpath: str, ns: dict[str, str]):
     """Return first element matching xpath or None."""
     results = elem.findall(xpath, ns)
     return results[0] if results else None
 
 
-def find_all_text(elem: ET.Element, xpath: str, ns: Dict[str, str]) -> List[str]:
+def find_all_text(elem: ET.Element, xpath: str, ns: dict[str, str]) -> list[str]:
     """Return list of text values from xpath matches (deduped)."""
     texts = []
     for node in elem.findall(xpath, ns):
@@ -57,8 +57,8 @@ def find_all_text(elem: ET.Element, xpath: str, ns: Dict[str, str]) -> List[str]
     return list(dict.fromkeys(texts))  # preserve order, dedupe
 
 
-def safe_list(x) -> List[Any]:
-    """Convert None → []"""
+def safe_list(x) -> list[Any]:
+    """Convert None → []."""
     if x is None:
         return []
     if isinstance(x, list):
@@ -71,7 +71,7 @@ def safe_list(x) -> List[Any]:
 # ============================================================
 
 
-def parse_properties(dbref: Optional[ET.Element], ns: Dict[str, str]) -> Dict[str, str]:
+def parse_properties(dbref: ET.Element | None, ns: dict[str, str]) -> dict[str, str]:
     """
     Extract key/value pairs from <property type="..." value="..."> blocks.
     """
@@ -86,7 +86,7 @@ def parse_properties(dbref: Optional[ET.Element], ns: Dict[str, str]) -> Dict[st
     return props
 
 
-def parse_db_references(elem: ET.Element, ns: Dict[str, str], pub_types=("PubMed", "DOI")):
+def parse_db_references(elem: ET.Element, ns: dict[str, str], pub_types=("PubMed", "DOI")):
     """
     Generic dbReference parser:
     - Identify publication IDs (PubMed, DOI)
@@ -115,7 +115,7 @@ def parse_db_references(elem: ET.Element, ns: Dict[str, str], pub_types=("PubMed
 # ============================================================
 
 
-def clean_dict(d: Dict[str, Any]) -> Dict[str, Any]:
+def clean_dict(d: dict[str, Any]) -> dict[str, Any]:
     """
     Remove keys whose value is None or empty list.
     """

@@ -42,7 +42,8 @@ import os
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from urllib.request import URLError, urlretrieve
+from urllib.error import URLError
+from urllib.request import urlretrieve
 
 import click
 from delta import configure_spark_with_delta_pip
