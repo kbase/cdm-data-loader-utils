@@ -1,9 +1,8 @@
 import click
-from refseq_pipeline.core.spark_delta import build_spark
-from refseq_pipeline.core.datasets_api import fetch_reports_by_taxon
 from refseq_pipeline.core.cdm_parse import parse_reports
+from refseq_pipeline.core.datasets_api import fetch_reports_by_taxon
 from refseq_pipeline.core.driver import process_and_write_reports
-
+from refseq_pipeline.core.spark_delta import build_spark
 
 """
 
@@ -36,7 +35,6 @@ def main(taxid, database, table, mode, data_dir, preview_only):
     - Optionally write the parsed result to a Delta Lake table
 
     """
-
     # Initialize Spark Session
     spark = build_spark(database)
     print(f"[DEBUG] Fetching reports for TaxID: {taxid}")

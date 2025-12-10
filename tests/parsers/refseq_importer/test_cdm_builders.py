@@ -31,7 +31,7 @@ def spark():
 # =============================================================
 @pytest.mark.requires_spark
 @pytest.mark.parametrize("input_key", ["abc", "   hello  ", "", "123", "GCF_0001"])
-def test_build_entity_id_prefix(input_key):
+def test_build_entity_id_prefix(input_key) -> None:
     eid = build_entity_id(input_key)
     assert eid.startswith("CDM:")
     assert len(eid) > 10  # UUID v5 non-empty
@@ -83,7 +83,7 @@ def test_build_cdm_name_rows(spark):
 #        TEST build_cdm_identifier_rows (parametrize!)
 # =============================================================
 @pytest.mark.parametrize(
-    "rep, request_taxid, expected_identifiers",
+    ("rep", "request_taxid", "expected_identifiers"),
     [
         # Case 1 – full fields
         (
@@ -116,7 +116,7 @@ def test_build_cdm_name_rows(spark):
         ),
     ],
 )
-def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifiers):
+def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifiers) -> None:
     # Convert mock representation into what extract_assembly_accessions expects
     fake_rep = {
         "biosample": rep.get("biosample", []),

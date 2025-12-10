@@ -1,10 +1,12 @@
 import json
-import click
-from pyspark.sql import SparkSession, functions as F, types as T
-from refseq_pipeline.core.spark_delta import build_spark, write_delta_table, cleanup_after_write
-from refseq_pipeline.core.datasets_api import fetch_reports_by_taxon
-from refseq_pipeline.core.cdm_parse import parse_reports
 
+import click
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
+from refseq_pipeline.core.cdm_parse import parse_reports
+from refseq_pipeline.core.datasets_api import fetch_reports_by_taxon
+from refseq_pipeline.core.spark_delta import build_spark, cleanup_after_write, write_delta_table
 
 # ----------  CDM Schema ----------
 CDM_SCHEMA = T.StructType(

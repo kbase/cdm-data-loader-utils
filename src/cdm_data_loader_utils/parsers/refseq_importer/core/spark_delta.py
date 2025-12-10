@@ -1,9 +1,9 @@
 import os
 import shutil
-from typing import Optional
+
 from delta import configure_spark_with_delta_pip
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
 
 
 def build_spark(database: str) -> SparkSession:
@@ -23,7 +23,7 @@ def build_spark(database: str) -> SparkSession:
 
 
 def write_delta(
-    spark: SparkSession, df: DataFrame, database: str, table: str, mode: str = "append", data_dir: Optional[str] = None
+    spark: SparkSession, df: DataFrame, database: str, table: str, mode: str = "append", data_dir: str | None = None
 ) -> None:
     """
     Write Spark DataFrame to Delta.
@@ -31,7 +31,6 @@ def write_delta(
     Otherwise writes to managed table.
 
     """
-
     if df is None or df.rdd.isEmpty():
         print(f"No data to write to {database}.{table}")
         return
@@ -87,7 +86,6 @@ def preview_or_skip(spark: SparkSession, database: str, table: str, limit: int =
     """
     Preview table if it exists.
     """
-
     full_table = f"{database}.{table}"
     if spark.catalog.tableExists(full_table):
         print(f"Preview for {full_table}:")

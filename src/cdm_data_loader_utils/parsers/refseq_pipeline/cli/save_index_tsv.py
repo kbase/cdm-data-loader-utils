@@ -1,6 +1,7 @@
 import os
-import click
 from datetime import datetime
+
+import click
 from refseq_pipeline.core.config import REFSEQ_ASM_REPORTS
 from refseq_pipeline.core.refseq_io import download_text
 
@@ -48,7 +49,6 @@ def main(out_dir: str, tag: str):
             --out-dir bronze/refseq/indexes \
             --tag 20250930
     """
-
     # Ensure output directory exists
     os.makedirs(out_dir, exist_ok=True)
 

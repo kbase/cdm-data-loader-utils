@@ -1,7 +1,6 @@
-import os
-from pyspark.sql import SparkSession
 from delta import configure_spark_with_delta_pip
-from refseq_pipeline.core.spark_delta import register_table, read_delta_table
+from pyspark.sql import SparkSession
+from refseq_pipeline.core.spark_delta import read_delta_table, register_table
 
 """
 PYTHONPATH=/global_share/alinawang/cdm-data-loader-utils/src/parsers python debug_register.py

@@ -10,10 +10,11 @@ PYTHONPATH=src/parsers python src/parsers/refseq_pipeline/cli/compare_snapshots.
 """
 
 import os
-import click
 from pathlib import Path
-from pyspark.sql import SparkSession
+
+import click
 from delta import configure_spark_with_delta_pip
+from pyspark.sql import SparkSession
 from refseq_pipeline.core.snapshot_utils import detect_updated_or_new_hashes_from_path
 
 
@@ -107,8 +108,7 @@ def main(database, table, old_tag, new_tag, output_dir):
         df_subset = df_diff.filter(f"change_type = '{change_type}'").select("accession")
         tsv_path = output_dir / f"{change_type}_accessions.tsv"
         with open(tsv_path, "w") as f:
-            for row in df_subset.collect():
-                f.write(f"{row['accession']}\n")
+            f.writelines(f"{row['accession']}\n" for row in df_subset.collect())
         print(f"[compare] {change_type} accession list saved: {tsv_path}")
 
     print(f"[compare] Done. {df_diff.count()} total differences written.")
