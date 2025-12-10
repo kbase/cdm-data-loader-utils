@@ -1,14 +1,15 @@
-from typing import List, Dict, Any
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import Row
-from pyspark.sql.types import StructType, StructField, StringType
-from .spark_delta import write_delta, preview_or_skip
+from typing import Any
+
+from pyspark.sql import DataFrame, Row, SparkSession
+from pyspark.sql.types import StringType, StructField, StructType
+
+from .spark_delta import preview_or_skip, write_delta
 
 
 # -------------------------------------------------------------------
 # Convert list[dict] → Spark DataFrame with explicit schema
 # -------------------------------------------------------------------
-def list_of_dicts_to_spark(spark: SparkSession, rows: List[Dict[str, Any]], schema: StructType) -> DataFrame:
+def list_of_dicts_to_spark(spark: SparkSession, rows: list[dict[str, Any]], schema: StructType) -> DataFrame:
     if not rows:
         return spark.createDataFrame([], schema=schema)
     spark_rows = [Row(**r) for r in rows]
@@ -20,16 +21,15 @@ def list_of_dicts_to_spark(spark: SparkSession, rows: List[Dict[str, Any]], sche
 # -------------------------------------------------------------------
 def finalize_tables(
     spark: SparkSession,
-    entities: List[DataFrame],
-    collections: List[DataFrame],
-    names: List[Dict[str, Any]],
-    identifiers: List[Dict[str, Any]],
+    entities: list[DataFrame],
+    collections: list[DataFrame],
+    names: list[dict[str, Any]],
+    identifiers: list[dict[str, Any]],
 ):
     """
     Combine Spark partial entity/collection DFs,
     and convert name + identifier lists into Spark DFs.
     """
-
     # entity table
     if entities:
         df_entity = entities[0]

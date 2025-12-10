@@ -18,7 +18,7 @@ def spark():
 # -------------------------------------------------------------------
 # Test list_of_dicts_to_spark
 # -------------------------------------------------------------------
-def test_list_of_dicts_to_spark(spark):
+def test_list_of_dicts_to_spark(spark) -> None:
     schema = StructType(
         [
             StructField("a", StringType(), True),
@@ -36,7 +36,7 @@ def test_list_of_dicts_to_spark(spark):
 # -------------------------------------------------------------------
 # Test finalize_tables end-to-end
 # -------------------------------------------------------------------
-def test_finalize_tables_basic(spark):
+def test_finalize_tables_basic(spark) -> None:
     # ---------- entity ----------
     e_schema = StructType(
         [
@@ -111,7 +111,7 @@ def test_finalize_tables_basic(spark):
     assert df_name.count() == 2
     assert df_ident.count() == 2
 
-    assert set(r.entity_id for r in df_entity.collect()) == {"E1", "E2"}
-    assert set(r.collection_id for r in df_coll.collect()) == {"E1", "E2"}
-    assert set(r.name for r in df_name.collect()) == {"A", "B"}
-    assert set(r.identifier for r in df_ident.collect()) == {"BioSample:1", "BioSample:2"}
+    assert {r.entity_id for r in df_entity.collect()} == {"E1", "E2"}
+    assert {r.collection_id for r in df_coll.collect()} == {"E1", "E2"}
+    assert {r.name for r in df_name.collect()} == {"A", "B"}
+    assert {r.identifier for r in df_ident.collect()} == {"BioSample:1", "BioSample:2"}

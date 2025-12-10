@@ -26,7 +26,7 @@ def spark():
 #                TEST build_entity_id
 # =============================================================
 @pytest.mark.parametrize("input_key", ["abc", "   hello  ", "", "123", "GCF_0001"])
-def test_build_entity_id_prefix(input_key):
+def test_build_entity_id_prefix(input_key) -> None:
     eid = build_entity_id(input_key)
     assert eid.startswith("CDM:")
     assert len(eid) > 10  # UUID v5 non-empty
@@ -36,7 +36,7 @@ def test_build_entity_id_prefix(input_key):
 # =============================================================
 #                TEST build_cdm_entity
 # =============================================================
-def test_build_cdm_entity_basic(spark):
+def test_build_cdm_entity_basic(spark) -> None:
     df, eid = build_cdm_entity(spark, key_for_uuid="ABC123", created_date="2020-01-01")
 
     row = df.collect()[0]
@@ -49,8 +49,8 @@ def test_build_cdm_entity_basic(spark):
 # =============================================================
 #           TEST build_cdm_contig_collection
 # =============================================================
-@pytest.mark.parametrize("taxid, expected", [("1234", "NCBITaxon:1234"), (None, None), ("999", "NCBITaxon:999")])
-def test_build_cdm_contig_collection_param(spark, taxid, expected):
+@pytest.mark.parametrize(("taxid", "expected"), [("1234", "NCBITaxon:1234"), (None, None), ("999", "NCBITaxon:999")])
+def test_build_cdm_contig_collection_param(spark, taxid, expected) -> None:
     df = build_cdm_contig_collection(spark, entity_id="CDM:xyz", taxid=taxid)
     row = df.collect()[0]
     assert row.collection_id == "CDM:xyz"
@@ -60,7 +60,7 @@ def test_build_cdm_contig_collection_param(spark, taxid, expected):
 # =============================================================
 #               TEST build_cdm_name_rows
 # =============================================================
-def test_build_cdm_name_rows(spark):
+def test_build_cdm_name_rows(spark) -> None:
     rep = {"organism": {"name": "Escherichia coli"}, "assembly": {"display_name": "GCF_test_assembly"}}
 
     df = build_cdm_name_rows(spark, "CDM:abc", rep)
@@ -75,7 +75,7 @@ def test_build_cdm_name_rows(spark):
 #        TEST build_cdm_identifier_rows (parametrize!)
 # =============================================================
 @pytest.mark.parametrize(
-    "rep, request_taxid, expected_identifiers",
+    ("rep", "request_taxid", "expected_identifiers"),
     [
         # Case 1 – full fields
         (
@@ -108,7 +108,7 @@ def test_build_cdm_name_rows(spark):
         ),
     ],
 )
-def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifiers):
+def test_build_cdm_identifier_rows_param(rep, request_taxid, expected_identifiers) -> None:
     # Convert mock representation into what extract_assembly_accessions expects
     fake_rep = {
         "biosample": rep.get("biosample", []),

@@ -1,5 +1,6 @@
-import click
 from pathlib import Path
+
+import click
 from refseq_pipeline.core.spark_delta import build_spark
 
 

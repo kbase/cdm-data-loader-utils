@@ -1,7 +1,7 @@
+from pyspark.sql import functions as F
 from refseq_pipeline.core.hashes_snapshot import snapshot_hashes_for_accessions, write_hash_snapshot
 from refseq_pipeline.core.refseq_io import load_refseq_assembly_index
 from refseq_pipeline.core.spark_delta import build_spark
-from pyspark.sql import functions as F
 
 ## python -m refseq_pipeline.core.debug_snapshot ##
 

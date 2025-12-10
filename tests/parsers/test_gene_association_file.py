@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+
 from cdm_data_loader_utils.parsers.gene_association_file import (
     ASSOCIATION_COL_TYPES,
     merge_evidence_mapping,
@@ -76,7 +77,7 @@ def annotation_df():
 
 
 # --- Tests ---
-def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
+def test_go_annotation_processed(temp_csv_files, evidence_mapping_df) -> None:
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     assert output_path.exists(), "Output file not created."
@@ -87,7 +88,7 @@ def test_go_annotation_processed(temp_csv_files, evidence_mapping_df):
     )
 
 
-def test_io_behavior(temp_csv_files, evidence_mapping_df):
+def test_io_behavior(temp_csv_files, evidence_mapping_df) -> None:
     """Integration test for I/O behavior of process_go_annotations."""
     input_path, output_path = temp_csv_files
     assert not output_path.exists(), "Output file already exist before processing."
@@ -99,7 +100,7 @@ def test_io_behavior(temp_csv_files, evidence_mapping_df):
         assert col in df_out.columns, f"Column {col} missing in output."
 
 
-def test_column_types(temp_csv_files, evidence_mapping_df):
+def test_column_types(temp_csv_files, evidence_mapping_df) -> None:
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     df = pd.read_csv(output_path)
@@ -110,7 +111,7 @@ def test_column_types(temp_csv_files, evidence_mapping_df):
             assert not mismatches.any(), f"Column {column} has incorrect types."
 
 
-def test_negated_logic(temp_csv_files, evidence_mapping_df):
+def test_negated_logic(temp_csv_files, evidence_mapping_df) -> None:
     input_path, output_path = temp_csv_files
     process_go_annotations(str(input_path), str(output_path), evidence_mapping_df)
     df = pd.read_csv(output_path)
@@ -119,7 +120,7 @@ def test_negated_logic(temp_csv_files, evidence_mapping_df):
 
 
 # --- Helper function for evidence mapping test ---
-def test_merge_and_fallback(annotation_df, evidence_mapping_df):
+def test_merge_and_fallback(annotation_df, evidence_mapping_df) -> None:
     """Test the evidence mapping merge and fallback logic."""
     merged = merge_evidence_mapping(annotation_df, evidence_mapping_df)
     assert merged.loc[0, "evidence_type"] == "ECO:0000250", "Direct match failed."
@@ -127,7 +128,7 @@ def test_merge_and_fallback(annotation_df, evidence_mapping_df):
     assert "DB_Reference" not in merged.columns, "'DB_Reference' should have been dropped after merge."
 
 
-def test_no_fallback():
+def test_no_fallback() -> None:
     annotation_df = pd.DataFrame([{"Evidence_Code": "IEA", "publications": "PMID:999999"}])
     evidence_df = pd.DataFrame(
         [{"Evidence_Code": "EXP", "DB_Reference": "GO_REF:0000024", "evidence_type": "ECO:0000269"}]
@@ -138,7 +139,7 @@ def test_no_fallback():
     )
 
 
-def test_fallback_after_explode():
+def test_fallback_after_explode() -> None:
     annotation_df = pd.DataFrame([{"Evidence_Code": "ND", "publications": ["PMID:111111", "PMID:222222"]}])
     evidence_df = pd.DataFrame([{"Evidence_Code": "ND", "DB_Reference": "DEFAULT", "evidence_type": "ECO:0000307"}])
     merged = merge_evidence_mapping(annotation_df, evidence_df)
@@ -146,7 +147,7 @@ def test_fallback_after_explode():
     assert all(merged["evidence_type"] == "ECO:0000307"), "Fallback evidence_type not correctly applied after explode"
 
 
-def test_normalize_dates():
+def test_normalize_dates() -> None:
     df = pd.DataFrame({"annotation_date": ["20200101", "20221301", "abcd1234", "20181231", None]})
     result = normalize_dates(df.copy())
     expected = ["2020-01-01", None, None, "2018-12-31", None]
@@ -158,7 +159,7 @@ def test_normalize_dates():
             assert a == e
 
 
-def test_process_predicates():
+def test_process_predicates() -> None:
     df = pd.DataFrame({"predicate": ["NOT|enables", "involved_in", "NOT|located_in", "part_of"]})
     result = process_predicates(df.copy())
     assert result["negated"].tolist() == [True, False, True, False], "Negation detection incorrect."

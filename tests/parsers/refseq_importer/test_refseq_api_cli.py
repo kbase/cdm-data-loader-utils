@@ -13,12 +13,12 @@ from cdm_data_loader_utils.parsers.refseq_importer.cli.refseq_api_cli import (
 # -------------------------------------------------
 
 
-def test_parse_taxid_args_basic():
+def test_parse_taxid_args_basic() -> None:
     taxids = parse_taxid_args("123, 456x, abc789", None)
     assert taxids == ["123", "456", "789"]
 
 
-def test_parse_taxid_args_file(tmp_path):
+def test_parse_taxid_args_file(tmp_path) -> None:
     file = tmp_path / "ids.txt"
     file.write_text("111\n222x\n333\n")
 
@@ -42,7 +42,7 @@ def test_main_end_to_end(
     mock_process,
     mock_finalize,
     mock_preview,
-):
+) -> None:
     mock_spark = MagicMock()
     mock_build.return_value = mock_spark
     mock_process.return_value = (["E"], ["C"], ["N"], ["I"])
@@ -70,7 +70,7 @@ def test_main_end_to_end(
 # -------------------------------------------------
 
 
-def test_cli_invocation():
+def test_cli_invocation() -> None:
     with patch("refseq_importer.cli.refseq_api_cli.main") as mock_main:
         runner = CliRunner()
         result = runner.invoke(

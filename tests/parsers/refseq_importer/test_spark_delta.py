@@ -33,7 +33,7 @@ def spark():
 # =============================================================
 
 
-def test_build_spark_creates_database(tmp_path):
+def test_build_spark_creates_database(tmp_path) -> None:
     db = "testdb"
     spark = build_spark(db)
     dbs = [d.name for d in spark.catalog.listDatabases()]
@@ -45,7 +45,7 @@ def test_build_spark_creates_database(tmp_path):
 # =============================================================
 
 
-def test_write_delta_managed_table(spark):
+def test_write_delta_managed_table(spark) -> None:
     db = "writetest"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
@@ -74,7 +74,7 @@ def test_write_delta_managed_table(spark):
 # =============================================================
 
 
-def test_write_delta_external_location(spark, tmp_path):
+def test_write_delta_external_location(spark, tmp_path) -> None:
     db = "externaldb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
@@ -103,7 +103,7 @@ def test_write_delta_external_location(spark, tmp_path):
 # =============================================================
 
 
-def test_write_delta_contig_collection_schema(spark):
+def test_write_delta_contig_collection_schema(spark) -> None:
     db = "cdmdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
@@ -143,7 +143,7 @@ def test_write_delta_contig_collection_schema(spark):
 # =============================================================
 
 
-def test_write_delta_empty_df(spark, capsys):
+def test_write_delta_empty_df(spark, capsys) -> None:
     db = "emptydb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
@@ -168,7 +168,7 @@ def test_write_delta_empty_df(spark, capsys):
 # =============================================================
 
 
-def test_preview_or_skip_existing(spark, capsys):
+def test_preview_or_skip_existing(spark, capsys) -> None:
     db = "previewdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 
@@ -191,7 +191,7 @@ def test_preview_or_skip_existing(spark, capsys):
     assert "hello" in captured
 
 
-def test_preview_or_skip_missing(spark, capsys):
+def test_preview_or_skip_missing(spark, capsys) -> None:
     db = "missingdb"
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {db}")
 

@@ -34,14 +34,12 @@ PYTHONPATH=src python -m parsers.gene_association_file \
 
 """
 
-import pandas as pd
-import click
 import os
 import sys
 
+import click
+import pandas as pd
 from pyspark.sql import SparkSession
-from delta import configure_spark_with_delta_pip
-
 
 # --- Constants ---
 SUBJECT = "subject"
@@ -253,7 +251,6 @@ def transform_go_data(df):
     - Ensures all required columns are present (inserting None where missing).
     - Reorders the columns to match the expected output format.
     """
-
     df.rename(
         columns={
             QUALIFIER: PREDICATE,
@@ -387,7 +384,7 @@ def get_spark_session(namespace="go_annotations"):
     return spark
 
 
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, BooleanType
+from pyspark.sql.types import ArrayType, BooleanType, StringType, StructField, StructType
 
 GO_DELTA_SCHEMA = StructType(
     [
@@ -510,7 +507,7 @@ def main(input, output, namespace, table_name, debug):
     try:
         eco_mapping_df = pd.read_csv(ECO_MAPPING_URL, sep="\t", comment="#", header=None, names=ECO_MAPPING_COLUMNS)
     except Exception as e:
-        click.echo(f"Error: Failed to load ECO mapping from {ECO_MAPPING_URL}: {str(e)}", err=True)
+        click.echo(f"Error: Failed to load ECO mapping from {ECO_MAPPING_URL}: {e!s}", err=True)
         sys.exit(1)
 
     # If all checks passed, then process annotations

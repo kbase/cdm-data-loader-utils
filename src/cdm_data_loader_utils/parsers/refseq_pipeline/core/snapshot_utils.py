@@ -1,4 +1,5 @@
-from pyspark.sql import SparkSession, functions as F, DataFrame
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 
 def get_changed_accessions(spark: SparkSession, delta_path: str, old_tag: str, new_tag: str) -> list[str]:

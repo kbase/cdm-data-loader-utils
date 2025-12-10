@@ -154,7 +154,6 @@ def add_metadata(df):
 
 def load_eco_mapping(spark, local_path="gaf-eco-mapping.txt"):
     """Download and load ECO evidence mapping table."""
-
     if not os.path.exists(local_path):
         print(f"Downloading ECO mapping file to: {local_path}")
         urllib.request.urlretrieve(ECO_MAPPING_URL, local_path)

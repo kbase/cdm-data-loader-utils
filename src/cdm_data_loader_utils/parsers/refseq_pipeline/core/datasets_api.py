@@ -1,6 +1,8 @@
 import logging
+from collections.abc import Iterable
+from typing import Any
+
 import requests
-from typing import Iterable, Dict, Any, Optional
 from refseq_pipeline.core.config import NCBI_BASE_V2
 
 # -------------------------------
@@ -40,13 +42,13 @@ def get_session():
 def fetch_reports_by_taxon(
     taxon: str,
     *,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     page_size: int = 500,
     refseq_only: bool = True,
     current_only: bool = True,
     debug: bool = False,
-    max_pages: Optional[int] = None,
-) -> Iterable[Dict[str, Any]]:
+    max_pages: int | None = None,
+) -> Iterable[dict[str, Any]]:
     """
     Generator that yields genome dataset reports for a given NCBI taxon ID.
 

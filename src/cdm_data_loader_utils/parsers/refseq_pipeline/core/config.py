@@ -1,5 +1,6 @@
 import uuid
-from pyspark.sql.types import StructType, StructField, StringType, LongType, DoubleType
+
+from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
 
 # CDM_NAMESPACE = uuid.uuid4()
 CDM_NAMESPACE = uuid.UUID("ff56e4aa-b9e8-4bcf-a43b-5b1d31394b9b")
