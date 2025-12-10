@@ -8,7 +8,7 @@ from cdm_data_loader_utils.parsers.xml_utils import (
 )
 
 
-def test_get_text_and_get_attr_basic():
+def test_get_text_and_get_attr_basic() -> None:
     elem = ET.Element("tag", attrib={"id": "123"})
     elem.text = "  hello  "
 
@@ -18,20 +18,13 @@ def test_get_text_and_get_attr_basic():
     assert get_attr(elem, "missing") is None
 
 
-def test_parse_db_references_pub_and_others():
-    # <source>
-    #   <dbReference type="PubMed" id="12345"/>
-    #   <dbReference type="DOI" id="10.1000/xyz"/>
-    #   <dbReference type="PDB" id="1ABC"/>
-    # </source>
-
+def test_parse_db_references_pub_and_others() -> None:
     ns = {"ns": "dummy"}
     source = ET.Element("source")
     db1 = ET.SubElement(source, "dbReference", attrib={"type": "PubMed", "id": "12345"})
     db2 = ET.SubElement(source, "dbReference", attrib={"type": "DOI", "id": "10.1000/xyz"})
     db3 = ET.SubElement(source, "dbReference", attrib={"type": "PDB", "id": "1ABC"})
 
-    # 手动加上 namespace 前缀，跟 parse_db_references 里的 "ns:dbReference" 对应
     db1.tag = "{dummy}dbReference"
     db2.tag = "{dummy}dbReference"
     db3.tag = "{dummy}dbReference"
@@ -43,7 +36,8 @@ def test_parse_db_references_pub_and_others():
     assert "PDB:1ABC" in others
 
 
-def test_clean_dict_removes_nones_and_empty():
+def test_clean_dict_removes_nones_and_empty() -> None:
+    """Test that clean_dict removes None and empty values."""
     d = {
         "a": 1,
         "b": None,
