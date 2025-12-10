@@ -46,7 +46,6 @@ import json
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import click
 import requests
@@ -69,7 +68,6 @@ def load_existing_identifiers(spark, output_dir, namespace):
     Returns:
         dict: {accession: entity_id}
     """
-
     access_to_cdm_id = {}
     id_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_identifiers_delta"))
     if os.path.exists(id_path):
@@ -103,7 +101,7 @@ def build_datasource_record(xml_url):
         "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
         "version": 115,
     }
 
@@ -140,7 +138,6 @@ def parse_names(entry, cdm_id):
           - description
           - source
     """
-
     names = []
 
     # Use `find_all_text` to automatically perform strip and deduplication
@@ -193,7 +190,6 @@ def parse_protein_info(entry, cdm_id):
     Extract protein-level metadata from a UniProt XML <entry> element
     using shared XML utilities.
     """
-
     protein_info = {}
 
     # Extract EC numbers (recommended + alternative names)
@@ -249,7 +245,6 @@ def parse_evidence_map(entry):
         { evidence_key : { evidence_type, supporting_objects, publications } }
     Using shared XML helpers for dbReference parsing and dict cleaning.
     """
-
     evidence_map = {}
 
     # Iterate over <evidence> elements
@@ -333,9 +328,9 @@ def parse_cofactor_association(cofactor, cdm_id):
 def _make_association(
     cdm_id: str,
     obj: str,
-    predicate: Optional[str] = None,
-    evidence_key: Optional[str] = None,
-    evidence_map: Optional[dict] = None,
+    predicate: str | None = None,
+    evidence_key: str | None = None,
+    evidence_map: dict | None = None,
 ):
     """
     Helper to construct a CDM association dict and merge evidence fields from evidence_map.
@@ -590,7 +585,6 @@ def save_batches_to_delta(spark, tables, output_dir, namespace):
     and register them into Spark SQL as managed Delta tables under {namespace}.
 
     """
-
     # Ensure the namespace(database) exists
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
 
@@ -698,7 +692,6 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
     Return (processed_entry_count, skipped_entry_count)
 
     """
-
     target_date_dt = None
 
     # Convert target_date string to datetime for comparison if provided
@@ -768,7 +761,7 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
 
 def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000):
     # Generate the timestamp for the current run
-    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
     # Prepare local XML
     local_xml_path = prepare_local_xml(xml_url, output_dir)
