@@ -79,11 +79,11 @@ class GenomeDataFileCreator:
         return attributes
 
     # TODO: Update to use prepare_feature_data
-    def prepare_gff3_data(self):
+    def prepare_gff3_data(self) -> None:
         """Prepare data for insertion into the database."""
         print(f"Preparing GFF3 data from: {self.gff_file}")
         if not self.gff_hash:
-            print(f"Error: GFF file hash not calculated.")
+            print("Error: GFF file hash not calculated.")
             return
 
         open_func = gzip.open if self.gff_file.endswith(".gz") else open
@@ -96,11 +96,11 @@ class GenomeDataFileCreator:
                         continue
 
                     seq_id = row[0]
-                    source = row[1]
+                    # source = row[1]
                     feature_type = row[2]
                     start = int(row[3])
                     end = int(row[4])
-                    score = row[5] if row[5] != "." else None
+                    # score = row[5] if row[5] != "." else None
                     strand = row[6] if row[6] in ["+", "-"] else None
                     phase = row[7] if row[7] in ["0", "1", "2"] else None
                     attributes_str = row[8]
@@ -110,7 +110,7 @@ class GenomeDataFileCreator:
                     # Parse attributes
                     attributes = self.parse_attributes(attributes_str)
                     feature_name = attributes.get("ID", None)
-                    protein_accession = attributes.get("protein_id", None)
+                    # protein_accession = attributes.get("protein_id", None)
                     protein_hash = None
 
                     # Mapping between features in gff and proteins in protein file
@@ -167,7 +167,7 @@ class GenomeDataFileCreator:
         except Exception as e:
             print(f"Error reading GFF file {self.gff_file}: {e}")
 
-    def prepare_contig_data(self):
+    def prepare_contig_data(self) -> None:
         """
         Calculate statistics for each contig in the assembly file.
         Handles both compressed (.gz) and uncompressed files.
@@ -198,7 +198,7 @@ class GenomeDataFileCreator:
                     }
                 )
 
-    def prepare_contigset_data(self):
+    def prepare_contigset_data(self) -> None:
         """
         Calculate statistics for each contig in the assembly file.
         Handles both compressed (.gz) and uncompressed files.
@@ -215,7 +215,7 @@ class GenomeDataFileCreator:
                 "contigset_hash": self.contigset_hash,
             }
 
-    def prepare_structural_annotation(self):
+    def prepare_structural_annotation(self) -> None:
         self.structural_annotation = {
             "contigset_hash": self.contigset_hash,
             "gff_hash": self.gff_hash,
@@ -283,7 +283,7 @@ class MultiGenomeDataFileCreator:
         associations,
         structural_annotation,
         headers_written,
-    ):
+    ) -> None:
         """Write data to TSV files incrementally."""
         try:
             # Contigset
@@ -404,7 +404,7 @@ class MultiGenomeDataFileCreator:
         except Exception as e:
             print(f"Error writing to TSV files: {e}")
 
-    def create_all_tables(self: "MultiGenomeDataFileCreator"):
+    def create_all_tables(self: "MultiGenomeDataFileCreator") -> None:
         checkm2_data = None
         stats_data = None
 
