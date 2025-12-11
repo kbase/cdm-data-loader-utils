@@ -11,14 +11,14 @@ authors = [
 dependencies = [
     "berdl-notebook-utils",
     "biopython>=1.86",
-    "ruff>=0.14.7",
     "cdm-schema",
     "click>=8.1.8",
+    "ruff>=0.14.8",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.1",
+    "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-env>=1.2.0",
 ]
@@ -119,7 +119,6 @@ select = [
     "LOG", # flake8-logging
     "RUF", # Ruff-specific rules
 ]
-
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
