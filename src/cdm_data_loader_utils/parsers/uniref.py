@@ -1,5 +1,4 @@
-"""
-UniRef XML Cluster ETL Pipeline
+"""UniRef XML Cluster ETL Pipeline.
 
 This script downloads a UniRef100 XML file, parses cluster and member information, and writes the extracted data into Delta Lake tables for downstream analysis.
 
@@ -42,6 +41,7 @@ import os
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlretrieve
 
@@ -54,24 +54,40 @@ from cdm_data_loader_utils.parsers.xml_utils import get_text, parse_properties
 
 logger = logging.getLogger(__name__)
 
+
 UNIREF_NS = {"ns": "http://uniprot.org/uniref"}
 DATA_SOURCE = "UniRef 100"
 
 
-def cdm_entity_id(accession: str | None, prefix: str = "CDM:") -> str | None:
-    """Generate a deterministic CDM entity_id from UniRef accession."""
-    if not accession:
-        return None
-    uuid_part = uuid.uuid5(uuid.NAMESPACE_OID, accession)
-    return f"{prefix}{uuid_part}"
+PREFIX_TRANSLATION = {
+    "UniProtKB ID": "UniProt",
+    "UniProtKB accession": "UniProt",
+    "UniParc ID": "UniParc",
+    "UniRef90 ID": "UniRef90",
+    "UniRef50 ID": "UniRef50",
+    "UniRef100 ID": "UniRef100",
+}
+
+
+# def cdm_entity_id(accession: Optional[str], prefix: str = "CDM:") -> Optional[str]:
+#     """Generate a deterministic CDM entity_id from UniRef accession."""
+#     if not accession:
+#         return None
+#     uuid_part = uuid.uuid5(uuid.NAMESPACE_OID, accession)
+#     return f"{prefix}{uuid_part}"
+
+
+def generate_dbxref(db: str, acc: str) -> str:
+    """Generate a database reference that uses BioRegistry prefixes."""
+    return f"{PREFIX_TRANSLATION[db]}:{acc}"
 
 
 # timestamp helper
 def get_timestamps(
-    uniref_id: str | None,
-    existing_created: dict[str, str],
-    now: datetime | None = None,
-) -> tuple[str, str]:
+    uniref_id: Optional[str],
+    existing_created: Dict[str, str],
+    now: Optional[datetime] = None,
+) -> Tuple[str, str]:
     """
     Return (updated_time, created_time) for a given UniRef cluster ID.
 
@@ -79,6 +95,7 @@ def get_timestamps(
     we keep its original `created` timestamp and only update `updated`.
     Otherwise, both are set to `now`.
     """
+
     uniref_key = uniref_id or ""
 
     now_dt = now or datetime.now()
@@ -113,12 +130,12 @@ def download_file(url: str, local_path: str) -> None:
         logger.info(f"File already exists: {local_path}")
 
 
-def load_existing_created(spark: SparkSession, entity_table: str | None) -> dict[str, str]:
+def load_existing_created(spark: SparkSession, entity_table: Optional[str]) -> Dict[str, str]:
     """
     Load mapping data_source_entity_id -> created timestamp from the Entity Delta table.
     Returns an empty dict if the table does not exist.
     """
-    existing_created: dict[str, str] = {}
+    existing_created: Dict[str, str] = {}
     if not entity_table:
         logger.warning("Entity table path not specified.")
         return existing_created
@@ -134,46 +151,50 @@ def load_existing_created(spark: SparkSession, entity_table: str | None) -> dict
 
 
 ##### -------------- List utility function --------------- #####
-def extract_cluster(elem: ET.Element, ns: dict[str, str], uniref_id: str) -> tuple[str, str]:
+def extract_cluster(elem: ET.Element, ns: Dict[str, str], uniref_id: str) -> Tuple[str, str]:
     """Extract a new CDM cluster_id and the UniRef cluster name."""
     # cluster_id = f"CDM:{uuid.uuid4()}"
-    cluster_id = cdm_entity_id(uniref_id, prefix="cdm_ccol_")
+    # cluster_id = cdm_entity_id(uniref_id, prefix="cdm_ccol_")
+    cluster_id = f"uniref:{uniref_id}"
     name_elem = elem.find("ns:name", ns)
+    # TODO: leave blank if there is no name
     name = get_text(name_elem, default="UNKNOWN")
     return cluster_id, name
 
 
-def get_accession_and_seed(dbref: ET.Element | None, ns: dict[str, str]) -> tuple[str | None, bool]:
+def get_accession_and_seed(dbref: ET.Element | None, ns: dict[str, str]) -> tuple[str | None, str | None, bool]:
     """Extract UniProtKB accession and is_seed status from a dbReference element."""
     if dbref is None:
-        return None, False
+        return None, None, False
 
     props = parse_properties(dbref, ns)
-    acc = props.get("UniProtKB accession") or dbref.attrib.get("id")
-    is_seed = props.get("isSeed", "false").lower() == "true"
-    return acc, is_seed
+    db = dbref.attrib.get("type")
+    acc = dbref.attrib.get("id")
+    is_seed_list = props.get("isSeed", [])
+    is_seed = is_seed_list and is_seed_list[0].lower() == "true"
+    return db, acc, is_seed
 
 
 def add_cluster_members(
     cluster_id: str,
-    repr_db: ET.Element | None,
+    repr_db: Optional[ET.Element],
     elem: ET.Element,
-    cluster_member_rows: list[tuple[str, str, str, str, str]],
-    ns: dict[str, str],
+    cluster_member_rows: List[Tuple[str, str, str, str, str]],
+    ns: Dict[str, str],
 ) -> None:
     """Populate cluster_member_rows with representative + member records."""
-    dbrefs: list[tuple[ET.Element, bool]] = []
+    dbrefs: List[Tuple[ET.Element, bool]] = []
     if repr_db is not None:
         dbrefs.append((repr_db, True))
     for mem in elem.findall("ns:member/ns:dbReference", ns):
         dbrefs.append((mem, False))
 
     for dbref, is_representative in dbrefs:
-        acc, is_seed = get_accession_and_seed(dbref, ns)
+        db, acc, is_seed = get_accession_and_seed(dbref, ns)
         if not acc:
             continue
-        # member_entity_id = cdm_entity_id(acc)
-        member_entity_id = cdm_entity_id(acc, prefix="cdm_prot_")
+
+        member_entity_id = generate_dbxref(db, acc)
         cluster_member_rows.append(
             (
                 cluster_id,
@@ -195,13 +216,18 @@ def extract_cross_refs(
         return
 
     props = parse_properties(dbref, ns)
-    entity_id = cdm_entity_id(dbref.attrib.get("id"))
-    if not entity_id:
+    entity_db = dbref.attrib.get("type")
+    entity_id = dbref.attrib.get("id")
+    if not entity_id or not entity_db:
         return
 
+    entity_dbxref = generate_dbxref(entity_db, entity_id)
+
     for key in ("UniRef90 ID", "UniRef50 ID", "UniParc ID"):
+        key = PREFIX_TRANSLATION[key]
         if key in props:
-            cross_reference_rows.append((entity_id, key, props[key]))
+            for val in props[key]:
+                cross_reference_rows.append((entity_dbxref, key, val))
 
 
 def parse_uniref_entry(
@@ -262,17 +288,17 @@ def parse_uniref_entry(
 
 
 ##### -------------- Parse Uniref XML --------------- #####
-def parse_uniref_xml(local_gz: str, batch_size: int, existing_created: dict[str, str]) -> dict[str, list[tuple]]:
+def parse_uniref_xml(local_gz: str, batch_size: int, existing_created: Dict[str, str]) -> Dict[str, List[Tuple]]:
     """
     Stream-parse UniRef XML (gzipped) and extract CDM-like row tuples.
     """
     ns = UNIREF_NS
     entry_count = 0
 
-    cluster_data: list[tuple] = []
-    entity_data: list[tuple] = []
-    cluster_member_data: list[tuple] = []
-    cross_reference_data: list[tuple] = []
+    cluster_data: List[Tuple] = []
+    entity_data: List[Tuple] = []
+    cluster_member_data: List[Tuple] = []
+    cross_reference_data: List[Tuple] = []
 
     with gzip.open(local_gz, "rb") as f:
         context = ET.iterparse(f, events=("end",))
@@ -416,7 +442,7 @@ def main(ftp_url, output_dir, batch_size):
     try:
         download_file(ftp_url, local_gz)
     except URLError as e:
-        logger.exception("Error! Cannot download file: %s", e.reason)
+        logger.error(f"Error! Cannot download file: {e.reason}")
         return
 
     # Start Spark session with Delta Lake support

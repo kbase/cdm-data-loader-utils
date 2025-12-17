@@ -1,9 +1,12 @@
 """UniProt XML Delta Lake Ingestion Pipeline.
 
+=========================================
+
 This script parses UniProt XML (.xml.gz) file and ingests the data into structured Delta Lake tables.
 
 Typical usage:
 --------------
+Use it in Berdle as:
 python3 src/parsers/uniprot.py \
     --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
     --output-dir "./output" \
@@ -43,71 +46,188 @@ Typical scenario:
 import datetime
 import gzip
 import json
+import logging
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from typing import Any
+from typing import Dict, List, Optional, Tuple
 
 import click
 import requests
 from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
-from pyspark.sql.types import ArrayType, StringType, StructField, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
-from cdm_data_loader_utils.parsers.xml_utils import clean_dict, find_all_text, get_attr, get_text, parse_db_references
+from cdm_data_loader_utils.parsers.xml_utils import (
+    clean_dict,
+    find_all_text,
+    get_attr,
+    get_text,
+    parse_db_references,
+)
 
-## XML namespace mapping for UniProt entries (used for all XPath queries)
+# ---------------------------------------------------------------------
+#                              Logging
+# ---------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+
+# ---------------------------------------------------------------------
+# XML namespace mapping for UniProt entries (used for all XPath queries)
+# ---------------------------------------------------------------------
 NS = {"ns": "https://uniprot.org/uniprot"}
 
 
-def load_existing_identifiers(spark, output_dir, namespace):
-    """
-    Load the existing 'identifiers' Delta table and build a mapping from UniProt accession to CDM entity ID.
-    This function enables consistent mapping of accessions to CDM IDs across multiple imports, supporting upsert and idempotent workflows.
-
-    Returns:
-        dict: {accession: entity_id}
-    """
-    access_to_cdm_id = {}
-    id_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_identifiers_delta"))
-    if os.path.exists(id_path):
-        try:
-            # Read identifier and entity_id columns from the Delta table
-            df = spark.read.format("delta").load(id_path).select("identifier", "entity_id")
-            for row in df.collect():
-                # Identifier field: UniProt:Pxxxxx, extract the actual accession part after the colon
-                accession = row["identifier"].split(":", 1)[1]
-                access_to_cdm_id[accession] = row["entity_id"]
-        except Exception as e:
-            print(f"Couldn't load identifiers table: {e}")
-    else:
-        print(f"No previous identifiers delta at {id_path}.")
-    return access_to_cdm_id
+# ---------------------------------------------------------------------
+# Stable ID namespace (UUIDv5)
+# ---------------------------------------------------------------------
+CDM_UUID_NAMESPACE = uuid.UUID("2d3f6e2a-4d7b-4a8c-9c5a-0e0f7b7d9b3a")
 
 
-def generate_cdm_id(prefix="cdm_prot_"):
-    """
-    Generate a CDM internal ID with a configurable prefix.
-    Example: cdm_prot_<uuid>
-    """
-    return f"{prefix}{uuid.uuid4()}"
-
-
-def build_datasource_record(xml_url):
-    """
-    Build a provenance record for the UniProt datasource without version extraction.
-    """
+# ================================ HELPERS =================================
+def build_datasource_record(xml_url: str) -> dict:
+    """Build a provenance record for the UniProt datasource."""
     return {
         "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
+        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "version": 115,
     }
 
 
-def parse_identifiers(entry, cdm_id):
+def save_datasource_record(xml_url: str, output_dir: str) -> dict:
+    """Generate and save the datasource provenance record as a JSON file."""
+    datasource = build_datasource_record(xml_url)
+
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "datasource.json")
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(datasource, f, indent=2)
+
+    logger.info("Saved datasource record to %s", output_path)
+    return datasource
+
+
+def download_file(url: str, output_path: str, chunk_size: int = 8192, overwrite: bool = False) -> None:
+    """Download a file from a given URL to a local output path."""
+    if os.path.exists(output_path) and not overwrite:
+        logger.info("File already exists, skip download: %s", output_path)
+        return
+
+    try:
+        logger.info("Downloading %s -> %s", url, output_path)
+        with requests.get(url, stream=True, timeout=60) as response:
+            response.raise_for_status()
+            with open(output_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        f.write(chunk)
+        logger.info("Download complete: %s", output_path)
+    except Exception:
+        logger.exception("Failed to download %s", url)
+
+        # remove incomplete file
+        try:
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except Exception:
+            logger.exception("Failed to remove incomplete download: %s", output_path)
+        raise
+
+
+def prepare_local_xml(xml_url: str, output_dir: str) -> str:
+    """Download UniProt XML (.xml.gz) to local output directory if needed."""
+    os.makedirs(output_dir, exist_ok=True)
+    local_xml_path = os.path.join(output_dir, os.path.basename(xml_url))
+    download_file(xml_url, local_xml_path)
+    return local_xml_path
+
+
+def stream_uniprot_xml(filepath: str):
+    """
+    Stream and parse UniProt XML entries from a local gzipped file.
+    Yields each <entry> element as soon as it is parsed to avoid loading entire XML.
+    """
+    logger.info("Streaming UniProt XML from: %s", filepath)
+    with gzip.open(filepath, "rb") as f:
+        context = ET.iterparse(f, events=("end",))
+        for _, element in context:
+            if element.tag.endswith("entry"):
+                yield element
+                element.clear()
+
+
+def get_spark_session(namespace: str) -> SparkSession:
+    """Initialize SparkSession with Delta Lake support, and ensure the target database exists."""
+    builder = (
+        SparkSession.builder.appName("UniProtDeltaIngestion")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
+    )
+    spark = configure_spark_with_delta_pip(builder).getOrCreate()
+    spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
+    return spark
+
+
+# ================================ STABLE ID =================================
+def stable_cdm_id_from_accession(accession: str, prefix: str = "cdm_prot_") -> str:
+    """
+    Deterministic/stable CDM ID using UUIDv5 on accession.
+    This prevents entity_id duplication across runs.
+    """
+    u = uuid.uuid5(CDM_UUID_NAMESPACE, accession)
+    return f"{prefix}{u}"
+
+
+def load_existing_identifiers(spark: SparkSession, output_dir: str, namespace: str) -> Dict[str, str]:
+    """
+    Load existing identifiers table to map UniProt accession -> existing entity_id.
+    Path: <output_dir>/<namespace>/identifiers
+    """
+    access_to_cdm_id: Dict[str, str] = {}
+    id_path = os.path.join(output_dir, namespace, "identifiers")
+
+    if not os.path.exists(id_path):
+        logger.info("No previous identifiers delta at %s", id_path)
+        return access_to_cdm_id
+
+    try:
+        df = spark.read.format("delta").load(id_path).select("identifier", "entity_id")
+        for row in df.collect():
+            ident = row["identifier"]
+            if not ident or ":" not in ident:
+                continue
+            prefix, acc = ident.split(":", 1)
+            if prefix.upper() == "UNIPROT" and acc:
+                access_to_cdm_id[acc] = row["entity_id"]
+        logger.info(
+            "Loaded %d existing accession->entity_id mappings from %s",
+            len(access_to_cdm_id),
+            id_path,
+        )
+    except Exception:
+        logger.exception("Couldn't load identifiers table from %s", id_path)
+
+    return access_to_cdm_id
+
+
+# ================================ PARSERS =================================
+def parse_identifiers(entry, cdm_id: str) -> List[dict]:
     out = parse_identifiers_generic(entry=entry, xpath="ns:accession", prefix="UniProt", ns=NS)
     for row in out:
         row["entity_id"] = cdm_id
@@ -115,9 +235,6 @@ def parse_identifiers(entry, cdm_id):
 
 
 def _make_name_record(cdm_id: str, name_text: str, description: str) -> dict:
-    """
-    Small helper to create a standardized name record.
-    """
     return {
         "entity_id": cdm_id,
         "name": name_text,
@@ -126,46 +243,20 @@ def _make_name_record(cdm_id: str, name_text: str, description: str) -> dict:
     }
 
 
-def parse_names(entry, cdm_id):
-    """
-    Extract all protein names from a UniProt <entry> element, including
-    - Top-level <name> elements (generic names)
-    - <recommendedName> and <alternativeName> blocks within <protein> (full and short names)
+def parse_names(entry, cdm_id: str) -> List[dict]:
+    names: List[dict] = []
 
-    Returns:
-        List[Dict[str, str]] with keys:
-          - entity_id
-          - name
-          - description
-          - source
-    """
-    names = []
-
-    # Use `find_all_text` to automatically perform strip and deduplication
     top_level_names = find_all_text(entry, "ns:name", NS)
     for txt in top_level_names:
-        names.append(
-            _make_name_record(
-                cdm_id=cdm_id,
-                name_text=txt,
-                description="UniProt protein name",
-            )
-        )
+        names.append(_make_name_record(cdm_id, txt, "UniProt protein name"))
 
-    # Recommended/alternative names in <protein> block
     protein = entry.find("ns:protein", NS)
     if protein is not None:
-        # (tag_name, logical_type)
         name_blocks_spec = [
             ("recommendedName", "recommended"),
             ("alternativeName", "alternative"),
         ]
-
-        # (xml tag, label used in description)
-        length_spec = [
-            ("fullName", "full"),
-            ("shortName", "short"),
-        ]
+        length_spec = [("fullName", "full"), ("shortName", "short")]
 
         for tag_name, logical_type in name_blocks_spec:
             for name_block in protein.findall(f"ns:{tag_name}", NS):
@@ -175,47 +266,28 @@ def parse_names(entry, cdm_id):
                     if not text:
                         continue
                     desc = f"UniProt {logical_type} {length_label} name"
-                    names.append(
-                        _make_name_record(
-                            cdm_id=cdm_id,
-                            name_text=text,
-                            description=desc,
-                        )
-                    )
+                    names.append(_make_name_record(cdm_id, text, desc))
 
     return names
 
 
-def parse_protein_info(entry, cdm_id):
-    """
-    Extract protein-level metadata from a UniProt XML <entry> element
-    using shared XML utilities.
-    """
-    protein_info = {}
+def parse_protein_info(entry, cdm_id: str) -> Optional[dict]:
+    protein_info: dict = {}
 
-    # Extract EC numbers (recommended + alternative names)
     protein = entry.find("ns:protein", NS)
     if protein is not None:
-        # full list of EC number search paths
-        ec_paths = [
-            "ns:recommendedName/ns:ecNumber",
-            "ns:alternativeName/ns:ecNumber",
-        ]
-
-        ec_numbers = []
+        ec_paths = ["ns:recommendedName/ns:ecNumber", "ns:alternativeName/ns:ecNumber"]
+        ec_numbers: List[str] = []
         for path in ec_paths:
             ec_numbers.extend(find_all_text(protein, path, NS))
-
         if ec_numbers:
-            protein_info["ec_numbers"] = ec_numbers
+            protein_info["ec_numbers"] = ";".join(ec_numbers)
 
-    # Protein existence evidence
     protein_existence = entry.find("ns:proteinExistence", NS)
     if protein_existence is not None:
         protein_info["protein_id"] = cdm_id
         protein_info["evidence_for_existence"] = get_attr(protein_existence, "type")
 
-    # Sequence block
     seq_elem = entry.find("ns:sequence", NS)
     if seq_elem is not None:
         protein_info.update(
@@ -231,41 +303,30 @@ def parse_protein_info(entry, cdm_id):
             )
         )
 
-    # XML entry metadata (modified timestamp)
     entry_modified = get_attr(entry, "modified") or get_attr(entry, "updated")
     if entry_modified:
         protein_info["entry_modified"] = entry_modified
 
-    # Return clean dict
     return protein_info if protein_info else None
 
 
-def parse_evidence_map(entry):
-    """
-    Parse all <evidence> elements and return:
-        { evidence_key : { evidence_type, supporting_objects, publications } }
-    Using shared XML helpers for dbReference parsing and dict cleaning.
-    """
-    evidence_map = {}
+def parse_evidence_map(entry) -> Dict[str, dict]:
+    evidence_map: Dict[str, dict] = {}
 
-    # Iterate over <evidence> elements
     for ev in entry.findall("ns:evidence", NS):
         key = get_attr(ev, "key")
         if not key:
             continue
 
         evidence_type = get_attr(ev, "type")
-
-        # Parse <source><dbReference>
-        pubs: list[str] = []
-        others: list[str] = []
+        pubs: List[str] = []
+        others: List[str] = []
 
         source = ev.find("ns:source", NS)
         if source is not None:
             raw_pubs, raw_others = parse_db_references(source, NS)
 
-            # Normalize publications:
-            normalized_pubs: list[str] = []
+            normalized_pubs: List[str] = []
             for p in raw_pubs:
                 up = p.upper()
                 if up.startswith("PUBMED:"):
@@ -277,7 +338,6 @@ def parse_evidence_map(entry):
             pubs = normalized_pubs
             others = raw_others
 
-        # Build clean evidence metadata
         evidence_map[key] = clean_dict(
             {
                 "evidence_type": evidence_type,
@@ -289,11 +349,33 @@ def parse_evidence_map(entry):
     return evidence_map
 
 
-def parse_reaction_association(reaction, cdm_id, evidence_map):
-    associations = []
+def _make_association(
+    cdm_id: str,
+    obj: str,
+    predicate: Optional[str] = None,
+    evidence_key: Optional[str] = None,
+    evidence_map: Optional[dict] = None,
+) -> dict:
+    assoc = {
+        "subject": cdm_id,
+        "object": obj,
+        "predicate": predicate,
+        "evidence_type": None,
+        "supporting_objects": None,
+        "publications": None,
+    }
+    if evidence_key and evidence_map and evidence_key in evidence_map:
+        assoc.update(evidence_map[evidence_key])
+    return clean_dict(assoc)
+
+
+def parse_reaction_association(reaction, cdm_id: str, evidence_map: Dict[str, dict]) -> List[dict]:
+    associations: List[dict] = []
     for dbref in reaction.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
+        if not db_type or not db_id:
+            continue
         assoc = {
             "subject": cdm_id,
             "predicate": "catalyzes",
@@ -305,15 +387,17 @@ def parse_reaction_association(reaction, cdm_id, evidence_map):
         evidence_key = reaction.get("evidence")
         if evidence_key and evidence_key in evidence_map:
             assoc.update(evidence_map[evidence_key])
-        associations.append(assoc)
+        associations.append(clean_dict(assoc))
     return associations
 
 
-def parse_cofactor_association(cofactor, cdm_id):
-    associations = []
+def parse_cofactor_association(cofactor, cdm_id: str) -> List[dict]:
+    associations: List[dict] = []
     for dbref in cofactor.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
+        if not db_type or not db_id:
+            continue
         assoc = {
             "subject": cdm_id,
             "predicate": "requires_cofactor",
@@ -322,135 +406,93 @@ def parse_cofactor_association(cofactor, cdm_id):
             "supporting_objects": None,
             "publications": None,
         }
-        associations.append(assoc)
+        associations.append(clean_dict(assoc))
     return associations
 
 
-def _make_association(
-    cdm_id: str,
-    obj: str,
-    predicate: str | None = None,
-    evidence_key: str | None = None,
-    evidence_map: dict[str, Any] | None = None,
-):
+def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> List[dict]:
     """
-    Helper to construct a CDM association dict and merge evidence fields from evidence_map.
+    removed annotation GO-2x
+    We only keep:
+      - taxonomy association
+      - generic dbReference cross-references
+      - catalytic activity / cofactor associations
     """
-    assoc = {
-        "subject": cdm_id,
-        "object": obj,
-        "predicate": predicate,
-        "evidence_type": None,
-        "supporting_objects": None,
-        "publications": None,
-    }
+    associations: List[dict] = []
 
-    if evidence_key and evidence_map and evidence_key in evidence_map:
-        assoc.update(evidence_map[evidence_key])
-
-    return clean_dict(assoc)
-
-
-def parse_associations(entry, cdm_id, evidence_map):
-    """
-    Parse all relevant associations from a UniProt XML entry for the CDM model.
-    Only include fields that are not None for each association.
-    """
-    associations = []
-
-    # ---------------- Taxonomy association ----------------
+    # Taxonomy association
     organism = entry.find("ns:organism", NS)
     if organism is not None:
         taxon_ref = organism.find('ns:dbReference[@type="NCBI Taxonomy"]', NS)
         if taxon_ref is not None:
             tax_id = taxon_ref.get("id")
             if tax_id:
-                associations.append(
-                    _make_association(
-                        cdm_id=cdm_id,
-                        obj=f"NCBITaxon:{tax_id}",
-                        predicate=None,
-                        evidence_key=None,
-                        evidence_map=None,
-                    )
-                )
+                associations.append(_make_association(cdm_id, f"NCBITaxon:{tax_id}"))
 
-    # ------------- Database cross-references --------------
+    # Generic dbReference cross-references
     for dbref in entry.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
         if not db_type or not db_id:
             continue
-
         evidence_key = dbref.get("evidence")
         associations.append(
             _make_association(
-                cdm_id=cdm_id,
-                obj=f"{db_type}:{db_id}",
-                predicate=None,
+                cdm_id,
+                f"{db_type}:{db_id}",
                 evidence_key=evidence_key,
                 evidence_map=evidence_map,
             )
         )
 
-    # ------------- Catalytic activity / cofactor ----------
+    # Catalytic activity / cofactor
     for comment in entry.findall("ns:comment", NS):
         comment_type = comment.get("type")
         if comment_type == "catalytic activity":
             for reaction in comment.findall("ns:reaction", NS):
-                for assoc in parse_reaction_association(reaction, cdm_id, evidence_map):
-                    associations.append(clean_dict(assoc))
+                associations.extend(parse_reaction_association(reaction, cdm_id, evidence_map))
         elif comment_type == "cofactor":
             for cofactor in comment.findall("ns:cofactor", NS):
-                for assoc in parse_cofactor_association(cofactor, cdm_id):
-                    associations.append(clean_dict(assoc))
+                associations.extend(parse_cofactor_association(cofactor, cdm_id))
 
     return associations
 
 
-def parse_publications(entry):
-    """
-    Extract all publication references from a UniProt XML <entry>.
-    Uses shared parse_db_references() to gather PubMed/DOI IDs from <citation> blocks.
-
-    Returns:
-        List[str] of standardized publication IDs, e.g. ["PMID:12345", "DOI:10.1000/xyz"]
-    """
-    publications: list[str] = []
-
+def parse_publications(entry) -> List[str]:
+    publications: List[str] = []
     for reference in entry.findall("ns:reference", NS):
         citation = reference.find("ns:citation", NS)
         if citation is None:
             continue
 
-        # Reuse the shared dbReference parser
         raw_pubs, _ = parse_db_references(citation, NS)
-
         for p in raw_pubs:
             up = p.upper()
-            # Expect formats like "PUBMED:" or "DOI:"
             if up.startswith("PUBMED:"):
                 _, acc = p.split(":", 1)
                 publications.append(f"PMID:{acc}")
             elif up.startswith("DOI:"):
-                # Preserve DOI value, but normalize prefix to upper
                 _, acc = p.split(":", 1)
                 publications.append(f"DOI:{acc}")
 
+    # dedup while preserving order
     return list(dict.fromkeys(publications))
 
 
-def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniProt import", prev_created=None):
-    if prev_created:
-        entity_created = prev_created
-        entity_updated = current_timestamp
-    else:
-        entity_created = current_timestamp
-        entity_updated = current_timestamp
+def parse_uniprot_entry(
+    entry,
+    cdm_id: str,
+    current_timestamp: str,
+    datasource_name: str = "UniProt import",
+    prev_created: Optional[str] = None,
+) -> dict:
+    entity_created = prev_created or current_timestamp
+    entity_updated = current_timestamp
 
     uniprot_created = entry.attrib.get("created")
     uniprot_modified = entry.attrib.get("modified") or entry.attrib.get("updated")
     uniprot_version = entry.attrib.get("version")
+
     entity = {
         "entity_id": cdm_id,
         "entity_type": "protein",
@@ -461,6 +503,7 @@ def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniPr
         "uniprot_created": uniprot_created,
         "uniprot_modified": uniprot_modified,
     }
+
     evidence_map = parse_evidence_map(entry)
     return {
         "entity": entity,
@@ -472,49 +515,7 @@ def parse_uniprot_entry(entry, cdm_id, current_timestamp, datasource_name="UniPr
     }
 
 
-def download_file(url, output_path, chunk_size=8192, overwrite=False) -> None:
-    """
-    Download a file from a given URL to a local output path.
-    """
-    # Skip download if file already exists and not overwriting
-    if os.path.exists(output_path) and not overwrite:
-        print(f"File '{output_path}' already exists.")
-        return
-
-    # Stream download to avoid high memory usage
-    try:
-        with requests.get(url, stream=True, timeout=60) as response:
-            response.raise_for_status()
-            with open(output_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        f.write(chunk)
-        print(f"Downloaded '{url}' to '{output_path}'")
-    except Exception as e:
-        print(f"Failed to download '{url}': {e}")
-
-        if os.path.exists(output_path):
-            os.remove(output_path)  # Remove incomplete file
-        raise
-
-
-def stream_uniprot_xml(filepath):
-    """
-    Stream and parse UniProt XML entries from a local gzipped file.
-    Yields each <entry> element as soon as it is parsed to avoid loading the entire XML into memory.
-    """
-    # Open the gzipped XML file for reading in binary mode
-    with gzip.open(filepath, "rb") as f:
-        # Use iterparse to process XML incrementally, triggering on element end events
-        context = ET.iterparse(f, events=("end",))
-        for _event, element in context:
-            # Check tag name, ignoring namespace
-            if element.tag.endswith("entry"):
-                yield element
-                element.clear()
-
-
-## ================================ SCHEMA =================================
+# ================================ SCHEMA =================================
 schema_entities = StructType(
     [
         StructField("entity_id", StringType(), False),
@@ -580,136 +581,95 @@ schema_publications = StructType(
 )
 
 
-def save_batches_to_delta(spark, tables, output_dir, namespace) -> None:
+# ================================ DELTA WRITE =================================
+def save_batches_to_delta(
+    spark: SparkSession,
+    tables: Dict[str, Tuple[list, StructType]],
+    output_dir: str,
+    namespace: str,
+    mode: str = "append",
+) -> None:
     """
     Persist batches of parsed records for each CDM table into Delta Lake format,
-    and register them into Spark SQL as managed Delta tables under {namespace}.
+    and register them into Spark SQL as external Delta tables under <namespace>.
 
+    Paths:
+      <output_dir>/<namespace>/<table_name>
     """
-    # Ensure the namespace(database) exists
+
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
 
     for table_name, (records, schema) in tables.items():
         if not records:
-            continue  # Skip all empty tables
+            continue
 
-        # Directory path: <output_dir>/<namespace>/<table_name>
         delta_dir = os.path.abspath(os.path.join(output_dir, namespace, table_name))
 
-        # Determine write mode based on directory presence
-        mode = "append" if os.path.exists(delta_dir) else "overwrite"
-
-        print(
-            f"[DEBUG] Saving table '{namespace}.{table_name}' to {delta_dir} "
-            f"with mode={mode}, record count={len(records)}"
+        logger.debug(
+            "Saving table %s.%s to %s (mode=%s, records=%d)",
+            namespace,
+            table_name,
+            delta_dir,
+            mode,
+            len(records),
         )
 
         try:
-            # Convert to Spark DataFrame
             df = spark.createDataFrame(records, schema)
 
-            # Write to Delta directory
-            (df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(delta_dir))
+            writer = df.write.format("delta").mode(mode)
+            if mode == "overwrite":
+                writer = writer.option("overwriteSchema", "true")
+            else:
+                writer = writer.option("mergeSchema", "true")
 
-            # Register using Spark SQL
-            spark.sql(f"""
+            writer.save(delta_dir)
+
+            spark.sql(
+                f"""
                 CREATE TABLE IF NOT EXISTS {namespace}.{table_name}
                 USING DELTA
                 LOCATION '{delta_dir}'
-            """)
+                """
+            )
+        except Exception:
+            logger.exception("Failed to save '%s' to Delta at %s", table_name, delta_dir)
+            raise
 
-        except Exception as e:
-            print(f"[ERROR] Failed to save '{table_name}' to Delta: {e}")
 
-
-def prepare_local_xml(xml_url, output_dir):
+# ================================ MAIN PARSE LOOP =================================
+def parse_entries(
+    local_xml_path: str,
+    target_date: Optional[str],
+    batch_size: int,
+    spark: SparkSession,
+    tables: Dict[str, Tuple[list, StructType]],
+    output_dir: str,
+    namespace: str,
+    current_timestamp: str,
+    accession_to_entity_id: Dict[str, str],
+    mode: str,
+) -> Tuple[int, int]:
     """
-    Download the remote UniProt XML (.xml.gz) file to the specified local output directory,
-    unless the file already exists locally. Returns the full local file path.
+    Parse UniProt XML entries and write to Delta in batches.
+    Returns (processed_entry_count, skipped_entry_count).
     """
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    local_xml_path = os.path.join(output_dir, os.path.basename(xml_url))
-    # Download only if file does not exist
-    download_file(xml_url, local_xml_path)
-    return local_xml_path
 
-
-def save_datasource_record(xml_url, output_dir):
-    """
-    Generate and save the datasource provenance record as a JSON file in the output directory.
-    """
-    datasource = build_datasource_record(xml_url)
-    os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
-    output_path = os.path.join(output_dir, "datasource.json")
-    with open(output_path, "w") as f:
-        json.dump(datasource, f, indent=4)
-    return datasource
-
-
-def get_spark_session(namespace):
-    """
-    Initialize SparkSession with Delta Lake support, and ensure the target database exists.
-    """
-    # Build SparkSession with Delta extensions enabled
-    builder = (
-        SparkSession.builder.appName("DeltaIngestion")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-    )
-    spark = configure_spark_with_delta_pip(builder).getOrCreate()
-    # Ensure the target namespace (database) exists
-    spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
-    return spark
-
-
-def load_existing_entity(spark, output_dir, namespace):
-    """
-    Load the existing entities_delta Delta table and build a mapping of entity_id to created timestamp.
-    This mapping is used to support upserts and idempotent writes.
-    """
-    old_created_dict = {}
-    entities_table_path = os.path.abspath(os.path.join(output_dir, f"{namespace}_entities_delta"))
-    if os.path.exists(entities_table_path):
-        try:
-            # Read only the required columns for efficiency
-            old_df = spark.read.format("delta").load(entities_table_path).select("entity_id", "created")
-            for row in old_df.collect():
-                old_created_dict[row["entity_id"]] = row["created"]
-            print(f"Loaded {len(old_created_dict)} existing entity_id records for upsert.")
-        except Exception as e:
-            print(f"Couldn't load previous entities delta table: {e}")
-    else:
-        print(f"No previous entities delta at {entities_table_path}.")
-    return old_created_dict
-
-
-def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp):
-    """
-    Parse UniProt XML entries, write to Delta Lake in batches
-    Return (processed_entry_count, skipped_entry_count).
-
-    """
     target_date_dt = None
-
-    # Convert target_date string to datetime for comparison if provided
     if target_date:
         try:
             target_date_dt = datetime.datetime.strptime(target_date, "%Y-%m-%d")
+            logger.info("Target date filter enabled: >= %s", target_date)
         except Exception:
-            print(f"Invalid target date is {target_date}")
+            logger.warning("Invalid target date provided: %s (ignored)", target_date)
+            target_date_dt = None
 
     entry_count, skipped = 0, 0
 
-    # Iterate over each <entry> element in the XML file
     for entry_elem in stream_uniprot_xml(local_xml_path):
         try:
-            # Get the modification date of the entry
             mod_date = entry_elem.attrib.get("modified") or entry_elem.attrib.get("updated")
-            # If target_date is set, skip entries older than target_date
+
             if target_date_dt and mod_date:
                 try:
                     entry_date_dt = datetime.datetime.strptime(mod_date[:10], "%Y-%m-%d")
@@ -720,60 +680,83 @@ def parse_entries(local_xml_path, target_date, batch_size, spark, tables, output
                     skipped += 1
                     continue
 
-            # Extract main accession (skip entry if not present)
             main_accession_elem = entry_elem.find("ns:accession", NS)
-            if main_accession_elem is None or main_accession_elem.text is None:
+            if main_accession_elem is None or not main_accession_elem.text:
                 skipped += 1
                 continue
 
-            # Generate a unique CDM ID (UUID) for this entry
-            cdm_id = generate_cdm_id(prefix="cdm_prot_")
+            accession = main_accession_elem.text.strip()
 
-            # Parse all sub-objects: entity, identifiers, names, protein, associations, publications
-            record = parse_uniprot_entry(entry_elem, cdm_id, current_timestamp)
+            # ----------------------------
+            # Prevent entity_id duplication:
+            # Reuse from existing identifiers table if present
+            # Else stable UUIDv5(accession)
+            # ----------------------------
+            cdm_id = accession_to_entity_id.get(accession)
+            prev_created = None
+
+            if not cdm_id:
+                cdm_id = stable_cdm_id_from_accession(accession)
+            else:
+                prev_created = None
+
+            record = parse_uniprot_entry(entry_elem, cdm_id, current_timestamp, prev_created=prev_created)
+
             tables["entities"][0].append(record["entity"])
             tables["identifiers"][0].extend(record["identifiers"])
             tables["names"][0].extend(record["names"])
 
             if record["protein"]:
                 tables["proteins"][0].append(record["protein"])
+
             tables["associations"][0].extend(record["associations"])
             tables["publications"][0].extend(
                 {"entity_id": record["entity"]["entity_id"], "publication": pub} for pub in record["publications"]
             )
 
             entry_count += 1
-            # Write batch to Delta and clear lists every batch_size entries
+
             if entry_count % batch_size == 0:
-                save_batches_to_delta(spark, tables, output_dir, namespace)
+                save_batches_to_delta(spark, tables, output_dir, namespace, mode=mode)
                 for v in tables.values():
                     v[0].clear()
-                print(f"{entry_count} entries processed and saved")
-        except Exception as e:
-            # If any error occurs in parsing this entry, skip it and count
-            print(f"Error parsing entry: {e}")
+                logger.info("Processed and saved %d entries...", entry_count)
+
+        except Exception:
+            logger.exception("Error parsing UniProt entry, skipping")
             skipped += 1
             continue
 
-    # write remaining records
-    save_batches_to_delta(spark, tables, output_dir, namespace)
+    save_batches_to_delta(spark, tables, output_dir, namespace, mode=mode)
     return entry_count, skipped
 
 
-def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=5000) -> None:
-    # Generate the timestamp for the current run
-    current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+def ingest_uniprot(
+    xml_url: str,
+    output_dir: str,
+    namespace: str,
+    target_date: Optional[str] = None,
+    batch_size: int = 5000,
+    mode: str = "append",
+) -> None:
+    """
+    Ingest UniProt XML into Delta tables under <namespace>.
 
-    # Prepare local XML
+    mode:
+      - append: incremental append (mergeSchema enabled)
+      - overwrite: replace existing Delta data (overwriteSchema enabled)
+    """
+    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
     local_xml_path = prepare_local_xml(xml_url, output_dir)
-
-    # Save data source meta information
     save_datasource_record(xml_url, output_dir)
 
-    # Get Spark and the existing CDM entity_id
     spark = get_spark_session(namespace)
 
-    # Define the table structure (batch storage)
+    # Load existing accession -> entity_id mappings
+    accession_to_entity_id = load_existing_identifiers(spark, output_dir, namespace)
+
+    # In-memory batch buffers
     entities, identifiers, names, proteins, associations, publications = (
         [],
         [],
@@ -782,6 +765,7 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
         [],
         [],
     )
+
     tables = {
         "entities": (entities, schema_entities),
         "identifiers": (identifiers, schema_identifiers),
@@ -791,39 +775,110 @@ def ingest_uniprot(xml_url, output_dir, namespace, target_date=None, batch_size=
         "publications": (publications, schema_publications),
     }
 
-    # Main cycle processing, transfer to current timestamp
-    entry_count, skipped = parse_entries(
-        local_xml_path, target_date, batch_size, spark, tables, output_dir, namespace, current_timestamp
+    logger.info(
+        "Starting UniProt ingestion: xml=%s | namespace=%s | mode=%s | batch_size=%d",
+        xml_url,
+        namespace,
+        mode,
+        batch_size,
     )
-    print(f"All entries processed ({entry_count}), skipped {skipped}, writing complete tables.")
-    spark.sql(f"SHOW TABLES IN {namespace}").show()
-    spark.sql(f"SELECT COUNT(*) FROM {namespace}.entities").show()
 
-    # make sql test in entity table
-    spark.sql(f"SELECT * FROM {namespace}.entities LIMIT 10").show(truncate=False)
+    # ------------------------------------------------------------------
+    # Main parsing + write loop
+    # ------------------------------------------------------------------
+    entry_count, skipped = parse_entries(
+        local_xml_path=local_xml_path,
+        target_date=target_date,
+        batch_size=batch_size,
+        spark=spark,
+        tables=tables,
+        output_dir=output_dir,
+        namespace=namespace,
+        current_timestamp=current_timestamp,
+        accession_to_entity_id=accession_to_entity_id,
+        mode=mode,
+    )
+
+    logger.info(
+        "Completed parsing UniProt XML. processed=%d skipped=%d",
+        entry_count,
+        skipped,
+    )
+
+    # ------------------------------------------------------------------
+    # Verification
+    # ------------------------------------------------------------------
+    logger.info("Verifying Delta tables in namespace `%s`", namespace)
+
+    spark.sql(f"SHOW TABLES IN {namespace}").show(truncate=False)
+
+    table_names = [
+        "entities",
+        "identifiers",
+        "names",
+        "proteins",
+        "associations",
+        "publications",
+    ]
+
+    for tbl in table_names:
+        logger.info("Verifying table: %s.%s", namespace, tbl)
+
+        # Row count
+        spark.sql(f"SELECT COUNT(*) AS row_count FROM {namespace}.{tbl}").show(truncate=False)
+
+        # Small preview
+        spark.sql(f"SELECT * FROM {namespace}.{tbl} LIMIT 5").show(truncate=False)
 
     spark.stop()
 
-    print(f"All Delta tables are created and registered in Spark SQL under `{namespace}`.")
+    logger.info(
+        "All Delta tables successfully created and registered in Spark SQL under `%s`.",
+        namespace,
+    )
 
 
+# ================================ CLI =================================
 @click.command()
 @click.option("--xml-url", required=True, help="URL to UniProt XML (.xml.gz)")
-@click.option("--output-dir", default="output", help="Output directory for Delta tables")
-@click.option("--namespace", default="uniprot_db", help="Delta Lake database name")
+@click.option(
+    "--output-dir",
+    default="output",
+    show_default=True,
+    help="Output directory for Delta tables",
+)
+@click.option(
+    "--namespace",
+    default="uniprot_db",
+    show_default=True,
+    help="Delta Lake database name",
+)
 @click.option(
     "--target-date",
     default=None,
     help="Only process entries modified/updated since this date (YYYY-MM-DD)",
 )
-@click.option("--batch-size", default=5000, help="Batch size for writing Delta tables")
-def main(xml_url, output_dir, namespace, target_date, batch_size) -> None:
+@click.option(
+    "--batch-size",
+    default=5000,
+    show_default=True,
+    help="Batch size for writing Delta tables",
+)
+@click.option(
+    "--mode",
+    type=click.Choice(["append", "overwrite"]),
+    default="append",
+    show_default=True,
+    help="Delta write mode",
+)
+def main(xml_url, output_dir, namespace, target_date, batch_size, mode):
     ingest_uniprot(
         xml_url=xml_url,
         output_dir=output_dir,
         namespace=namespace,
         target_date=target_date,
         batch_size=int(batch_size),
+        mode=mode,
     )
 
 

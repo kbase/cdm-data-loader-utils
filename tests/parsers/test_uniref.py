@@ -1,30 +1,28 @@
-"""Tests for the UniRef importer."""
-
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-import gzip
-import tempfile
+import pytest
 import textwrap
-import xml.etree.ElementTree as ET
 from datetime import datetime
+import xml.etree.ElementTree as ET
+import tempfile
+import gzip
 from types import SimpleNamespace
 
-import pytest
-
 from cdm_data_loader_utils.parsers.uniref import (
-    add_cluster_members,
-    cdm_entity_id,
-    extract_cluster,
-    extract_cross_refs,
-    get_accession_and_seed,
-    get_timestamps,
     load_existing_created,
+    extract_cluster,
+    cdm_entity_id,
+    get_timestamps,
+    get_accession_and_seed,
+    add_cluster_members,
+    extract_cross_refs,
     parse_uniref_entry,
     parse_uniref_xml,
 )
+
 
 NS = {"ns": "http://uniprot.org/uniref"}
 
@@ -32,7 +30,7 @@ NS = {"ns": "http://uniprot.org/uniref"}
 class FakeSparkDF:
     """A fake DataFrame returned by spark.read.format().load().select()."""
 
-    def __init__(self, rows) -> None:
+    def __init__(self, rows):
         self._rows = rows
 
     def collect(self):
@@ -40,9 +38,9 @@ class FakeSparkDF:
 
 
 class FakeSparkReader:
-    """Mock spark.read.format('delta').load().select() chain."""
+    """Mock spark.read.format('delta').load().select() chain"""
 
-    def __init__(self, rows=None, fail=False) -> None:
+    def __init__(self, rows=None, fail=False):
         self._rows = rows
         self._fail = fail
 
@@ -52,8 +50,7 @@ class FakeSparkReader:
 
     def load(self, path):
         if self._fail:
-            msg = "Table does not exist"
-            raise Exception(msg)
+            raise Exception("Table does not exist")
         return self
 
     def select(self, *cols):
@@ -61,19 +58,19 @@ class FakeSparkReader:
 
 
 @pytest.mark.parametrize(
-    ("entity_table", "expected"),
+    "entity_table, expected",
     [
         (None, {}),  # no path
         ("", {}),  # empty path
     ],
 )
-def test_load_existing_created_no_path(entity_table, expected) -> None:
+def test_load_existing_created_no_path(entity_table, expected):
     """Should return empty dict when entity_table path is missing."""
     fake_spark = SimpleNamespace()
     assert load_existing_created(fake_spark, entity_table) == expected
 
 
-def test_load_existing_created_success(monkeypatch) -> None:
+def test_load_existing_created_success(monkeypatch):
     """Delta table exists: should return dict of id → created timestamp."""
     rows = [
         {"data_source_entity_id": "UniRef100_A", "created": "2024-01-01T00:00:00"},
@@ -93,7 +90,7 @@ def test_load_existing_created_success(monkeypatch) -> None:
     }
 
 
-def test_load_existing_created_missing_table(monkeypatch) -> None:
+def test_load_existing_created_missing_table(monkeypatch):
     """If Delta table does not exist (load fails), return empty dict."""
     fake_reader = FakeSparkReader(fail=True)
 
@@ -105,7 +102,7 @@ def test_load_existing_created_missing_table(monkeypatch) -> None:
 
 
 @pytest.mark.parametrize(
-    ("accession", "expected_prefix"),
+    "accession,expected_prefix",
     [
         ("A0B0123456", "CDM:"),
         ("P01234", "CDM:"),
@@ -113,7 +110,7 @@ def test_load_existing_created_missing_table(monkeypatch) -> None:
         (None, None),
     ],
 )
-def test_cdm_entity_id(accession, expected_prefix) -> None:
+def test_cdm_entity_id(accession, expected_prefix):
     result = cdm_entity_id(accession)
     if expected_prefix is None:
         assert result is None
@@ -122,7 +119,7 @@ def test_cdm_entity_id(accession, expected_prefix) -> None:
 
 
 @pytest.mark.parametrize(
-    ("xml_str", "expected_name"),
+    "xml_str, expected_name",
     [
         (
             "<entry xmlns='http://uniprot.org/uniref' id='UniRef100_A0A009GP46' updated='2016-10-05'>"
@@ -135,7 +132,7 @@ def test_cdm_entity_id(accession, expected_prefix) -> None:
         ),
     ],
 )
-def test_extract_cluster(xml_str, expected_name) -> None:
+def test_extract_cluster(xml_str, expected_name):
     ns = {"ns": "http://uniprot.org/uniref"}
     elem = ET.fromstring(xml_str)
 
@@ -148,7 +145,7 @@ def test_extract_cluster(xml_str, expected_name) -> None:
 
 
 @pytest.mark.parametrize(
-    ("uniref_id", "existing_created", "now", "expected"),
+    "uniref_id, existing_created, now, expected",
     [
         # Has existing_created
         (
@@ -173,7 +170,7 @@ def test_extract_cluster(xml_str, expected_name) -> None:
         ),
     ],
 )
-def test_get_timestamps(uniref_id, existing_created, now, expected) -> None:
+def test_get_timestamps(uniref_id, existing_created, now, expected):
     result = get_timestamps(uniref_id, existing_created, now)
     if expected is not None:
         assert result == expected
@@ -185,7 +182,7 @@ def test_get_timestamps(uniref_id, existing_created, now, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    ("xml_str", "expected_acc", "expected_is_seed"),
+    "xml_str, expected_acc, expected_is_seed",
     [
         # Have accession and isSeed
         (
@@ -224,7 +221,7 @@ def test_get_timestamps(uniref_id, existing_created, now, expected) -> None:
         ),
     ],
 )
-def test_get_accession_and_seed(xml_str, expected_acc, expected_is_seed) -> None:
+def test_get_accession_and_seed(xml_str, expected_acc, expected_is_seed):
     ns = {"ns": "http://uniprot.org/uniref"}
     dbref = ET.fromstring(xml_str) if xml_str else None
     acc, is_seed = get_accession_and_seed(dbref, ns)
@@ -234,8 +231,8 @@ def test_get_accession_and_seed(xml_str, expected_acc, expected_is_seed) -> None
 
 def make_entry_with_members(member_xmls, ns_uri="http://uniprot.org/uniref"):
     """
-    Receives a list of xml strings from dbReference,
-    generates an <entry> element with <member> child nodes.
+    receives a list of xml strings from dbReference,
+    generates an <entry> element with <member> child nodes
     """
     entry_elem = ET.Element(f"{{{ns_uri}}}entry")
     for dbref_xml in member_xmls:
@@ -246,7 +243,7 @@ def make_entry_with_members(member_xmls, ns_uri="http://uniprot.org/uniref"):
 
 
 @pytest.mark.parametrize(
-    ("repr_xml", "member_xmls", "expected"),
+    "repr_xml, member_xmls, expected",
     [
         pytest.param(
             # representative member
@@ -302,8 +299,9 @@ def make_entry_with_members(member_xmls, ns_uri="http://uniprot.org/uniref"):
         ),
     ],
 )
-def test_add_cluster_members(repr_xml, member_xmls, expected) -> None:
-    """Test add_cluster_members with various representative/member combinations."""
+def test_add_cluster_members(repr_xml, member_xmls, expected):
+    """Test add_cluster_members with various representative/member combinations"""
+
     ns = {"ns": "http://uniprot.org/uniref"}
     cluster_id = "CLUSTER_X"
 
@@ -328,7 +326,7 @@ def test_add_cluster_members(repr_xml, member_xmls, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    ("dbref_props", "expected_xrefs"),
+    "dbref_props, expected_xrefs",
     [
         (
             # all cross-ref fields present
@@ -363,9 +361,9 @@ def test_add_cluster_members(repr_xml, member_xmls, expected) -> None:
         ),
     ],
 )
-def test_extract_cross_refs_param(dbref_props, expected_xrefs) -> None:
+def test_extract_cross_refs_param(dbref_props, expected_xrefs):
     """
-    Test that extract_cross_refs correctly extracts all UniRef cross-reference fields.
+    Test that extract_cross_refs correctly extracts all UniRef cross-reference fields
     """
     dbref = ET.Element(
         "{http://uniprot.org/uniref}dbReference",
@@ -386,13 +384,13 @@ def test_extract_cross_refs_param(dbref_props, expected_xrefs) -> None:
     extract_cross_refs(dbref, cross_reference_data, ns)
 
     entity_id = cdm_entity_id("TEST_ID")
-    expected = {(entity_id, typ, val) for typ, val in expected_xrefs}
+    expected = set((entity_id, typ, val) for typ, val in expected_xrefs)
     got = set(cross_reference_data)
     assert got == expected
 
 
 @pytest.mark.parametrize(
-    ("xml_str", "existing_created", "expected_created", "expect_member_count", "expect_xref_count"),
+    "xml_str, existing_created, expected_created, expect_member_count, expect_xref_count",
     [
         pytest.param(
             # CASE 1:
@@ -449,9 +447,7 @@ def test_extract_cross_refs_param(dbref_props, expected_xrefs) -> None:
         ),
     ],
 )
-def test_parse_uniref_entry_param(
-    xml_str, existing_created, expected_created, expect_member_count, expect_xref_count
-) -> None:
+def test_parse_uniref_entry_param(xml_str, existing_created, expected_created, expect_member_count, expect_xref_count):
     elem = ET.fromstring(xml_str)
 
     result = parse_uniref_entry(elem, existing_created, NS)
@@ -474,7 +470,7 @@ def test_parse_uniref_entry_param(
     assert len(entity_rows) == 1
     (
         ent_entity_id,
-        _data_source_entity_id,
+        data_source_entity_id,
         ent_type,
         data_source,
         updated,
@@ -505,7 +501,7 @@ def test_parse_uniref_entry_param(
     # Validate xrefs
     # -----------------------------
     assert len(xref_rows) == expect_xref_count
-    for e_id, _x_type, _x_val in xref_rows:
+    for e_id, x_type, x_val in xref_rows:
         # xrefs use CDM: prefix
         assert e_id.startswith("CDM:")
 
@@ -537,7 +533,7 @@ def make_fake_uniref_xml(num_entries=2):
 
 
 @pytest.mark.parametrize("batch_size", [1, 2])
-def test_parse_uniref_xml_batch(batch_size) -> None:
+def test_parse_uniref_xml_batch(batch_size):
     # Prepare fake XML inside a gzipped temp file
     with tempfile.NamedTemporaryFile(suffix=".xml.gz", delete=True) as tmp:
         xml_bytes = make_fake_uniref_xml(num_entries=2)

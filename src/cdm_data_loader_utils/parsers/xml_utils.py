@@ -71,7 +71,7 @@ def safe_list(x) -> list[Any]:
 # ============================================================
 
 
-def parse_properties(dbref: ET.Element | None, ns: dict[str, str]) -> dict[str, str]:
+def parse_properties(dbref: ET.Element | None, ns: dict[str, str]) -> dict[str, list[str]]:
     """
     Extract key/value pairs from <property type="..." value="..."> blocks.
     """
@@ -82,7 +82,9 @@ def parse_properties(dbref: ET.Element | None, ns: dict[str, str]) -> dict[str, 
         ptype = prop.attrib.get("type")
         pval = prop.attrib.get("value")
         if ptype and pval:
-            props[ptype] = pval
+            if ptype not in props:
+                props[ptype] = []
+            props[ptype].append(pval)
     return props
 
 
