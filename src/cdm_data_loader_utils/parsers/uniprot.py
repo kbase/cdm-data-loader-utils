@@ -43,6 +43,16 @@ Typical scenario:
 
 """
 
+"""
+UniProt XML → CDM Delta Lake ETL (refactored with UniRef-style ID/xref conventions)
+
+Key changes vs prior version:
+1) entity_id remains a stable surrogate key (UUIDv5) but is now derived from CURIE: "UniProt:<accession>"
+2) dbReference cross-references are extracted into a dedicated "cross_references" table (not associations)
+3) associations are restricted to taxonomy + catalytic activity + cofactor (as documented)
+4) created timestamp is preserved across runs by loading existing entities.created via identifiers mapping
+"""
+
 import datetime
 import gzip
 import json
@@ -56,12 +66,7 @@ import click
 import requests
 from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
-from pyspark.sql.types import (
-    ArrayType,
-    StringType,
-    StructField,
-    StructType,
-)
+from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
 from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
 from cdm_data_loader_utils.parsers.xml_utils import (
@@ -81,17 +86,34 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
-
 # ---------------------------------------------------------------------
 # XML namespace mapping for UniProt entries (used for all XPath queries)
 # ---------------------------------------------------------------------
 NS = {"ns": "https://uniprot.org/uniprot"}
 
-
 # ---------------------------------------------------------------------
 # Stable ID namespace (UUIDv5)
 # ---------------------------------------------------------------------
 CDM_UUID_NAMESPACE = uuid.UUID("2d3f6e2a-4d7b-4a8c-9c5a-0e0f7b7d9b3a")
+
+# ---------------------------------------------------------------------
+# CURIE prefixes (UniRef-style normalization)
+# ---------------------------------------------------------------------
+PREFIX_TRANSLATION: Dict[str, str] = {
+    "UniProtKB": "UniProt",
+    "UniProtKB/Swiss-Prot": "UniProt",
+    "UniProtKB/TrEMBL": "UniProt",
+    "UniParc": "UniParc",
+    "RefSeq": "RefSeq",
+    "EMBL": "EMBL",
+    "PDB": "PDB",
+    "ChEBI": "ChEBI",
+    "Rhea": "Rhea",
+    "NCBI Taxonomy": "NCBITaxon",
+    "GeneID": "NCBIGene",
+    "Ensembl": "Ensembl",
+    "GO": "GO",
+}
 
 
 # ================================ HELPERS =================================
@@ -102,6 +124,7 @@ def build_datasource_record(xml_url: str) -> dict:
         "source": "UniProt",
         "url": xml_url,
         "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        # keep your original version value; if you later want this dynamic, we can wire it
         "version": 115,
     }
 
@@ -184,46 +207,76 @@ def get_spark_session(namespace: str) -> SparkSession:
     return spark
 
 
+def normalize_prefix(db_type: str) -> str:
+    """Map UniProt dbReference @type to a normalized CURIE prefix."""
+    return PREFIX_TRANSLATION.get(db_type, db_type.replace(" ", ""))
+
+
+def make_curie(db_type: str, db_id: str) -> str:
+    """Create CURIE with normalized prefix."""
+    return f"{normalize_prefix(db_type)}:{db_id}"
+
+
 # ================================ STABLE ID =================================
-def stable_cdm_id_from_accession(accession: str, prefix: str = "cdm_prot_") -> str:
+def stable_cdm_id_from_uniprot_accession(accession: str, prefix: str = "cdm_prot_") -> str:
     """
-    Deterministic/stable CDM ID using UUIDv5 on accession.
-    This prevents entity_id duplication across runs.
+    Stable CDM surrogate ID using UUIDv5 on fully-qualified CURIE.
+    UniRef-style principle: feed the namespace into the stable ID.
     """
-    u = uuid.uuid5(CDM_UUID_NAMESPACE, accession)
+    curie = f"UniProt:{accession}"
+    u = uuid.uuid5(CDM_UUID_NAMESPACE, curie)
     return f"{prefix}{u}"
 
 
-def load_existing_identifiers(spark: SparkSession, output_dir: str, namespace: str) -> Dict[str, str]:
+def load_existing_maps(
+    spark: SparkSession,
+    output_dir: str,
+    namespace: str,
+) -> Tuple[Dict[str, str], Dict[str, str]]:
     """
-    Load existing identifiers table to map UniProt accession -> existing entity_id.
-    Path: <output_dir>/<namespace>/identifiers
+    Load existing mappings:
+      1) accession -> entity_id   (from identifiers table)
+      2) entity_id -> created     (from entities table)
+
+    Returns: (accession_to_entity_id, entity_id_to_created)
     """
-    access_to_cdm_id: Dict[str, str] = {}
+    accession_to_entity_id: Dict[str, str] = {}
+    entity_id_to_created: Dict[str, str] = {}
+
     id_path = os.path.join(output_dir, namespace, "identifiers")
+    ent_path = os.path.join(output_dir, namespace, "entities")
 
-    if not os.path.exists(id_path):
+    # identifiers: accession -> entity_id
+    if os.path.exists(id_path):
+        try:
+            df = spark.read.format("delta").load(id_path).select("identifier", "entity_id")
+            for row in df.collect():
+                ident = row["identifier"]
+                if not ident or ":" not in ident:
+                    continue
+                prefix, acc = ident.split(":", 1)
+                if prefix.upper() == "UNIPROT" and acc:
+                    accession_to_entity_id[acc] = row["entity_id"]
+            logger.info("Loaded %d accession->entity_id mappings from %s", len(accession_to_entity_id), id_path)
+        except Exception:
+            logger.exception("Couldn't load identifiers table from %s", id_path)
+    else:
         logger.info("No previous identifiers delta at %s", id_path)
-        return access_to_cdm_id
 
-    try:
-        df = spark.read.format("delta").load(id_path).select("identifier", "entity_id")
-        for row in df.collect():
-            ident = row["identifier"]
-            if not ident or ":" not in ident:
-                continue
-            prefix, acc = ident.split(":", 1)
-            if prefix.upper() == "UNIPROT" and acc:
-                access_to_cdm_id[acc] = row["entity_id"]
-        logger.info(
-            "Loaded %d existing accession->entity_id mappings from %s",
-            len(access_to_cdm_id),
-            id_path,
-        )
-    except Exception:
-        logger.exception("Couldn't load identifiers table from %s", id_path)
+    # entities: entity_id -> created
+    if os.path.exists(ent_path):
+        try:
+            df = spark.read.format("delta").load(ent_path).select("entity_id", "created")
+            for row in df.collect():
+                if row["entity_id"] and row["created"]:
+                    entity_id_to_created[row["entity_id"]] = row["created"]
+            logger.info("Loaded %d entity_id->created mappings from %s", len(entity_id_to_created), ent_path)
+        except Exception:
+            logger.exception("Couldn't load entities table from %s", ent_path)
+    else:
+        logger.info("No previous entities delta at %s", ent_path)
 
-    return access_to_cdm_id
+    return accession_to_entity_id, entity_id_to_created
 
 
 # ================================ PARSERS =================================
@@ -231,6 +284,8 @@ def parse_identifiers(entry, cdm_id: str) -> List[dict]:
     out = parse_identifiers_generic(entry=entry, xpath="ns:accession", prefix="UniProt", ns=NS)
     for row in out:
         row["entity_id"] = cdm_id
+        row.setdefault("source", "UniProt")
+        row.setdefault("description", "UniProt accession")
     return out
 
 
@@ -248,7 +303,7 @@ def parse_names(entry, cdm_id: str) -> List[dict]:
 
     top_level_names = find_all_text(entry, "ns:name", NS)
     for txt in top_level_names:
-        names.append(_make_name_record(cdm_id, txt, "UniProt protein name"))
+        names.append(_make_name_record(cdm_id, txt, "UniProt entry name"))
 
     protein = entry.find("ns:protein", NS)
     if protein is not None:
@@ -291,16 +346,14 @@ def parse_protein_info(entry, cdm_id: str) -> Optional[dict]:
     seq_elem = entry.find("ns:sequence", NS)
     if seq_elem is not None:
         protein_info.update(
-            clean_dict(
-                {
-                    "length": get_attr(seq_elem, "length"),
-                    "mass": get_attr(seq_elem, "mass"),
-                    "checksum": get_attr(seq_elem, "checksum"),
-                    "modified": get_attr(seq_elem, "modified"),
-                    "sequence_version": get_attr(seq_elem, "version"),
-                    "sequence": get_text(seq_elem),
-                }
-            )
+            clean_dict({
+                "length": get_attr(seq_elem, "length"),
+                "mass": get_attr(seq_elem, "mass"),
+                "checksum": get_attr(seq_elem, "checksum"),
+                "modified": get_attr(seq_elem, "modified"),
+                "sequence_version": get_attr(seq_elem, "version"),
+                "sequence": get_text(seq_elem),
+            })
         )
 
     entry_modified = get_attr(entry, "modified") or get_attr(entry, "updated")
@@ -338,13 +391,11 @@ def parse_evidence_map(entry) -> Dict[str, dict]:
             pubs = normalized_pubs
             others = raw_others
 
-        evidence_map[key] = clean_dict(
-            {
-                "evidence_type": evidence_type,
-                "publications": pubs or None,
-                "supporting_objects": others or None,
-            }
-        )
+        evidence_map[key] = clean_dict({
+            "evidence_type": evidence_type,
+            "publications": pubs or None,
+            "supporting_objects": others or None,
+        })
 
     return evidence_map
 
@@ -376,10 +427,11 @@ def parse_reaction_association(reaction, cdm_id: str, evidence_map: Dict[str, di
         db_id = dbref.get("id")
         if not db_type or not db_id:
             continue
+
         assoc = {
             "subject": cdm_id,
             "predicate": "catalyzes",
-            "object": f"{db_type}:{db_id}",
+            "object": make_curie(db_type, db_id),
             "evidence_type": None,
             "supporting_objects": None,
             "publications": None,
@@ -401,7 +453,7 @@ def parse_cofactor_association(cofactor, cdm_id: str) -> List[dict]:
         assoc = {
             "subject": cdm_id,
             "predicate": "requires_cofactor",
-            "object": f"{db_type}:{db_id}",
+            "object": make_curie(db_type, db_id),
             "evidence_type": None,
             "supporting_objects": None,
             "publications": None,
@@ -412,11 +464,11 @@ def parse_cofactor_association(cofactor, cdm_id: str) -> List[dict]:
 
 def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> List[dict]:
     """
-    removed annotation GO-2x
     We only keep:
       - taxonomy association
-      - generic dbReference cross-references
       - catalytic activity / cofactor associations
+
+    NOTE: Generic <dbReference> cross-references are moved to "cross_references" table.
     """
     associations: List[dict] = []
 
@@ -427,23 +479,7 @@ def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> Lis
         if taxon_ref is not None:
             tax_id = taxon_ref.get("id")
             if tax_id:
-                associations.append(_make_association(cdm_id, f"NCBITaxon:{tax_id}"))
-
-    # Generic dbReference cross-references
-    for dbref in entry.findall("ns:dbReference", NS):
-        db_type = dbref.get("type")
-        db_id = dbref.get("id")
-        if not db_type or not db_id:
-            continue
-        evidence_key = dbref.get("evidence")
-        associations.append(
-            _make_association(
-                cdm_id,
-                f"{db_type}:{db_id}",
-                evidence_key=evidence_key,
-                evidence_map=evidence_map,
-            )
-        )
+                associations.append(_make_association(cdm_id, f"NCBITaxon:{tax_id}", predicate="in_taxon"))
 
     # Catalytic activity / cofactor
     for comment in entry.findall("ns:comment", NS):
@@ -456,6 +492,37 @@ def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> Lis
                 associations.extend(parse_cofactor_association(cofactor, cdm_id))
 
     return associations
+
+
+def parse_cross_references(entry, cdm_id: str) -> List[dict]:
+    """
+    Extract *generic* UniProt <dbReference> into a UniRef-style CrossReference table.
+
+    Output schema:
+      entity_id (CDM protein entity_id)
+      xref_type (normalized prefix)
+      xref_value (raw db id)
+      xref (optional CURIE string)
+    """
+    rows: List[dict] = []
+
+    for dbref in entry.findall("ns:dbReference", NS):
+        db_type = dbref.get("type")
+        db_id = dbref.get("id")
+        if not db_type or not db_id:
+            continue
+
+        xref_type = normalize_prefix(db_type)
+        rows.append(
+            clean_dict({
+                "entity_id": cdm_id,
+                "xref_type": xref_type,
+                "xref_value": db_id,
+                "xref": f"{xref_type}:{db_id}",
+            })
+        )
+
+    return rows
 
 
 def parse_publications(entry) -> List[str]:
@@ -511,74 +578,70 @@ def parse_uniprot_entry(
         "names": parse_names(entry, cdm_id),
         "protein": parse_protein_info(entry, cdm_id),
         "associations": parse_associations(entry, cdm_id, evidence_map),
+        "cross_references": parse_cross_references(entry, cdm_id),
         "publications": parse_publications(entry),
     }
 
 
 # ================================ SCHEMA =================================
-schema_entities = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("data_source", StringType(), False),
-        StructField("created", StringType(), True),
-        StructField("updated", StringType(), True),
-        StructField("version", StringType(), True),
-        StructField("uniprot_created", StringType(), True),
-        StructField("uniprot_modified", StringType(), True),
-    ]
-)
+schema_entities = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("entity_type", StringType(), False),
+    StructField("data_source", StringType(), False),
+    StructField("created", StringType(), True),
+    StructField("updated", StringType(), True),
+    StructField("version", StringType(), True),
+    StructField("uniprot_created", StringType(), True),
+    StructField("uniprot_modified", StringType(), True),
+])
 
-schema_identifiers = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("identifier", StringType(), False),
-        StructField("source", StringType(), True),
-        StructField("description", StringType(), True),
-    ]
-)
+schema_identifiers = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("identifier", StringType(), False),
+    StructField("source", StringType(), True),
+    StructField("description", StringType(), True),
+])
 
-schema_proteins = StructType(
-    [
-        StructField("protein_id", StringType(), False),
-        StructField("ec_numbers", StringType(), True),
-        StructField("evidence_for_existence", StringType(), True),
-        StructField("length", StringType(), True),
-        StructField("mass", StringType(), True),
-        StructField("checksum", StringType(), True),
-        StructField("modified", StringType(), True),
-        StructField("sequence_version", StringType(), True),
-        StructField("sequence", StringType(), True),
-        StructField("entry_modified", StringType(), True),
-    ]
-)
+schema_proteins = StructType([
+    StructField("protein_id", StringType(), False),
+    StructField("ec_numbers", StringType(), True),
+    StructField("evidence_for_existence", StringType(), True),
+    StructField("length", StringType(), True),
+    StructField("mass", StringType(), True),
+    StructField("checksum", StringType(), True),
+    StructField("modified", StringType(), True),
+    StructField("sequence_version", StringType(), True),
+    StructField("sequence", StringType(), True),
+    StructField("entry_modified", StringType(), True),
+])
 
-schema_names = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("name", StringType(), False),
-        StructField("description", StringType(), True),
-        StructField("source", StringType(), True),
-    ]
-)
+schema_names = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("name", StringType(), False),
+    StructField("description", StringType(), True),
+    StructField("source", StringType(), True),
+])
 
-schema_associations = StructType(
-    [
-        StructField("subject", StringType(), True),
-        StructField("object", StringType(), True),
-        StructField("predicate", StringType(), True),
-        StructField("evidence_type", StringType(), True),
-        StructField("supporting_objects", ArrayType(StringType()), True),
-        StructField("publications", ArrayType(StringType()), True),
-    ]
-)
+schema_associations = StructType([
+    StructField("subject", StringType(), True),
+    StructField("object", StringType(), True),
+    StructField("predicate", StringType(), True),
+    StructField("evidence_type", StringType(), True),
+    StructField("supporting_objects", ArrayType(StringType()), True),
+    StructField("publications", ArrayType(StringType()), True),
+])
 
-schema_publications = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("publication", StringType(), True),
-    ]
-)
+schema_cross_references = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("xref_type", StringType(), True),
+    StructField("xref_value", StringType(), True),
+    StructField("xref", StringType(), True),
+])
+
+schema_publications = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("publication", StringType(), True),
+])
 
 
 # ================================ DELTA WRITE =================================
@@ -648,6 +711,7 @@ def parse_entries(
     namespace: str,
     current_timestamp: str,
     accession_to_entity_id: Dict[str, str],
+    entity_id_to_created: Dict[str, str],
     mode: str,
 ) -> Tuple[int, int]:
     """
@@ -687,18 +751,13 @@ def parse_entries(
 
             accession = main_accession_elem.text.strip()
 
-            # ----------------------------
-            # Prevent entity_id duplication:
-            # Reuse from existing identifiers table if present
-            # Else stable UUIDv5(accession)
-            # ----------------------------
+            # Prefer previously known entity_id (from identifiers), else stable UUIDv5 on CURIE
             cdm_id = accession_to_entity_id.get(accession)
-            prev_created = None
-
             if not cdm_id:
-                cdm_id = stable_cdm_id_from_accession(accession)
-            else:
-                prev_created = None
+                cdm_id = stable_cdm_id_from_uniprot_accession(accession)
+
+            # Preserve created if entity already exists
+            prev_created = entity_id_to_created.get(cdm_id)
 
             record = parse_uniprot_entry(entry_elem, cdm_id, current_timestamp, prev_created=prev_created)
 
@@ -710,6 +769,7 @@ def parse_entries(
                 tables["proteins"][0].append(record["protein"])
 
             tables["associations"][0].extend(record["associations"])
+            tables["cross_references"][0].extend(record["cross_references"])
             tables["publications"][0].extend(
                 {"entity_id": record["entity"]["entity_id"], "publication": pub} for pub in record["publications"]
             )
@@ -753,25 +813,25 @@ def ingest_uniprot(
 
     spark = get_spark_session(namespace)
 
-    # Load existing accession -> entity_id mappings
-    accession_to_entity_id = load_existing_identifiers(spark, output_dir, namespace)
+    # Load existing accession -> entity_id + entity_id -> created mappings
+    accession_to_entity_id, entity_id_to_created = load_existing_maps(spark, output_dir, namespace)
 
     # In-memory batch buffers
-    entities, identifiers, names, proteins, associations, publications = (
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    )
+    entities: list[dict] = []
+    identifiers: list[dict] = []
+    names: list[dict] = []
+    proteins: list[dict] = []
+    associations: list[dict] = []
+    cross_references: list[dict] = []
+    publications: list[dict] = []
 
-    tables = {
+    tables: dict[str, Tuple[list, StructType]] = {
         "entities": (entities, schema_entities),
         "identifiers": (identifiers, schema_identifiers),
         "names": (names, schema_names),
         "proteins": (proteins, schema_proteins),
         "associations": (associations, schema_associations),
+        "cross_references": (cross_references, schema_cross_references),
         "publications": (publications, schema_publications),
     }
 
@@ -783,9 +843,6 @@ def ingest_uniprot(
         batch_size,
     )
 
-    # ------------------------------------------------------------------
-    # Main parsing + write loop
-    # ------------------------------------------------------------------
     entry_count, skipped = parse_entries(
         local_xml_path=local_xml_path,
         target_date=target_date,
@@ -796,20 +853,16 @@ def ingest_uniprot(
         namespace=namespace,
         current_timestamp=current_timestamp,
         accession_to_entity_id=accession_to_entity_id,
+        entity_id_to_created=entity_id_to_created,
         mode=mode,
     )
 
-    logger.info(
-        "Completed parsing UniProt XML. processed=%d skipped=%d",
-        entry_count,
-        skipped,
-    )
+    logger.info("Completed parsing UniProt XML. processed=%d skipped=%d", entry_count, skipped)
 
     # ------------------------------------------------------------------
     # Verification
     # ------------------------------------------------------------------
     logger.info("Verifying Delta tables in namespace `%s`", namespace)
-
     spark.sql(f"SHOW TABLES IN {namespace}").show(truncate=False)
 
     table_names = [
@@ -818,24 +871,17 @@ def ingest_uniprot(
         "names",
         "proteins",
         "associations",
+        "cross_references",
         "publications",
     ]
 
     for tbl in table_names:
         logger.info("Verifying table: %s.%s", namespace, tbl)
-
-        # Row count
         spark.sql(f"SELECT COUNT(*) AS row_count FROM {namespace}.{tbl}").show(truncate=False)
-
-        # Small preview
         spark.sql(f"SELECT * FROM {namespace}.{tbl} LIMIT 5").show(truncate=False)
 
     spark.stop()
-
-    logger.info(
-        "All Delta tables successfully created and registered in Spark SQL under `%s`.",
-        namespace,
-    )
+    logger.info("All Delta tables successfully created and registered in Spark SQL under `%s`.", namespace)
 
 
 # ================================ CLI =================================
