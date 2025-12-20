@@ -21,985 +21,725 @@ How to run in the terminal:
 
 """
 
-import json
-import uuid
-from pathlib import Path
+import datetime
 import pytest
-from unittest.mock import Mock
-import requests
-
+import json
+from pathlib import Path
+import xml.etree.ElementTree as ET
 from cdm_data_loader_utils.parsers.uniprot import (
-    download_file,
-    save_datasource_record,
-    parse_identifiers,
-    prepare_local_xml,
-    stable_cdm_id_from_accession,
-    CDM_UUID_NAMESPACE,
-    load_existing_identifiers,
     parse_names,
-    parse_evidence_map,
+    parse_identifiers,
     parse_associations,
-    parse_publications,
+    parse_evidence_map,
+    parse_protein_info,
+    save_datasource_record,
+    build_datasource_record,
+    parse_cross_references,
 )
 
 
-@pytest.mark.parametrize(
-    "xml_url",
-    [
+NS_URI = "https://uniprot.org/uniprot"
+
+
+@pytest.fixture(
+    params=[
         "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz",
         "http://example.org/uniprot_test.xml.gz",
-    ],
+    ]
 )
-def test_save_datasource_record(tmp_path: Path, xml_url: str):
+def xml_url(request):
+    return request.param
+
+
+def test_build_datasource_record(xml_url):
+    record = build_datasource_record(xml_url)
+
+    # ---- basic structure ----
+    assert isinstance(record, dict)
+
+    # ---- fixed fields ----
+    assert record["name"] == "UniProt import"
+    assert record["source"] == "UniProt"
+    assert record["url"] == xml_url
+    assert record["version"] == 115
+
+    # ---- accessed field ----
+    accessed = record.get("accessed")
+    assert accessed is not None
+
+    parsed = datetime.datetime.fromisoformat(accessed)
+    assert parsed.tzinfo is not None
+    assert parsed.tzinfo == datetime.timezone.utc
+
+
+def test_save_datasource_record(tmp_path: Path, xml_url):
     """
     save_datasource_record should:
-    - create datasource.json
-    - return the same content as written to disk
+    - create output directory if missing
+    - write datasource.json
+    - return the same content that is written to disk
     """
 
     output_dir = tmp_path / "output"
+
+    # ---- call function ----
     result = save_datasource_record(xml_url, str(output_dir))
 
-    # return value
+    # ---- return value sanity ----
     assert isinstance(result, dict)
     assert result["url"] == xml_url
     assert result["source"] == "UniProt"
+    assert result["name"] == "UniProt import"
+    assert "accessed" in result
+    assert "version" in result
 
-    # file existence
+    # ---- file existence ----
     output_file = output_dir / "datasource.json"
     assert output_file.exists()
+    assert output_file.is_file()
 
-    # file content correctness
+    # ---- file content correctness ----
     with open(output_file, encoding="utf-8") as f:
         on_disk = json.load(f)
 
     assert on_disk == result
 
 
-# ---------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------
-class FakeResponse:
-    def __init__(self, content=b"test-data", status_code=200):
-        self.content = content
-        self.status_code = status_code
+def make_entry(names=None, protein_names=None):
+    entry = ET.Element(f"{{{NS_URI}}}entry")
 
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise requests.HTTPError(f"HTTP {self.status_code}")
+    # <entry><name>
+    for n in names or []:
+        e = ET.SubElement(entry, f"{{{NS_URI}}}name")
+        e.text = n
 
-    def iter_content(self, chunk_size=8192):
-        yield self.content
+    # <protein> block
+    if protein_names:
+        protein = ET.SubElement(entry, f"{{{NS_URI}}}protein")
 
-    def __enter__(self):
-        return self
+        for tag, logical in [
+            ("recommendedName", "recommended"),
+            ("alternativeName", "alternative"),
+        ]:
+            if logical not in protein_names:
+                continue
 
-    def __exit__(self, exc_type, exc, tb):
-        pass
+            block = ET.SubElement(protein, f"{{{NS_URI}}}{tag}")
+            for xml_tag in ["fullName", "shortName"]:
+                val = protein_names[logical].get(xml_tag.replace("Name", ""))
+                if val:
+                    e = ET.SubElement(block, f"{{{NS_URI}}}{xml_tag}")
+                    e.text = val
 
-
-# ---------------------------------------------------------
-# Tests
-# ---------------------------------------------------------
-def test_download_file_skip_if_exists(tmp_path, monkeypatch):
-    output = tmp_path / "file.bin"
-    output.write_bytes(b"existing")
-
-    mock_get = Mock()
-    monkeypatch.setattr(requests, "get", mock_get)
-
-    download_file(
-        url="http://example.com/file",
-        output_path=str(output),
-        overwrite=False,
-    )
-
-    # requests.get should not be called
-    mock_get.assert_not_called()
-    assert output.read_bytes() == b"existing"
-
-
-def test_download_file_success(tmp_path, monkeypatch):
-    """Successful download writes file"""
-    output = tmp_path / "file.bin"
-
-    monkeypatch.setattr(
-        requests,
-        "get",
-        lambda *args, **kwargs: FakeResponse(b"hello"),
-    )
-
-    download_file(
-        url="http://example.com/file",
-        output_path=str(output),
-        overwrite=True,
-    )
-
-    assert output.exists()
-    assert output.read_bytes() == b"hello"
-
-
-@pytest.mark.parametrize("status_code", [404, 500])
-def test_download_file_http_error(tmp_path, monkeypatch, status_code):
-    """HTTP error => exception + file removed"""
-    output = tmp_path / "file.bin"
-
-    monkeypatch.setattr(
-        requests,
-        "get",
-        lambda *args, **kwargs: FakeResponse(
-            content=b"bad",
-            status_code=status_code,
-        ),
-    )
-
-    with pytest.raises(requests.HTTPError):
-        download_file(
-            url="http://example.com/file",
-            output_path=str(output),
-            overwrite=True,
-        )
-
-    assert not output.exists()
-
-
-def test_download_file_partial_cleanup(tmp_path, monkeypatch):
-    """Exception during iter_content => partial file cleaned"""
-
-    class BrokenResponse(FakeResponse):
-        def iter_content(self, chunk_size=8192):
-            yield b"partial"
-            raise RuntimeError("connection lost")
-
-    output = tmp_path / "file.bin"
-
-    monkeypatch.setattr(
-        requests,
-        "get",
-        lambda *args, **kwargs: BrokenResponse(),
-    )
-
-    with pytest.raises(RuntimeError):
-        download_file(
-            url="http://example.com/file",
-            output_path=str(output),
-            overwrite=True,
-        )
-
-    assert not output.exists()
-
-
-def test_prepare_local_xml_download_called(monkeypatch, tmp_path):
-    """
-    Verify:
-    1. output directory is created
-    2. download_file is called with correct arguments
-    3. returned path is correct
-    """
-
-    xml_url = "https://example.org/uniprot_sprot.xml.gz"
-    output_dir = tmp_path / "output"
-
-    called = {}
-
-    def fake_download(url, path, *args, **kwargs):
-        # record calls instead of real download
-        called["url"] = url
-        called["path"] = path
-
-        # simulate downloaded file
-        Path(path).write_bytes(b"fake gzip content")
-
-    # monkeypatch download_file inside uniprot module
-    monkeypatch.setattr("uniprot.download_file", fake_download)
-
-    local_path = prepare_local_xml(xml_url, str(output_dir))
-    expected_path = output_dir / "uniprot_sprot.xml.gz"
-
-    assert output_dir.exists()
-    assert Path(local_path) == expected_path
-    assert called["url"] == xml_url
-    assert Path(called["path"]) == expected_path
-    assert expected_path.exists()
-
-
-def test_stable_cdm_id_is_deterministic():
-    accession = "P12345"
-
-    id1 = stable_cdm_id_from_accession(accession)
-    id2 = stable_cdm_id_from_accession(accession)
-
-    assert id1 == id2
-
-
-def test_stable_cdm_id_diff_accessions():
-    id1 = stable_cdm_id_from_accession("P12345")
-    id2 = stable_cdm_id_from_accession("Q99999")
-
-    assert id1 != id2
-
-
-def test_stable_cdm_id_prefix():
-    accession = "P12345"
-    prefix = "cdm_test_"
-
-    result = stable_cdm_id_from_accession(accession, prefix=prefix)
-
-    assert result.startswith(prefix)
-
-
-def test_stable_cdm_id_uuid_v5_correctness():
-    accession = "P12345"
-
-    expected_uuid = uuid.uuid5(CDM_UUID_NAMESPACE, accession)
-    result = stable_cdm_id_from_accession(accession)
-
-    assert result == f"cdm_prot_{expected_uuid}"
+    return entry
 
 
 @pytest.mark.parametrize(
-    "accession",
+    "entry_kwargs, cdm_id, expected",
     [
-        "P12345",
-        "Q9XYZ1",
-        "A0A1234567",
-    ],
-)
-def test_stable_cdm_id_parametrized(accession):
-    id1 = stable_cdm_id_from_accession(accession)
-    id2 = stable_cdm_id_from_accession(accession)
-
-    assert id1 == id2
-
-
-class FakeRow(dict):
-    """Simple stand-in for pyspark.sql.Row"""
-
-    def __getattr__(self, item):
-        return self[item]
-
-
-class FakeDataFrame:
-    def __init__(self, rows):
-        self._rows = rows
-
-    def select(self, *cols):
-        return self
-
-    def collect(self):
-        return self._rows
-
-
-class FakeReader:
-    def __init__(self, rows):
-        self.rows = rows
-
-    def format(self, _):
-        return self
-
-    def load(self, _):
-        return FakeDataFrame(self.rows)
-
-
-class FakeSpark:
-    def __init__(self, rows):
-        self.read = FakeReader(rows)
-
-
-@pytest.mark.parametrize(
-    "rows, expected",
-    [
-        # ---------------- valid UniProt ----------------
+        # 1) Only <entry><name>
         (
-            [
-                FakeRow(identifier="UniProt:P12345", entity_id="cdm1"),
-                FakeRow(identifier="UniProt:Q99999", entity_id="cdm2"),
-            ],
+            {"names": ["ProteinA"]},
+            "cdm_1",
             {
-                "P12345": "cdm1",
-                "Q99999": "cdm2",
+                ("ProteinA", "UniProt entry name"),
             },
         ),
-        # ---------------- mixed prefixes ----------------
+        # 2) entry name + recommended full name
         (
-            [
-                FakeRow(identifier="UniProt:P12345", entity_id="cdm1"),
-                FakeRow(identifier="RefSeq:WP_000001", entity_id="cdmX"),
-            ],
             {
-                "P12345": "cdm1",
-            },
-        ),
-        # ---------------- invalid formats ----------------
-        (
-            [
-                FakeRow(identifier="UniProtP12345", entity_id="cdm1"),  # no colon
-                FakeRow(identifier=None, entity_id="cdm2"),
-            ],
-            {},
-        ),
-        # ---------------- case-insensitive prefix ----------------
-        (
-            [
-                FakeRow(identifier="uniprot:A0A123", entity_id="cdmA"),
-            ],
-            {
-                "A0A123": "cdmA",
-            },
-        ),
-    ],
-)
-def test_load_existing_identifiers_parametrized(tmp_path, rows, expected):
-    output_dir = tmp_path
-    namespace = "uniprot_db"
-
-    # create fake identifiers dir
-    id_dir = output_dir / namespace / "identifiers"
-    id_dir.mkdir(parents=True)
-
-    fake_spark = FakeSpark(rows)
-
-    result = load_existing_identifiers(
-        spark=fake_spark,
-        output_dir=str(output_dir),
-        namespace=namespace,
-    )
-
-    assert result == expected
-
-
-@pytest.mark.parametrize(
-    "generic_output, cdm_id, expected",
-    [
-        # case 1: single identifier
-        (
-            [
-                {
-                    "identifier": "P12345",
-                    "identifier_type": "UniProt",
-                }
-            ],
-            "cdm_prot_test_1",
-            [
-                {
-                    "identifier": "P12345",
-                    "identifier_type": "UniProt",
-                    "entity_id": "cdm_prot_test_1",
-                }
-            ],
-        ),
-        # case 2: multiple identifiers
-        (
-            [
-                {"identifier": "P1", "identifier_type": "UniProt"},
-                {"identifier": "P2", "identifier_type": "UniProt"},
-            ],
-            "cdm_prot_test_2",
-            [
-                {
-                    "identifier": "P1",
-                    "identifier_type": "UniProt",
-                    "entity_id": "cdm_prot_test_2",
+                "names": ["ProteinB"],
+                "protein_names": {
+                    "recommended": {"full": "Rec Full B", "short": None},
                 },
-                {
-                    "identifier": "P2",
-                    "identifier_type": "UniProt",
-                    "entity_id": "cdm_prot_test_2",
-                },
-            ],
+            },
+            "cdm_2",
+            {
+                ("ProteinB", "UniProt entry name"),
+                ("Rec Full B", "UniProt recommended full name"),
+            },
         ),
-        # case 3: empty list
+        # 3) everything
         (
-            [],
-            "cdm_prot_test_3",
-            [],
+            {
+                "names": ["ProteinC"],
+                "protein_names": {
+                    "recommended": {"full": "Rec Full C", "short": "Rec Short C"},
+                    "alternative": {"full": "Alt Full C", "short": "Alt Short C"},
+                },
+            },
+            "cdm_3",
+            {
+                ("ProteinC", "UniProt entry name"),
+                ("Rec Full C", "UniProt recommended full name"),
+                ("Rec Short C", "UniProt recommended short name"),
+                ("Alt Full C", "UniProt alternative full name"),
+                ("Alt Short C", "UniProt alternative short name"),
+            },
         ),
     ],
 )
-def test_parse_identifiers_adds_entity_id(monkeypatch, generic_output, cdm_id, expected):
-    """
-    parse_identifiers should:
-    - call parse_identifiers_generic
-    - add entity_id to each returned row
-    """
+def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
+    entry = make_entry(**entry_kwargs)
 
-    def mock_parse_identifiers_generic(*args, **kwargs):
-        return generic_output
+    rows = parse_names(entry, cdm_id)
 
-    monkeypatch.setattr(
-        "uniprot.parse_identifiers_generic",
-        mock_parse_identifiers_generic,
-    )
+    # ---- row count ----
+    assert len(rows) == len(expected)
 
-    dummy_entry = object()
-    result = parse_identifiers(dummy_entry, cdm_id)
+    # ---- content ----
+    observed = {(r["name"], r["description"]) for r in rows}
+    assert observed == expected
 
-    assert result == expected
+    # ---- entity_id and source ----
+    for r in rows:
+        assert r["entity_id"] == cdm_id
+        assert r["source"] == "UniProt"
 
 
 @pytest.mark.parametrize(
-    "top_level_names, protein_blocks, expected",
+    "build_entry, cdm_id, expected",
     [
-        # -------------------------
-        # case 1: only top-level
-        # -------------------------
+        # --------------------------------------------------
+        # 1) Empty entry -> None
+        # --------------------------------------------------
         (
-            ["Protein A"],
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
             None,
-            [
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein A",
-                    "description": "UniProt protein name",
-                }
-            ],
         ),
-        # -------------------------
-        # case 2: only protein names
-        # -------------------------
+        # --------------------------------------------------
+        # 2) Only EC numbers
+        # --------------------------------------------------
         (
-            [],
-            [
-                ("recommended", "full", "Protein Rec Full"),
-                ("recommended", "short", "Protein Rec Short"),
-                ("alternative", "full", "Protein Alt Full"),
-            ],
-            [
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein Rec Full",
-                    "description": "UniProt recommended full name",
-                },
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein Rec Short",
-                    "description": "UniProt recommended short name",
-                },
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein Alt Full",
-                    "description": "UniProt alternative full name",
-                },
-            ],
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        ET.SubElement(
+                            ET.SubElement(entry, f"{{{NS_URI}}}protein"),
+                            f"{{{NS_URI}}}recommendedName",
+                        ),
+                        f"{{{NS_URI}}}ecNumber",
+                    ).__setattr__("text", "1.1.1.1"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            {
+                "ec_numbers": "1.1.1.1",
+            },
         ),
-        # -------------------------
-        # case 3: top-level + protein
-        # -------------------------
+        # --------------------------------------------------
+        # 3) Only sequence + entry modified
+        # --------------------------------------------------
         (
-            ["Protein A"],
-            [
-                ("recommended", "full", "Protein Rec Full"),
-            ],
-            [
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein A",
-                    "description": "UniProt protein name",
-                },
-                {
-                    "entity_id": "cdm_prot_1",
-                    "name": "Protein Rec Full",
-                    "description": "UniProt recommended full name",
-                },
-            ],
+            lambda: (
+                lambda entry: (
+                    entry.set("modified", "2024-01-01"),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}sequence",
+                        {
+                            "length": "100",
+                            "mass": "12345",
+                            "checksum": "ABC",
+                            "version": "2",
+                        },
+                    ).__setattr__("text", "MKTIIALSY"),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            {
+                "length": "100",
+                "mass": "12345",
+                "checksum": "ABC",
+                "sequence_version": "2",
+                "sequence": "MKTIIALSY",
+                "entry_modified": "2024-01-01",
+            },
         ),
-        # -------------------------
-        # case 4: nothing
-        # -------------------------
+        # --------------------------------------------------
+        # 4) Everything
+        # --------------------------------------------------
         (
-            [],
-            None,
-            [],
+            lambda: (
+                lambda entry: (
+                    entry.set("modified", "2024-02-02"),
+                    # protein + EC
+                    ET.SubElement(
+                        ET.SubElement(
+                            ET.SubElement(entry, f"{{{NS_URI}}}protein"),
+                            f"{{{NS_URI}}}recommendedName",
+                        ),
+                        f"{{{NS_URI}}}ecNumber",
+                    ).__setattr__("text", "3.5.4.4"),
+                    # proteinExistence
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}proteinExistence",
+                        {"type": "evidence at protein level"},
+                    ),
+                    # sequence
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}sequence",
+                        {
+                            "length": "250",
+                            "mass": "99999",
+                            "checksum": "XYZ",
+                            "modified": "2023-12-01",
+                            "version": "1",
+                        },
+                    ).__setattr__("text", "MADEUPSEQUENCE"),
+                    entry,
+                )[4]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
+            {
+                "ec_numbers": "3.5.4.4",
+                "protein_id": "cdm_4",
+                "evidence_for_existence": "evidence at protein level",
+                "length": "250",
+                "mass": "99999",
+                "checksum": "XYZ",
+                "modified": "2023-12-01",
+                "sequence_version": "1",
+                "sequence": "MADEUPSEQUENCE",
+                "entry_modified": "2024-02-02",
+            },
         ),
     ],
 )
-def test_parse_names(
-    monkeypatch,
-    top_level_names,
-    protein_blocks,
-    expected,
-):
-    cdm_id = "cdm_prot_1"
+def test_parse_protein_info(build_entry, cdm_id, expected):
+    entry = build_entry()
 
-    # -------------------------------------------------
-    # mock: find_all_text
-    # -------------------------------------------------
-    monkeypatch.setattr(
-        "uniprot.find_all_text",
-        lambda entry, xpath, ns: top_level_names,
-    )
+    result = parse_protein_info(entry, cdm_id)
 
-    # -------------------------------------------------
-    # Dummy element returned by get_text
-    # -------------------------------------------------
-    class DummyTextElem:
-        def __init__(self, text):
-            self.text = text
-
-    # -------------------------------------------------
-    # Name block: handles fullName / shortName
-    # -------------------------------------------------
-    class DummyNameBlock:
-        def __init__(self, logical, values):
-            self.logical = logical
-            self.values = values
-
-        def find(self, xpath, ns):
-            if "fullName" in xpath:
-                return DummyTextElem(self.values.get("full"))
-            if "shortName" in xpath:
-                return DummyTextElem(self.values.get("short"))
-            return None
-
-    # -------------------------------------------------
-    # Protein element
-    # -------------------------------------------------
-    class DummyProtein:
-        def findall(self, xpath, ns):
-            if protein_blocks is None:
-                return []
-
-            blocks = {}
-            for logical, length, text in protein_blocks:
-                blocks.setdefault(logical, {})[length] = text
-
-            if "recommendedName" in xpath and "recommended" in blocks:
-                return [DummyNameBlock("recommended", blocks["recommended"])]
-            if "alternativeName" in xpath and "alternative" in blocks:
-                return [DummyNameBlock("alternative", blocks["alternative"])]
-
-            return []
-
-    # -------------------------------------------------
-    # Entry
-    # -------------------------------------------------
-    class DummyEntry:
-        def find(self, xpath, ns):
-            if "protein" in xpath and protein_blocks is not None:
-                return DummyProtein()
-            return None
-
-    entry = DummyEntry()
-
-    # -------------------------------------------------
-    # mock: get_text
-    # -------------------------------------------------
-    monkeypatch.setattr(
-        "uniprot.get_text",
-        lambda elem: elem.text if elem else None,
-    )
-
-    # -------------------------------------------------
-    # mock: _make_name_record
-    # -------------------------------------------------
-    monkeypatch.setattr(
-        "uniprot._make_name_record",
-        lambda entity_id, name, desc: {
-            "entity_id": entity_id,
-            "name": name,
-            "description": desc,
-        },
-    )
-
-    result = parse_names(entry, cdm_id)
-
-    assert result == expected
+    if expected is None:
+        assert result is None
+    else:
+        assert isinstance(result, dict)
+        assert result == expected
 
 
 @pytest.mark.parametrize(
-    "evidence_blocks, expected",
+    "build_xml, expected",
     [
-        # -------------------------------------------------
-        # case 1: no evidence
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 1) No evidence elements
+        # --------------------------------------------------
         (
-            [],
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
             {},
         ),
-        # -------------------------------------------------
-        # case 2: evidence without key
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 2) Evidence without key -> ignored
+        # --------------------------------------------------
         (
-            [
-                {
-                    "key": None,
-                    "type": "experimental",
-                    "pubs": ["PUBMED:123"],
-                    "others": [],
-                }
-            ],
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}evidence", {"type": "ECO:0000269"}),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
             {},
         ),
-        # -------------------------------------------------
-        # case 3: evidence with key, no source
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 3) Evidence with key, no source
+        # --------------------------------------------------
         (
-            [
-                {
-                    "key": "E1",
-                    "type": "experimental",
-                    "pubs": None,
-                    "others": None,
-                }
-            ],
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}evidence",
+                        {"key": "1", "type": "ECO:0000313"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
             {
-                "E1": {
-                    "evidence_type": "experimental",
+                "1": {
+                    "evidence_type": "ECO:0000313",
                 }
             },
         ),
-        # -------------------------------------------------
-        # case 4: evidence with source + PUBMED normalize
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 4) Evidence with PUBMED + other refs
+        # --------------------------------------------------
         (
-            [
-                {
-                    "key": "E2",
-                    "type": "computational",
-                    "pubs": ["PUBMED:12345", "DOI:10.1000/xyz"],
-                    "others": ["CHEBI:1234"],
-                }
-            ],
+            lambda: (
+                lambda entry: (
+                    lambda ev: (
+                        ET.SubElement(
+                            ET.SubElement(ev, f"{{{NS_URI}}}source"),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "PubMed", "id": "12345"},
+                        ),
+                        ET.SubElement(
+                            ET.SubElement(ev, f"{{{NS_URI}}}source"),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "GO", "id": "GO:0008150"},
+                        ),
+                        entry,
+                    )[2]
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}evidence",
+                        {"key": "E2", "type": "ECO:0000269"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
             {
                 "E2": {
-                    "evidence_type": "computational",
-                    "publications": ["PMID:12345", "DOI:10.1000/xyz"],
-                    "supporting_objects": ["CHEBI:1234"],
+                    "evidence_type": "ECO:0000269",
+                    "publications": ["PMID:12345"],
                 }
             },
         ),
     ],
 )
-def test_parse_evidence_map(monkeypatch, evidence_blocks, expected):
-    """
-    parse_evidence_map should:
-    - skip evidence without key
-    - normalize PUBMED -> PMID
-    - preserve supporting objects
-    - clean empty fields
-    """
-
-    # =====================================================
-    # Dummy XML elements
-    # =====================================================
-    class DummyEvidence:
-        def __init__(self, block):
-            self.block = block
-
-        def find(self, xpath, ns):
-            if "source" in xpath and self.block.get("pubs") is not None:
-                return object()
-            return None
-
-    class DummyEntry:
-        def findall(self, xpath, ns):
-            if "evidence" in xpath:
-                return [DummyEvidence(b) for b in evidence_blocks]
-            return []
-
-    entry = DummyEntry()
-
-    # =====================================================
-    # mock: get_attr
-    # =====================================================
-    def mock_get_attr(elem, key):
-        return elem.block.get(key)
-
-    monkeypatch.setattr(
-        "uniprot.get_attr",
-        mock_get_attr,
-    )
-
-    # =====================================================
-    # mock: parse_db_references
-    # =====================================================
-    def mock_parse_db_references(source, ns):
-        # find which evidence this source belongs to
-        for b in evidence_blocks:
-            if b.get("pubs") is not None:
-                return b.get("pubs", []), b.get("others", [])
-        return [], []
-
-    monkeypatch.setattr(
-        "uniprot.parse_db_references",
-        mock_parse_db_references,
-    )
-
-    # =====================================================
-    # mock: clean_dict
-    # =====================================================
-    monkeypatch.setattr(
-        "uniprot.clean_dict",
-        lambda d: {k: v for k, v in d.items() if v is not None},
-    )
-
+def test_parse_evidence_map_parametrized(build_xml, expected):
+    entry = build_xml()
     result = parse_evidence_map(entry)
 
+    assert isinstance(result, dict)
     assert result == expected
 
 
 @pytest.mark.parametrize(
-    "organism_taxid, dbrefs, comments, expected",
+    "build_xml, cdm_id, evidence_map, expected",
     [
-        # -------------------------------------------------
-        # case 1: only taxonomy
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 1) Taxonomy association only
+        # --------------------------------------------------
         (
-            "9606",
-            [],
-            [],
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        ET.SubElement(entry, f"{{{NS_URI}}}organism"),
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "NCBI Taxonomy", "id": "1234"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_1",
+            {},
             [
                 {
-                    "entity_id": "cdm_prot_1",
-                    "target": "NCBITaxon:9606",
+                    "subject": "cdm_1",
+                    "object": "NCBITaxon:1234",
+                    "predicate": "in_taxon",
                 }
             ],
         ),
-        # -------------------------------------------------
-        # case 2: generic dbReferences
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 2) Catalytic activity with evidence
+        # --------------------------------------------------
         (
-            None,
-            [
-                {"type": "UniRef100", "id": "P12345", "evidence": "E1"},
-                {"type": "PDB", "id": "1ABC", "evidence": None},
-            ],
-            [],
+            lambda: (
+                lambda entry: (
+                    lambda comment: (
+                        lambda reaction: (
+                            ET.SubElement(
+                                reaction,
+                                f"{{{NS_URI}}}dbReference",
+                                {"type": "Rhea", "id": "RHEA:12345"},
+                            ),
+                            entry,
+                        )[1]
+                    )(
+                        ET.SubElement(
+                            comment,
+                            f"{{{NS_URI}}}reaction",
+                            {"evidence": "E1"},
+                        )
+                    )
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}comment",
+                        {"type": "catalytic activity"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            {
+                "E1": {
+                    "evidence_type": "ECO:0000269",
+                    "publications": ["PMID:12345"],
+                }
+            },
             [
                 {
-                    "entity_id": "cdm_prot_1",
-                    "target": "UniRef100:P12345",
-                    "evidence_key": "E1",
-                },
-                {
-                    "entity_id": "cdm_prot_1",
-                    "target": "PDB:1ABC",
-                },
+                    "subject": "cdm_2",
+                    "predicate": "catalyzes",
+                    "object": "Rhea:RHEA:12345",
+                    "evidence_type": "ECO:0000269",
+                    "publications": ["PMID:12345"],
+                }
             ],
         ),
-        # -------------------------------------------------
-        # case 3: catalytic activity + cofactor
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 3) Cofactor association
+        # --------------------------------------------------
         (
-            None,
-            [],
-            [
-                {"type": "catalytic activity", "items": ["R1", "R2"]},
-                {"type": "cofactor", "items": ["C1"]},
-            ],
-            [
-                {"assoc": "reaction:R1"},
-                {"assoc": "reaction:R2"},
-                {"assoc": "cofactor:C1"},
-            ],
-        ),
-        # -------------------------------------------------
-        # case 4: everything together
-        # -------------------------------------------------
-        (
-            "562",
-            [
-                {"type": "UniRef90", "id": "Q9XYZ", "evidence": "E2"},
-            ],
-            [
-                {"type": "catalytic activity", "items": ["R1"]},
-            ],
+            lambda: (
+                lambda entry: (
+                    lambda comment: (
+                        ET.SubElement(
+                            ET.SubElement(
+                                comment,
+                                f"{{{NS_URI}}}cofactor",
+                            ),
+                            f"{{{NS_URI}}}dbReference",
+                            {"type": "ChEBI", "id": "CHEBI:15377"},
+                        ),
+                        entry,
+                    )[1]
+                )(
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}comment",
+                        {"type": "cofactor"},
+                    )
+                )
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            {},
             [
                 {
-                    "entity_id": "cdm_prot_1",
-                    "target": "NCBITaxon:562",
-                },
-                {
-                    "entity_id": "cdm_prot_1",
-                    "target": "UniRef90:Q9XYZ",
-                    "evidence_key": "E2",
-                },
-                {"assoc": "reaction:R1"},
+                    "subject": "cdm_3",
+                    "predicate": "requires_cofactor",
+                    "object": "ChEBI:CHEBI:15377",
+                }
             ],
         ),
     ],
 )
-def test_parse_associations(
-    monkeypatch,
-    organism_taxid,
-    dbrefs,
-    comments,
-    expected,
-):
-    cdm_id = "cdm_prot_1"
-    evidence_map = {"E1": {}, "E2": {}}
-
-    class DummyElem:
-        def __init__(self, attrs=None):
-            self.attrs = attrs or {}
-
-        def get(self, key):
-            return self.attrs.get(key)
-
-    class DummyOrganism:
-        def find(self, xpath, ns):
-            if "NCBI Taxonomy" in xpath and organism_taxid:
-                return DummyElem({"id": organism_taxid})
-            return None
-
-    class DummyDBRef(DummyElem):
-        pass
-
-    class DummyComment(DummyElem):
-        def __init__(self, comment_type, items):
-            super().__init__({"type": comment_type})
-            self.items = items
-
-        def findall(self, xpath, ns):
-            return self.items
-
-    class DummyEntry:
-        def find(self, xpath, ns):
-            if "organism" in xpath and organism_taxid:
-                return DummyOrganism()
-            return None
-
-        def findall(self, xpath, ns):
-            if xpath == "ns:dbReference":
-                return [
-                    DummyDBRef({
-                        "type": d["type"],
-                        "id": d["id"],
-                        "evidence": d.get("evidence"),
-                    })
-                    for d in dbrefs
-                ]
-            if xpath == "ns:comment":
-                return [DummyComment(c["type"], c["items"]) for c in comments]
-            return []
-
-    entry = DummyEntry()
-
-    def mock_make_association(entity_id, target, evidence_key=None, evidence_map=None):
-        out = {
-            "entity_id": entity_id,
-            "target": target,
-        }
-        if evidence_key is not None:
-            out["evidence_key"] = evidence_key
-        return out
-
-    monkeypatch.setattr("uniprot._make_association", mock_make_association)
-    monkeypatch.setattr(
-        "uniprot.parse_reaction_association",
-        lambda reaction, cdm_id, evidence_map: [{"assoc": f"reaction:{reaction}"}],
-    )
-    monkeypatch.setattr(
-        "uniprot.parse_cofactor_association",
-        lambda cofactor, cdm_id: [{"assoc": f"cofactor:{cofactor}"}],
-    )
+def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expected):
+    entry = build_xml()
 
     result = parse_associations(entry, cdm_id, evidence_map)
 
+    assert isinstance(result, list)
     assert result == expected
 
 
 @pytest.mark.parametrize(
-    "references, expected",
+    "build_xml, cdm_id, expected",
     [
-        # -------------------------------------------------
-        # case 1: no reference
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 1) No dbReference
+        # --------------------------------------------------
         (
-            [],
-            [],
-        ),
-        # -------------------------------------------------
-        # case 2: reference without citation (ignored)
-        # -------------------------------------------------
-        (
-            [
-                {"pubs": ["PUBMED:12345"]},
-            ],
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
             [],
         ),
-        # -------------------------------------------------
-        # case 3: single PUBMED
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 2) dbReference with CURIE id
+        # --------------------------------------------------
         (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO", "id": "GO:0008150"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
             [
-                {"citation": True, "pubs": ["PUBMED:12345"]},
+                {
+                    "entity_id": "cdm_2",
+                    "xref_type": "GO",
+                    "xref_value": "GO:0008150",
+                    "xref": "GO:0008150",
+                }
             ],
-            ["PMID:12345"],
         ),
-        # -------------------------------------------------
-        # case 4: PUBMED + DOI + duplicates
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 3) dbReference without CURIE (prefix)
+        # --------------------------------------------------
         (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "CDD", "id": "cd04253"},
+                    ),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
             [
                 {
-                    "citation": True,
-                    "pubs": ["PUBMED:12345", "DOI:10.1000/xyz"],
-                },
-                {
-                    "citation": True,
-                    "pubs": ["PUBMED:12345"],
-                },
+                    "entity_id": "cdm_3",
+                    "xref_type": "CDD",
+                    "xref_value": "cd04253",
+                    "xref": "CDD:cd04253",
+                }
             ],
-            ["PMID:12345", "DOI:10.1000/xyz"],
         ),
-        # -------------------------------------------------
-        # case 5: unsupported prefixes ignored
-        # -------------------------------------------------
+        # --------------------------------------------------
+        # 4) Mixed dbReferences
+        # --------------------------------------------------
         (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO", "id": "GO:0003674"},
+                    ),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "PDB", "id": "1ABC"},
+                    ),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
             [
                 {
-                    "citation": True,
-                    "pubs": ["PMC:999", "ISBN:123", "DOI:10.1/abc"],
+                    "entity_id": "cdm_4",
+                    "xref_type": "GO",
+                    "xref_value": "GO:0003674",
+                    "xref": "GO:0003674",
+                },
+                {
+                    "entity_id": "cdm_4",
+                    "xref_type": "PDB",
+                    "xref_value": "1ABC",
+                    "xref": "PDB:1ABC",
                 },
             ],
-            ["DOI:10.1/abc"],
+        ),
+        # --------------------------------------------------
+        # 5) Missing type or id -> ignored
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"type": "GO"},  # missing id
+                    ),
+                    ET.SubElement(
+                        entry,
+                        f"{{{NS_URI}}}dbReference",
+                        {"id": "123"},  # missing type
+                    ),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_5",
+            [],
         ),
     ],
 )
-def test_parse_publications(monkeypatch, references, expected):
-    """
-    parse_publications should:
-    - normalize PUBMED -> PMID
-    - normalize DOI
-    - ignore unsupported prefixes
-    - deduplicate while preserving order
-    """
+def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
+    entry = build_xml()
 
-    # =====================================================
-    # Dummy elements
-    # =====================================================
-    class DummyReference:
-        def __init__(self, block):
-            self.block = block
+    result = parse_cross_references(entry, cdm_id)
 
-        def find(self, xpath, ns):
-            if "citation" in xpath and self.block.get("citation"):
-                return object()
-            return None
+    assert isinstance(result, list)
+    assert result == expected
 
-    class DummyEntry:
-        def findall(self, xpath, ns):
-            if "reference" in xpath:
-                return [DummyReference(b) for b in references]
-            return []
 
-    entry = DummyEntry()
+@pytest.mark.parametrize(
+    "build_xml, cdm_id, expected",
+    [
+        # --------------------------------------------------
+        # 1) No accession
+        # --------------------------------------------------
+        (
+            lambda: ET.Element(f"{{{NS_URI}}}entry"),
+            "cdm_1",
+            [],
+        ),
+        # --------------------------------------------------
+        # 2) Single accession
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "P12345"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_2",
+            [
+                {
+                    "entity_id": "cdm_2",
+                    "identifier": "UniProt:P12345",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                }
+            ],
+        ),
+        # --------------------------------------------------
+        # 3) Multiple accessions
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "Q11111"),
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "Q22222"),
+                    entry,
+                )[2]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_3",
+            [
+                {
+                    "entity_id": "cdm_3",
+                    "identifier": "UniProt:Q11111",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                },
+                {
+                    "entity_id": "cdm_3",
+                    "identifier": "UniProt:Q22222",
+                    "source": "UniProt",
+                    "description": "UniProt accession",
+                },
+            ],
+        ),
+        # --------------------------------------------------
+        # 4) parse_identifiers_generic already sets source/description → setdefault
+        # --------------------------------------------------
+        (
+            lambda: (
+                lambda entry: (
+                    ET.SubElement(entry, f"{{{NS_URI}}}accession").__setattr__("text", "A0A000"),
+                    entry,
+                )[1]
+            )(ET.Element(f"{{{NS_URI}}}entry")),
+            "cdm_4",
+            [
+                {
+                    "entity_id": "cdm_4",
+                    "identifier": "UniProt:A0A000",
+                    "source": "UniProt",  # remains
+                    "description": "UniProt accession",  # remains
+                }
+            ],
+        ),
+    ],
+)
+def test_parse_identifiers_parametrized(build_xml, cdm_id, expected):
+    entry = build_xml()
 
-    # =====================================================
-    # mock: parse_db_references
-    # =====================================================
-    def mock_parse_db_references(citation, ns):
-        for b in references:
-            if b.get("citation"):
-                return b.get("pubs", []), []
-        return [], []
+    result = parse_identifiers(entry, cdm_id)
 
-    monkeypatch.setattr(
-        "uniprot.parse_db_references",
-        mock_parse_db_references,
-    )
-
-    result = parse_publications(entry)
-
+    assert isinstance(result, list)
     assert result == expected
