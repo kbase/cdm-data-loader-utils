@@ -137,7 +137,7 @@ def make_entry(names=None, protein_names=None):
 @pytest.mark.parametrize(
     "entry_kwargs, cdm_id, expected",
     [
-        # 1) Only <entry><name>
+        # Only <entry><name>
         (
             {"names": ["ProteinA"]},
             "cdm_1",
@@ -145,7 +145,7 @@ def make_entry(names=None, protein_names=None):
                 ("ProteinA", "UniProt entry name"),
             },
         ),
-        # 2) entry name + recommended full name
+        # entry name + recommended full name
         (
             {
                 "names": ["ProteinB"],
@@ -159,7 +159,7 @@ def make_entry(names=None, protein_names=None):
                 ("Rec Full B", "UniProt recommended full name"),
             },
         ),
-        # 3) everything
+        # everything
         (
             {
                 "names": ["ProteinC"],
@@ -201,7 +201,7 @@ def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
     "build_entry, cdm_id, expected",
     [
         # --------------------------------------------------
-        # 1) Empty entry -> None
+        # Empty entry -> None
         # --------------------------------------------------
         (
             lambda: ET.Element(f"{{{NS_URI}}}entry"),
@@ -209,7 +209,7 @@ def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
             None,
         ),
         # --------------------------------------------------
-        # 2) Only EC numbers
+        # Only EC numbers
         # --------------------------------------------------
         (
             lambda: (
@@ -230,7 +230,7 @@ def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
             },
         ),
         # --------------------------------------------------
-        # 3) Only sequence + entry modified
+        # Only sequence + entry modified
         # --------------------------------------------------
         (
             lambda: (
@@ -260,7 +260,7 @@ def test_parse_names_parametrized(entry_kwargs, cdm_id, expected):
             },
         ),
         # --------------------------------------------------
-        # 4) Everything
+        # Everything
         # --------------------------------------------------
         (
             lambda: (
@@ -327,14 +327,14 @@ def test_parse_protein_info(build_entry, cdm_id, expected):
     "build_xml, expected",
     [
         # --------------------------------------------------
-        # 1) No evidence elements
+        # No evidence elements
         # --------------------------------------------------
         (
             lambda: ET.Element(f"{{{NS_URI}}}entry"),
             {},
         ),
         # --------------------------------------------------
-        # 2) Evidence without key -> ignored
+        # Evidence without key
         # --------------------------------------------------
         (
             lambda: (
@@ -346,7 +346,7 @@ def test_parse_protein_info(build_entry, cdm_id, expected):
             {},
         ),
         # --------------------------------------------------
-        # 3) Evidence with key, no source
+        # Evidence with key, no source
         # --------------------------------------------------
         (
             lambda: (
@@ -366,7 +366,7 @@ def test_parse_protein_info(build_entry, cdm_id, expected):
             },
         ),
         # --------------------------------------------------
-        # 4) Evidence with PUBMED + other refs
+        # Evidence with PUBMED with other refs
         # --------------------------------------------------
         (
             lambda: (
@@ -413,7 +413,7 @@ def test_parse_evidence_map_parametrized(build_xml, expected):
     "build_xml, cdm_id, evidence_map, expected",
     [
         # --------------------------------------------------
-        # 1) Taxonomy association only
+        # Taxonomy association only
         # --------------------------------------------------
         (
             lambda: (
@@ -437,7 +437,7 @@ def test_parse_evidence_map_parametrized(build_xml, expected):
             ],
         ),
         # --------------------------------------------------
-        # 2) Catalytic activity with evidence
+        # Catalytic activity with evidence
         # --------------------------------------------------
         (
             lambda: (
@@ -484,7 +484,7 @@ def test_parse_evidence_map_parametrized(build_xml, expected):
             ],
         ),
         # --------------------------------------------------
-        # 3) Cofactor association
+        # Cofactor association
         # --------------------------------------------------
         (
             lambda: (
@@ -533,7 +533,7 @@ def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expect
     "build_xml, cdm_id, expected",
     [
         # --------------------------------------------------
-        # 1) No dbReference
+        # No dbReference
         # --------------------------------------------------
         (
             lambda: ET.Element(f"{{{NS_URI}}}entry"),
@@ -541,7 +541,7 @@ def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expect
             [],
         ),
         # --------------------------------------------------
-        # 2) dbReference with CURIE id
+        # dbReference with CURIE id
         # --------------------------------------------------
         (
             lambda: (
@@ -565,7 +565,7 @@ def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expect
             ],
         ),
         # --------------------------------------------------
-        # 3) dbReference without CURIE (prefix)
+        # dbReference without CURIE (prefix)
         # --------------------------------------------------
         (
             lambda: (
@@ -589,7 +589,7 @@ def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expect
             ],
         ),
         # --------------------------------------------------
-        # 4) Mixed dbReferences
+        # Mixed dbReferences
         # --------------------------------------------------
         (
             lambda: (
@@ -624,7 +624,7 @@ def test_parse_associations_parametrized(build_xml, cdm_id, evidence_map, expect
             ],
         ),
         # --------------------------------------------------
-        # 5) Missing type or id -> ignored
+        # Missing type or id
         # --------------------------------------------------
         (
             lambda: (
@@ -660,7 +660,7 @@ def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
     "build_xml, cdm_id, expected",
     [
         # --------------------------------------------------
-        # 1) No accession
+        # No accession
         # --------------------------------------------------
         (
             lambda: ET.Element(f"{{{NS_URI}}}entry"),
@@ -668,7 +668,7 @@ def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
             [],
         ),
         # --------------------------------------------------
-        # 2) Single accession
+        # Single accession
         # --------------------------------------------------
         (
             lambda: (
@@ -688,7 +688,7 @@ def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
             ],
         ),
         # --------------------------------------------------
-        # 3) Multiple accessions
+        # Multiple accessions
         # --------------------------------------------------
         (
             lambda: (
@@ -715,7 +715,7 @@ def test_parse_cross_references_parametrized(build_xml, cdm_id, expected):
             ],
         ),
         # --------------------------------------------------
-        # 4) parse_identifiers_generic already sets source/description → setdefault
+        # parse_identifiers_generic already sets source/description → setdefault
         # --------------------------------------------------
         (
             lambda: (
