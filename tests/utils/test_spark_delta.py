@@ -509,6 +509,62 @@ def test_write_delta_raise_error(
 
 
 @pytest.mark.requires_spark
+@pytest.mark.parametrize("mode", WRITE_MODE)
+def test_write_delta_uninited_namespace(
+    mode: str,
+    spark_db: tuple[SparkSession, str, str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that a namespace that has not been registered throws an error."""
+    spark, _delta_ns, _ns_save_dir = spark_db
+    table = f"{mode}_example"
+    err_msg = "Could not find an appropriate base directory for saving data."
+    df = spark.createDataFrame([DEFAULT_SAMPLE_DATA])
+    with pytest.raises(RuntimeError, match=err_msg):
+        write_delta(
+            spark=spark,
+            sdf=df,
+            delta_ns="namespace_I_just_made_up",
+            table=table,
+            mode=mode,
+        )
+
+    assert caplog.records[-1].levelno == logging.ERROR
+    assert caplog.records[-1].message.startswith(err_msg)
+
+
+@pytest.mark.skip("Not yet implemented")
+@pytest.mark.requires_spark
+@pytest.mark.parametrize("mode", [APPEND, OVERWRITE])
+def test_write_delta_existing_proposed_path_warning(
+    mode: str, spark_db: tuple[SparkSession, str, str], caplog: pytest.LogCaptureFixture, tmp_path: Path
+) -> None:
+    """Test that a warning is emitted if there already exists data saved in another location."""
+    spark, delta_ns, _ns_save_dir = spark_db
+    table = f"{mode}_example"
+    db_table = f"{delta_ns}.{table}"
+    err_msg = "Existing path does not match the projected base path for the table. Data written to this directory must be tracked manually."
+    save_dir = tmp_path / "save" / "some" / "data" / "here"
+
+    # set up a save directory for the table
+    spark.sql(f"CREATE TABLE IF NOT EXISTS {db_table} USING DELTA LOCATION '{save_dir!s}'")
+
+    df = spark.createDataFrame([DEFAULT_SAMPLE_DATA])
+    write_delta(
+        spark=spark,
+        sdf=df,
+        delta_ns=delta_ns,
+        table=table,
+        mode=mode,
+    )
+    assert caplog.records[0].levelno == logging.WARNING
+    assert caplog.records[0].message.startswith(err_msg)
+
+
+# END write_delta tests. PHEW!
+
+
+@pytest.mark.requires_spark
 def test_preview_or_skip_existing(
     spark_db: tuple[SparkSession, str, str], caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture
 ) -> None:

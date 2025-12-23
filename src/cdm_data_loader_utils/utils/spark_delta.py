@@ -138,11 +138,22 @@ def get_existing_table_save_dir(spark: SparkSession, delta_ns: str, table: str |
 
 
 def write_delta(spark: SparkSession, sdf: DataFrame, delta_ns: str, table: str, mode: str = "append") -> None:
-    """Write Spark DataFrame in Delta format and register it with the Hive metastore.
-
-    If data_dir is provided, writes to external LOCATION {data_dir}. Parquet files will be
-    saved in {data_dir}/*.parquet and log files will be {data_dir}/_delta_log/*.json .
     """
+    Write data as delta tables and register it in the hive metastore.
+
+    :param spark: spark sesh
+    :type spark: SparkSession
+    :param sdf: data frame to be written
+    :type sdf: DataFrame
+    :param delta_ns: namespace assigned by `set_up_workspace` or `create_namespace_if_not_exists`
+    :type delta_ns: str
+    :param table: table name
+    :type table: str
+    :param mode: spark write mode (one of append, overwrite, ignore, error, errorifexists)
+    :type mode: str
+    """
+    # Write Spark DataFrame in Delta format and register it with the Hive metastore.
+
     if mode not in WRITE_MODE:
         msg = f"Invalid mode supplied for writing delta table: {mode}"
         logger.error(msg)
@@ -153,37 +164,39 @@ def write_delta(spark: SparkSession, sdf: DataFrame, delta_ns: str, table: str, 
         logger.warning("No data to write to %s", db_table)
         return
 
-    # TODO: check if this is true when saving to a specific location
+    # this should have been set using create_namespace_if_not_exists
+    base_path = get_existing_database_save_dir(spark, delta_ns)
+    if not base_path:
+        msg = "Could not find an appropriate base directory for saving data. Was the workspace initialised using set_up_workspace?"
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     # check whether the table already exists and get the path if so
     existing_path = get_existing_table_save_dir(spark, delta_ns, table)
 
-    if existing_path:
-        if mode in (IGNORE, ERROR, ERROR_IF_EXISTS):
-            logger.warning(
-                "Database table %s already exists and writer is set to %s mode, so no data would be written. Aborting.",
-                db_table,
-                mode,
-            )
-            return
+    if existing_path and mode in (IGNORE, ERROR, ERROR_IF_EXISTS):
+        # TODO: check if data must be in the dir or whether the table just needs to be registered
+        logger.warning(
+            "Database table %s already exists and writer is set to %s mode, so no data would be written. Aborting.",
+            db_table,
+            mode,
+        )
+        return
 
-        # this should have been set using create_namespace_if_not_exists
-        base_path = get_existing_database_save_dir(spark, delta_ns)
-        if base_path:
+        """
+        # TODO: implement check for non-standard table paths
+        # TODO: write tests
+        if existing_path:
             table_path = f"{base_path}/{table}"
 
-        if not table_path:
-            msg = "Could not find an appropriate base directory for saving data. Was the workspace initialised using set_up_workspace?"
-            logger.error(msg)
-            raise RuntimeError(msg)
+            existing = urlparse(existing_path)
+            proposed = urlparse(table_path)
 
-        existing = urlparse(existing_path)
-        proposed = urlparse(table_path)
-
-        if existing.path != proposed.path:
-            logger.warning(
-                "Existing path does not match the projected base path for the table. Data written to this directory must be tracked manually."
-            )
-
+            if existing.path != proposed.path:
+                logger.warning(
+                    "Existing path does not match the projected base path for the table. Data written to this directory must be tracked manually."
+                )
+        """
     merge_or_overwrite_schema = "mergeSchema" if mode == APPEND else "overwriteSchema"
     writer = sdf.write.format("delta").mode(mode).option(merge_or_overwrite_schema, "true")
 
@@ -214,10 +227,6 @@ def write_delta_to_file(
         # Register/create an external table using LOCATION
         spark.sql(f"CREATE TABLE IF NOT EXISTS {db_table} USING DELTA LOCATION '{data_dir}'")
         logger.info("Saved external table %s (rows=%d) to %s", db_table, sdf.count(), data_dir)
-
-        # spark.catalog.tableExists(db_table)
-        # spark.sql(f"SELECT * from {db_table}").show()
-
     except Exception:
         logger.exception("Error writing external table %s", db_table)
         raise

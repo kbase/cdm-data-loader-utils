@@ -46,6 +46,7 @@ def test_build_spark_creates_database(tmp_path) -> None:
 # =============================================================
 
 
+@pytest.mark.skip("See tests/utils/test_delta_spark.py")
 @pytest.mark.requires_spark
 def test_write_delta_managed_table(spark) -> None:
     db = "writetest"
@@ -76,6 +77,7 @@ def test_write_delta_managed_table(spark) -> None:
 # =============================================================
 
 
+@pytest.mark.skip("See tests/utils/test_delta_spark.py")
 @pytest.mark.requires_spark
 def test_write_delta_external_location(spark, tmp_path) -> None:
     db = "externaldb"
@@ -106,6 +108,7 @@ def test_write_delta_external_location(spark, tmp_path) -> None:
 # =============================================================
 
 
+@pytest.mark.skip("See tests/utils/test_delta_spark.py")
 @pytest.mark.requires_spark
 def test_write_delta_contig_collection_schema(spark) -> None:
     db = "cdmdb"
