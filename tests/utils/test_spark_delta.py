@@ -4,9 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from berdl_notebook_utils import create_namespace_if_not_exists
 from pyspark.sql import DataFrame, DataFrameWriter, Row, SparkSession
-from pyspark.sql.types import StringType, StructField, StructType
 
 from cdm_data_loader_utils.utils import spark_delta
 from cdm_data_loader_utils.utils.spark_delta import (
@@ -18,8 +16,6 @@ from cdm_data_loader_utils.utils.spark_delta import (
     IGNORE,
     OVERWRITE,
     WRITE_MODE,
-    get_existing_database_save_dir,
-    get_existing_table_save_dir,
     get_spark,
     preview_or_skip,
     write_delta,

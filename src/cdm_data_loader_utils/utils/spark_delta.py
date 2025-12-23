@@ -1,13 +1,8 @@
 """Utilities for interacting with Spark and delta tables."""
 
-from collections.abc import Iterable
-from pathlib import Path
-from urllib.parse import urlparse
-
 from berdl_notebook_utils.setup_spark_session import get_spark_session
 from berdl_notebook_utils.spark.database import create_namespace_if_not_exists
-from pyspark.sql import DataFrame, DataFrameWriter, SparkSession, Window
-from pyspark.sql import functions as sf
+from pyspark.sql import DataFrame, DataFrameWriter, SparkSession
 
 from cdm_data_loader_utils.utils.logging import get_logger
 
