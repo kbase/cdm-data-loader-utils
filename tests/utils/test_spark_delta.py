@@ -76,7 +76,7 @@ def spark_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[tuple
     # patch the create_namespace_if_not_exists function
     monkeypatch.setattr(
         "cdm_data_loader_utils.utils.spark_delta.create_namespace_if_not_exists",
-        lambda *args, **kwargs: fake_create_namespace_if_not_exists(*args, **kwargs),
+        fake_create_namespace_if_not_exists,
     )
 
     def set_up_test_workspace(*args, **kwargs) -> tuple[SparkSession, str]:
@@ -105,7 +105,7 @@ def test_get_spark(app_name: str | None, monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(
         "cdm_data_loader_utils.utils.spark_delta.get_spark_session",
-        lambda *args, **kwargs: fake_get_spark_session(*args, **kwargs),
+        fake_get_spark_session,
     )
 
     spark = get_spark(app_name)
@@ -152,12 +152,12 @@ def test_set_up_workspace_defaults(
 
     monkeypatch.setattr(
         "cdm_data_loader_utils.utils.spark_delta.get_spark_session",
-        lambda *args, **kwargs: fake_get_spark_session(*args, **kwargs),
+        fake_get_spark_session,
     )
 
     monkeypatch.setattr(
         "cdm_data_loader_utils.utils.spark_delta.create_namespace_if_not_exists",
-        lambda *args, **kwargs: fake_create_ns(*args, **kwargs),
+        fake_create_ns,
     )
 
     if data_dir:
@@ -215,7 +215,7 @@ def test_set_up_workspace_creates_database(
     # patch the create_namespace_if_not_exists function
     monkeypatch.setattr(
         "cdm_data_loader_utils.utils.spark_delta.create_namespace_if_not_exists",
-        lambda *args, **kwargs: fake_create_namespace_if_not_exists(*args, **kwargs),
+        fake_create_namespace_if_not_exists,
     )
 
     def set_up_test_workspace(*args, **kwargs) -> tuple[SparkSession, str]:
