@@ -158,7 +158,7 @@ build-backend = "uv_build"
 [tool.pytest]
 pythonpath = ["src"]
 log_cli = true
-log_cli_level = "DEBUG"
+log_cli_level = "INFO"
 addopts = ["-v"]
 markers = ["requires_spark: must be run in an environment where spark is available"]
 
