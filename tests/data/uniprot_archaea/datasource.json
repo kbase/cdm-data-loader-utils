@@ -1,0 +1,7 @@
+{
+  "name": "UniProt import",
+  "source": "UniProt",
+  "url": "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz",
+  "accessed": "2025-12-24T04:06:42.594253+00:00",
+  "version": 115
+}

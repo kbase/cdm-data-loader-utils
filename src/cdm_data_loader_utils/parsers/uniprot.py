@@ -13,18 +13,12 @@ python3 src/parsers/uniprot.py \
     --namespace "uniprot_db" \
     --batch-size 5000
 
-Use it in the local computer as: 
-python3 uniprot.py \
-  --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
-  --output-dir "./output_archaea" \
-  --namespace "uniprot_archaea_db" \
-  --batch-size 5000
 
 python -m cdm_data_loader_utils.parsers.uniprot \
   --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
-  --output-dir "./output" \
+  --output-dir "tests/data/uniprot_archaea" \
   --namespace "uniprot_db" \
-  --batch-size 5000 \
+  --batch-size 5000
 
 
 Arguments:
