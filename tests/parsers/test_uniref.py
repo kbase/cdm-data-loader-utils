@@ -9,12 +9,10 @@ import textwrap
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from types import SimpleNamespace
-
 import pytest
 
 from cdm_data_loader_utils.parsers.uniref import (
     add_cluster_members,
-    cdm_entity_id,
     extract_cluster,
     extract_cross_refs,
     get_accession_and_seed,
