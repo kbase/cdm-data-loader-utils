@@ -17,6 +17,7 @@ Coverage:
 
 How to run in the terminal:
     PYTHONPATH=src pytest tests/test_uniprot.py
+    pytest tests/parsers/test_uniprot.py
     PYTHONPATH=. pytest test_uniprot.py
 
 """

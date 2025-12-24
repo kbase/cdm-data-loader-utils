@@ -20,6 +20,13 @@ python3 uniprot.py \
   --namespace "uniprot_archaea_db" \
   --batch-size 5000
 
+python -m cdm_data_loader_utils.parsers.uniprot \
+  --xml-url "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/taxonomic_divisions/uniprot_sprot_archaea.xml.gz" \
+  --output-dir "./output" \
+  --namespace "uniprot_db" \
+  --batch-size 5000 \
+
+
 Arguments:
 ----------
 --xml-url:      URL to the UniProt XML .gz file 
@@ -104,6 +111,10 @@ PREFIX_TRANSLATION: dict[str, str] = {
 
 
 # ================================ HELPERS =================================
+def delta_table_path(output_dir: str, namespace: str, table: str) -> str:
+    return os.path.abspath(os.path.join(output_dir, namespace, table))
+
+
 def build_datasource_record(xml_url: str) -> dict:
     """Build a provenance record for the UniProt datasource."""
     return {
@@ -193,6 +204,7 @@ def get_spark_session(namespace: str) -> SparkSession:
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
+        .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
     )
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
@@ -341,16 +353,14 @@ def parse_protein_info(entry, cdm_id: str) -> dict | None:
     seq_elem = entry.find("ns:sequence", NS)
     if seq_elem is not None:
         protein_info.update(
-            clean_dict(
-                {
-                    "length": get_attr(seq_elem, "length"),
-                    "mass": get_attr(seq_elem, "mass"),
-                    "checksum": get_attr(seq_elem, "checksum"),
-                    "modified": get_attr(seq_elem, "modified"),
-                    "sequence_version": get_attr(seq_elem, "version"),
-                    "sequence": get_text(seq_elem),
-                }
-            )
+            clean_dict({
+                "length": get_attr(seq_elem, "length"),
+                "mass": get_attr(seq_elem, "mass"),
+                "checksum": get_attr(seq_elem, "checksum"),
+                "modified": get_attr(seq_elem, "modified"),
+                "sequence_version": get_attr(seq_elem, "version"),
+                "sequence": get_text(seq_elem),
+            })
         )
 
     entry_modified = get_attr(entry, "modified") or get_attr(entry, "updated")
@@ -388,13 +398,11 @@ def parse_evidence_map(entry) -> dict[str, dict]:
             pubs = normalized_pubs
             others = raw_others
 
-        evidence_map[key] = clean_dict(
-            {
-                "evidence_type": evidence_type,
-                "publications": pubs or None,
-                "supporting_objects": others or None,
-            }
-        )
+        evidence_map[key] = clean_dict({
+            "evidence_type": evidence_type,
+            "publications": pubs or None,
+            "supporting_objects": others or None,
+        })
 
     return evidence_map
 
@@ -450,16 +458,14 @@ def parse_cofactor_association(cofactor, cdm_id: str) -> list[dict]:
         if not db_type or not db_id:
             continue
         associations.append(
-            clean_dict(
-                {
-                    "subject": cdm_id,
-                    "predicate": "requires_cofactor",
-                    "object": make_curie(db_type, db_id),
-                    "evidence_type": None,
-                    "supporting_objects": None,
-                    "publications": None,
-                }
-            )
+            clean_dict({
+                "subject": cdm_id,
+                "predicate": "requires_cofactor",
+                "object": make_curie(db_type, db_id),
+                "evidence_type": None,
+                "supporting_objects": None,
+                "publications": None,
+            })
         )
     return associations
 
@@ -512,14 +518,12 @@ def parse_cross_references(entry, cdm_id: str) -> list[dict]:
             xref = f"{xref_type}:{db_id}"
 
         rows.append(
-            clean_dict(
-                {
-                    "entity_id": cdm_id,
-                    "xref_type": xref_type,
-                    "xref_value": db_id,
-                    "xref": xref,
-                }
-            )
+            clean_dict({
+                "entity_id": cdm_id,
+                "xref_type": xref_type,
+                "xref_value": db_id,
+                "xref": xref,
+            })
         )
 
     return rows
@@ -584,85 +588,72 @@ def parse_uniprot_entry(
 
 
 # ================================ SCHEMA =================================
-schema_entities = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("data_source", StringType(), False),
-        StructField("created", StringType(), True),
-        StructField("updated", StringType(), True),
-        StructField("version", StringType(), True),
-        StructField("uniprot_created", StringType(), True),
-        StructField("uniprot_modified", StringType(), True),
-    ]
-)
+schema_entities = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("entity_type", StringType(), False),
+    StructField("data_source", StringType(), False),
+    StructField("created", StringType(), True),
+    StructField("updated", StringType(), True),
+    StructField("version", StringType(), True),
+    StructField("uniprot_created", StringType(), True),
+    StructField("uniprot_modified", StringType(), True),
+])
 
-schema_identifiers = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("identifier", StringType(), False),
-        StructField("source", StringType(), True),
-        StructField("description", StringType(), True),
-    ]
-)
+schema_identifiers = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("identifier", StringType(), False),
+    StructField("source", StringType(), True),
+    StructField("description", StringType(), True),
+])
 
-schema_proteins = StructType(
-    [
-        StructField("protein_id", StringType(), False),
-        StructField("ec_numbers", StringType(), True),
-        StructField("evidence_for_existence", StringType(), True),
-        StructField("length", StringType(), True),
-        StructField("mass", StringType(), True),
-        StructField("checksum", StringType(), True),
-        StructField("modified", StringType(), True),
-        StructField("sequence_version", StringType(), True),
-        StructField("sequence", StringType(), True),
-        StructField("entry_modified", StringType(), True),
-    ]
-)
+schema_proteins = StructType([
+    StructField("protein_id", StringType(), False),
+    StructField("ec_numbers", StringType(), True),
+    StructField("evidence_for_existence", StringType(), True),
+    StructField("length", StringType(), True),
+    StructField("mass", StringType(), True),
+    StructField("checksum", StringType(), True),
+    StructField("modified", StringType(), True),
+    StructField("sequence_version", StringType(), True),
+    StructField("sequence", StringType(), True),
+    StructField("entry_modified", StringType(), True),
+])
 
-schema_names = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("name", StringType(), False),
-        StructField("description", StringType(), True),
-        StructField("source", StringType(), True),
-    ]
-)
+schema_names = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("name", StringType(), False),
+    StructField("description", StringType(), True),
+    StructField("source", StringType(), True),
+])
 
-schema_associations = StructType(
-    [
-        StructField("subject", StringType(), True),
-        StructField("object", StringType(), True),
-        StructField("predicate", StringType(), True),
-        StructField("evidence_type", StringType(), True),
-        StructField("supporting_objects", ArrayType(StringType()), True),
-        StructField("publications", ArrayType(StringType()), True),
-    ]
-)
+schema_associations = StructType([
+    StructField("subject", StringType(), True),
+    StructField("object", StringType(), True),
+    StructField("predicate", StringType(), True),
+    StructField("evidence_type", StringType(), True),
+    StructField("supporting_objects", ArrayType(StringType()), True),
+    StructField("publications", ArrayType(StringType()), True),
+])
 
-schema_cross_references = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("xref_type", StringType(), True),
-        StructField("xref_value", StringType(), True),
-        StructField("xref", StringType(), True),
-    ]
-)
+schema_cross_references = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("xref_type", StringType(), True),
+    StructField("xref_value", StringType(), True),
+    StructField("xref", StringType(), True),
+])
 
-schema_publications = StructType(
-    [
-        StructField("entity_id", StringType(), False),
-        StructField("publication", StringType(), True),
-    ]
-)
+schema_publications = StructType([
+    StructField("entity_id", StringType(), False),
+    StructField("publication", StringType(), True),
+])
 
 
 # ================================ DELTA WRITE =================================
 def ensure_tables_registered(spark: SparkSession, output_dir: str, namespace: str, table_names: list[str]) -> None:
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
     for tbl in table_names:
-        delta_dir = os.path.abspath(os.path.join(output_dir, namespace, tbl))
+        # delta_dir = os.path.abspath(os.path.join(output_dir, namespace, tbl))
+        delta_dir = delta_table_path(output_dir, namespace, tbl)
         spark.sql(
             f"""
             CREATE TABLE IF NOT EXISTS {namespace}.{tbl}
@@ -683,10 +674,13 @@ def save_batches_to_delta(
         if not records:
             continue
 
-        delta_dir = os.path.abspath(os.path.join(output_dir, namespace, table_name))
+        # delta_dir = os.path.abspath(os.path.join(output_dir, namespace, table_name))
+        delta_dir = delta_table_path(output_dir, namespace, table_name)
         df = spark.createDataFrame(records, schema)
         writer = df.write.format("delta").mode(mode)
 
+        if mode == "append":
+            writer = writer.option("mergeSchema", "true")
         if mode == "overwrite":
             writer = writer.option("overwriteSchema", "true")
 
@@ -755,12 +749,10 @@ def parse_entries(
             tables["cross_references"][0].extend(record["cross_references"])
 
             for pub in record["publications"]:
-                tables["publications"][0].append(
-                    {
-                        "entity_id": cdm_id,
-                        "publication": pub,
-                    }
-                )
+                tables["publications"][0].append({
+                    "entity_id": cdm_id,
+                    "publication": pub,
+                })
 
             entry_count += 1
 
@@ -793,8 +785,12 @@ def ingest_uniprot(
     save_datasource_record(xml_url, output_dir)
 
     spark = get_spark_session(namespace)
+    if mode == "append":
+        accession_to_entity_id, entity_id_to_created = load_existing_maps(spark, output_dir, namespace)
+    else:
+        accession_to_entity_id, entity_id_to_created = {}, {}
 
-    accession_to_entity_id, entity_id_to_created = load_existing_maps(spark, output_dir, namespace)
+    # accession_to_entity_id, entity_id_to_created = load_existing_maps(spark, output_dir, namespace)
 
     entities: list[dict] = []
     identifiers: list[dict] = []
