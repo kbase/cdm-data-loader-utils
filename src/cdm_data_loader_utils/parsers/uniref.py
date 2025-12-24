@@ -38,10 +38,8 @@ import gzip
 ### ===== logging setup ===== ###
 import logging
 import os
-import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 from urllib.error import URLError
 from urllib.request import urlretrieve
 
@@ -84,10 +82,10 @@ def generate_dbxref(db: str, acc: str) -> str:
 
 # timestamp helper
 def get_timestamps(
-    uniref_id: Optional[str],
-    existing_created: Dict[str, str],
-    now: Optional[datetime] = None,
-) -> Tuple[str, str]:
+    uniref_id: str | None,
+    existing_created: dict[str, str],
+    now: datetime | None = None,
+) -> tuple[str, str]:
     """
     Return (updated_time, created_time) for a given UniRef cluster ID.
 
@@ -95,7 +93,6 @@ def get_timestamps(
     we keep its original `created` timestamp and only update `updated`.
     Otherwise, both are set to `now`.
     """
-
     uniref_key = uniref_id or ""
 
     now_dt = now or datetime.now()
@@ -130,12 +127,12 @@ def download_file(url: str, local_path: str) -> None:
         logger.info(f"File already exists: {local_path}")
 
 
-def load_existing_created(spark: SparkSession, entity_table: Optional[str]) -> Dict[str, str]:
+def load_existing_created(spark: SparkSession, entity_table: str | None) -> dict[str, str]:
     """
     Load mapping data_source_entity_id -> created timestamp from the Entity Delta table.
     Returns an empty dict if the table does not exist.
     """
-    existing_created: Dict[str, str] = {}
+    existing_created: dict[str, str] = {}
     if not entity_table:
         logger.warning("Entity table path not specified.")
         return existing_created
@@ -151,7 +148,7 @@ def load_existing_created(spark: SparkSession, entity_table: Optional[str]) -> D
 
 
 ##### -------------- List utility function --------------- #####
-def extract_cluster(elem: ET.Element, ns: Dict[str, str], uniref_id: str) -> Tuple[str, str]:
+def extract_cluster(elem: ET.Element, ns: dict[str, str], uniref_id: str) -> tuple[str, str]:
     """Extract a new CDM cluster_id and the UniRef cluster name."""
     # cluster_id = f"CDM:{uuid.uuid4()}"
     # cluster_id = cdm_entity_id(uniref_id, prefix="cdm_ccol_")
@@ -177,13 +174,13 @@ def get_accession_and_seed(dbref: ET.Element | None, ns: dict[str, str]) -> tupl
 
 def add_cluster_members(
     cluster_id: str,
-    repr_db: Optional[ET.Element],
+    repr_db: ET.Element | None,
     elem: ET.Element,
-    cluster_member_rows: List[Tuple[str, str, str, str, str]],
-    ns: Dict[str, str],
+    cluster_member_rows: list[tuple[str, str, str, str, str]],
+    ns: dict[str, str],
 ) -> None:
     """Populate cluster_member_rows with representative + member records."""
-    dbrefs: List[Tuple[ET.Element, bool]] = []
+    dbrefs: list[tuple[ET.Element, bool]] = []
     if repr_db is not None:
         dbrefs.append((repr_db, True))
     for mem in elem.findall("ns:member/ns:dbReference", ns):
@@ -288,17 +285,17 @@ def parse_uniref_entry(
 
 
 ##### -------------- Parse Uniref XML --------------- #####
-def parse_uniref_xml(local_gz: str, batch_size: int, existing_created: Dict[str, str]) -> Dict[str, List[Tuple]]:
+def parse_uniref_xml(local_gz: str, batch_size: int, existing_created: dict[str, str]) -> dict[str, list[tuple]]:
     """
     Stream-parse UniRef XML (gzipped) and extract CDM-like row tuples.
     """
     ns = UNIREF_NS
     entry_count = 0
 
-    cluster_data: List[Tuple] = []
-    entity_data: List[Tuple] = []
-    cluster_member_data: List[Tuple] = []
-    cross_reference_data: List[Tuple] = []
+    cluster_data: list[tuple] = []
+    entity_data: list[tuple] = []
+    cluster_member_data: list[tuple] = []
+    cross_reference_data: list[tuple] = []
 
     with gzip.open(local_gz, "rb") as f:
         context = ET.iterparse(f, events=("end",))

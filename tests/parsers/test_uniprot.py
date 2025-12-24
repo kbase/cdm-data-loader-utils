@@ -22,21 +22,22 @@ How to run in the terminal:
 """
 
 import datetime
-import pytest
 import json
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
+
 from cdm_data_loader_utils.parsers.uniprot import (
-    parse_names,
-    parse_identifiers,
+    build_datasource_record,
     parse_associations,
+    parse_cross_references,
     parse_evidence_map,
+    parse_identifiers,
+    parse_names,
     parse_protein_info,
     save_datasource_record,
-    build_datasource_record,
-    parse_cross_references,
 )
-
 
 NS_URI = "https://uniprot.org/uniprot"
 
@@ -69,7 +70,7 @@ def test_build_datasource_record(xml_url):
 
     parsed = datetime.datetime.fromisoformat(accessed)
     assert parsed.tzinfo is not None
-    assert parsed.tzinfo == datetime.timezone.utc
+    assert parsed.tzinfo == datetime.UTC
 
 
 def test_save_datasource_record(tmp_path: Path, xml_url):
@@ -79,7 +80,6 @@ def test_save_datasource_record(tmp_path: Path, xml_url):
     - write datasource.json
     - return the same content that is written to disk
     """
-
     output_dir = tmp_path / "output"
 
     # ---- call function ----

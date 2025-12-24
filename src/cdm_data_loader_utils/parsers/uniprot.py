@@ -50,7 +50,6 @@ import logging
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional, Tuple
 
 import click
 import requests
@@ -61,7 +60,6 @@ from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
 from cdm_data_loader_utils.parsers.shared_identifiers import parse_identifiers_generic
 from cdm_data_loader_utils.parsers.xml_utils import clean_dict, find_all_text, get_attr, get_text, parse_db_references
-
 
 # ---------------------------------------------------------------------
 #                              Logging
@@ -88,7 +86,7 @@ CDM_UUID_NAMESPACE = uuid.UUID("2d3f6e2a-4d7b-4a8c-9c5a-0e0f7b7d9b3a")
 # ---------------------------------------------------------------------
 # CURIE prefixes
 # ---------------------------------------------------------------------
-PREFIX_TRANSLATION: Dict[str, str] = {
+PREFIX_TRANSLATION: dict[str, str] = {
     "UniProtKB": "UniProt",
     "UniProtKB/Swiss-Prot": "UniProt",
     "UniProtKB/TrEMBL": "UniProt",
@@ -112,7 +110,7 @@ def build_datasource_record(xml_url: str) -> dict:
         "name": "UniProt import",
         "source": "UniProt",
         "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
         "version": 115,
     }
 
@@ -221,14 +219,14 @@ def load_existing_maps(
     spark: SparkSession,
     output_dir: str,
     namespace: str,
-) -> Tuple[Dict[str, str], Dict[str, str]]:
+) -> tuple[dict[str, str], dict[str, str]]:
     """
     Returns:
       accession_to_entity_id: accession -> entity_id  (from identifiers)
       entity_id_to_created:   entity_id -> created    (from entities)
     """
-    accession_to_entity_id: Dict[str, str] = {}
-    entity_id_to_created: Dict[str, str] = {}
+    accession_to_entity_id: dict[str, str] = {}
+    entity_id_to_created: dict[str, str] = {}
 
     id_path = os.path.join(output_dir, namespace, "identifiers")
     ent_path = os.path.join(output_dir, namespace, "entities")
@@ -275,7 +273,7 @@ def load_existing_maps(
 
 
 # ================================ PARSERS =================================
-def parse_identifiers(entry, cdm_id: str) -> List[dict]:
+def parse_identifiers(entry, cdm_id: str) -> list[dict]:
     out = parse_identifiers_generic(entry=entry, xpath="ns:accession", prefix="UniProt", ns=NS)
     for row in out:
         row["entity_id"] = cdm_id
@@ -293,8 +291,8 @@ def _make_name_record(cdm_id: str, name_text: str, description: str) -> dict:
     }
 
 
-def parse_names(entry, cdm_id: str) -> List[dict]:
-    names: List[dict] = []
+def parse_names(entry, cdm_id: str) -> list[dict]:
+    names: list[dict] = []
 
     for txt in find_all_text(entry, "ns:name", NS):
         names.append(_make_name_record(cdm_id, txt, "UniProt entry name"))
@@ -323,13 +321,13 @@ def parse_names(entry, cdm_id: str) -> List[dict]:
     return names
 
 
-def parse_protein_info(entry, cdm_id: str) -> Optional[dict]:
+def parse_protein_info(entry, cdm_id: str) -> dict | None:
     protein_info: dict = {}
 
     protein = entry.find("ns:protein", NS)
     if protein is not None:
         ec_paths = ["ns:recommendedName/ns:ecNumber", "ns:alternativeName/ns:ecNumber"]
-        ec_numbers: List[str] = []
+        ec_numbers: list[str] = []
         for path in ec_paths:
             ec_numbers.extend(find_all_text(protein, path, NS))
         if ec_numbers:
@@ -360,8 +358,8 @@ def parse_protein_info(entry, cdm_id: str) -> Optional[dict]:
     return protein_info if protein_info else None
 
 
-def parse_evidence_map(entry) -> Dict[str, dict]:
-    evidence_map: Dict[str, dict] = {}
+def parse_evidence_map(entry) -> dict[str, dict]:
+    evidence_map: dict[str, dict] = {}
 
     for ev in entry.findall("ns:evidence", NS):
         key = get_attr(ev, "key")
@@ -400,9 +398,9 @@ def parse_evidence_map(entry) -> Dict[str, dict]:
 def _make_association(
     cdm_id: str,
     obj: str,
-    predicate: Optional[str] = None,
-    evidence_key: Optional[str] = None,
-    evidence_map: Optional[dict] = None,
+    predicate: str | None = None,
+    evidence_key: str | None = None,
+    evidence_map: dict | None = None,
 ) -> dict:
     assoc = {
         "subject": cdm_id,
@@ -417,8 +415,8 @@ def _make_association(
     return clean_dict(assoc)
 
 
-def parse_reaction_association(reaction, cdm_id: str, evidence_map: Dict[str, dict]) -> List[dict]:
-    associations: List[dict] = []
+def parse_reaction_association(reaction, cdm_id: str, evidence_map: dict[str, dict]) -> list[dict]:
+    associations: list[dict] = []
     for dbref in reaction.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
@@ -440,8 +438,8 @@ def parse_reaction_association(reaction, cdm_id: str, evidence_map: Dict[str, di
     return associations
 
 
-def parse_cofactor_association(cofactor, cdm_id: str) -> List[dict]:
-    associations: List[dict] = []
+def parse_cofactor_association(cofactor, cdm_id: str) -> list[dict]:
+    associations: list[dict] = []
     for dbref in cofactor.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
         db_id = dbref.get("id")
@@ -460,14 +458,13 @@ def parse_cofactor_association(cofactor, cdm_id: str) -> List[dict]:
     return associations
 
 
-def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> List[dict]:
+def parse_associations(entry, cdm_id: str, evidence_map: dict[str, dict]) -> list[dict]:
     """
     Only keep:
       - taxonomy association
       - catalytic activity / cofactor associations
     """
-
-    associations: List[dict] = []
+    associations: list[dict] = []
 
     # Taxonomy association
     organism = entry.find("ns:organism", NS)
@@ -491,9 +488,9 @@ def parse_associations(entry, cdm_id: str, evidence_map: Dict[str, dict]) -> Lis
     return associations
 
 
-def parse_cross_references(entry, cdm_id: str) -> List[dict]:
+def parse_cross_references(entry, cdm_id: str) -> list[dict]:
     """Generic <dbReference> -> cross_references table."""
-    rows: List[dict] = []
+    rows: list[dict] = []
 
     for dbref in entry.findall("ns:dbReference", NS):
         db_type = dbref.get("type")
@@ -520,8 +517,8 @@ def parse_cross_references(entry, cdm_id: str) -> List[dict]:
     return rows
 
 
-def parse_publications(entry) -> List[str]:
-    publications: List[str] = []
+def parse_publications(entry) -> list[str]:
+    publications: list[str] = []
     for reference in entry.findall("ns:reference", NS):
         citation = reference.find("ns:citation", NS)
         if citation is None:
@@ -545,7 +542,7 @@ def parse_uniprot_entry(
     cdm_id: str,
     current_timestamp: str,
     datasource_name: str = "UniProt import",
-    prev_created: Optional[str] = None,
+    prev_created: str | None = None,
 ) -> dict:
     entity_created = prev_created or current_timestamp
     entity_updated = current_timestamp
@@ -640,7 +637,7 @@ schema_publications = StructType([
 
 
 # ================================ DELTA WRITE =================================
-def ensure_tables_registered(spark: SparkSession, output_dir: str, namespace: str, table_names: List[str]) -> None:
+def ensure_tables_registered(spark: SparkSession, output_dir: str, namespace: str, table_names: list[str]) -> None:
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {namespace}")
     for tbl in table_names:
         delta_dir = os.path.abspath(os.path.join(output_dir, namespace, tbl))
@@ -655,7 +652,7 @@ def ensure_tables_registered(spark: SparkSession, output_dir: str, namespace: st
 
 def save_batches_to_delta(
     spark: SparkSession,
-    tables: Dict[str, Tuple[list, StructType]],
+    tables: dict[str, tuple[list, StructType]],
     output_dir: str,
     namespace: str,
     mode: str = "append",
@@ -677,17 +674,17 @@ def save_batches_to_delta(
 ## =============================== MAIN PARSING LOOP =================================
 def parse_entries(
     local_xml_path: str,
-    target_date: Optional[str],
+    target_date: str | None,
     batch_size: int,
     spark: SparkSession,
-    tables: Dict[str, Tuple[list, StructType]],
+    tables: dict[str, tuple[list, StructType]],
     output_dir: str,
     namespace: str,
     current_timestamp: str,
-    accession_to_entity_id: Dict[str, str],
-    entity_id_to_created: Dict[str, str],
+    accession_to_entity_id: dict[str, str],
+    entity_id_to_created: dict[str, str],
     mode: str,
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     target_date_dt = None
     if target_date:
         try:
@@ -761,12 +758,12 @@ def ingest_uniprot(
     xml_url: str,
     output_dir: str,
     namespace: str,
-    target_date: Optional[str] = None,
+    target_date: str | None = None,
     batch_size: int = 5000,
     mode: str = "append",
     overwrite_download: bool = False,
 ) -> None:
-    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    current_timestamp = datetime.datetime.now(datetime.UTC).isoformat()
 
     local_xml_path = prepare_local_xml(xml_url, output_dir, overwrite=overwrite_download)
     save_datasource_record(xml_url, output_dir)
@@ -783,7 +780,7 @@ def ingest_uniprot(
     cross_references: list[dict] = []
     publications: list[dict] = []
 
-    tables: Dict[str, Tuple[list, StructType]] = {
+    tables: dict[str, tuple[list, StructType]] = {
         "entities": (entities, schema_entities),
         "identifiers": (identifiers, schema_identifiers),
         "names": (names, schema_names),

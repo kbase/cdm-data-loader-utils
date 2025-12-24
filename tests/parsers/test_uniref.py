@@ -3,26 +3,26 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-import pytest
-import textwrap
-from datetime import datetime
-import xml.etree.ElementTree as ET
-import tempfile
 import gzip
+import tempfile
+import textwrap
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from types import SimpleNamespace
 
+import pytest
+
 from cdm_data_loader_utils.parsers.uniref import (
-    load_existing_created,
-    extract_cluster,
-    cdm_entity_id,
-    get_timestamps,
-    get_accession_and_seed,
     add_cluster_members,
+    cdm_entity_id,
+    extract_cluster,
     extract_cross_refs,
+    get_accession_and_seed,
+    get_timestamps,
+    load_existing_created,
     parse_uniref_entry,
     parse_uniref_xml,
 )
-
 
 NS = {"ns": "http://uniprot.org/uniref"}
 
@@ -231,7 +231,7 @@ def test_get_accession_and_seed(xml_str, expected_acc, expected_is_seed):
 
 def make_entry_with_members(member_xmls, ns_uri="http://uniprot.org/uniref"):
     """
-    receives a list of xml strings from dbReference,
+    Receives a list of xml strings from dbReference,
     generates an <entry> element with <member> child nodes
     """
     entry_elem = ET.Element(f"{{{ns_uri}}}entry")
@@ -301,7 +301,6 @@ def make_entry_with_members(member_xmls, ns_uri="http://uniprot.org/uniref"):
 )
 def test_add_cluster_members(repr_xml, member_xmls, expected):
     """Test add_cluster_members with various representative/member combinations"""
-
     ns = {"ns": "http://uniprot.org/uniref"}
     cluster_id = "CLUSTER_X"
 
