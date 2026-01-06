@@ -16,9 +16,7 @@ Coverage:
     - parse_uniprot_entry: Full record parsing, all fields together
 
 How to run in the terminal:
-    PYTHONPATH=src pytest tests/test_uniprot.py
-    pytest tests/parsers/test_uniprot.py
-    PYTHONPATH=. pytest test_uniprot.py
+   pytest tests/uniprot_refactor/test_uniprot_parsers.py
 
 """
 
