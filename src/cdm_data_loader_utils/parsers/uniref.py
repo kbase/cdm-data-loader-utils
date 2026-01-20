@@ -231,13 +231,15 @@ def add_cluster_members(
         if not member_entity_id:
             continue
 
-        cluster_member_rows.append((
-            cluster_id,
-            member_entity_id,
-            str(is_representative).lower(),
-            str(is_seed).lower(),
-            "1.0",  # score placeholder
-        ))
+        cluster_member_rows.append(
+            (
+                cluster_id,
+                member_entity_id,
+                str(is_representative).lower(),
+                str(is_seed).lower(),
+                "1.0",  # score placeholder
+            )
+        )
 
 
 def extract_cross_refs(dbref, cross_reference_data, ns) -> None:
@@ -268,23 +270,27 @@ def parse_uniref_entry(
     updated_time, created_time = get_timestamps(uniref_id, existing_created)
 
     # Cluster table
-    cluster_rows.append((
-        cluster_id,
-        name,
-        "protein",
-        None,
-        DATA_SOURCE,
-    ))
+    cluster_rows.append(
+        (
+            cluster_id,
+            name,
+            "protein",
+            None,
+            DATA_SOURCE,
+        )
+    )
 
     # Entity table
-    entity_rows.append((
-        cluster_id,
-        uniref_id,
-        "Cluster",
-        DATA_SOURCE,
-        updated_time,
-        created_time,
-    ))
+    entity_rows.append(
+        (
+            cluster_id,
+            uniref_id,
+            "Cluster",
+            DATA_SOURCE,
+            updated_time,
+            created_time,
+        )
+    )
 
     # Cross references from representative and members
     repr_db = elem.find("ns:representativeMember/ns:dbReference", ns)
@@ -347,27 +353,31 @@ def parse_uniref_xml(local_gz: str, batch_size: int, existing_created: dict[str,
 ##### -------------- Save delta table and print the preview --------------- #####
 def save_delta_tables(spark, output_dir, data_dict):
     # Cluster
-    cluster_schema = StructType([
-        StructField("cluster_id", StringType(), False),
-        StructField("name", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("description", StringType(), True),
-        StructField("protocol_id", StringType(), False),
-    ])
+    cluster_schema = StructType(
+        [
+            StructField("cluster_id", StringType(), False),
+            StructField("name", StringType(), False),
+            StructField("entity_type", StringType(), False),
+            StructField("description", StringType(), True),
+            StructField("protocol_id", StringType(), False),
+        ]
+    )
 
     cluster_df = spark.createDataFrame(data_dict["cluster_data"], cluster_schema)
     cluster_df.write.format("delta").mode("overwrite").save(os.path.join(output_dir, "Cluster"))
     logger.info(f"Cluster Delta table written to: {os.path.join(output_dir, 'Cluster')}")
 
     # Entity
-    entity_schema = StructType([
-        StructField("entity_id", StringType(), False),
-        StructField("data_source_entity_id", StringType(), False),
-        StructField("entity_type", StringType(), False),
-        StructField("data_source", StringType(), False),
-        StructField("updated", StringType(), False),
-        StructField("created", StringType(), False),
-    ])
+    entity_schema = StructType(
+        [
+            StructField("entity_id", StringType(), False),
+            StructField("data_source_entity_id", StringType(), False),
+            StructField("entity_type", StringType(), False),
+            StructField("data_source", StringType(), False),
+            StructField("updated", StringType(), False),
+            StructField("created", StringType(), False),
+        ]
+    )
 
     entity_df = spark.createDataFrame(data_dict["entity_data"], entity_schema)
     entity_table_path = os.path.join(output_dir, "Entity")
@@ -375,13 +385,15 @@ def save_delta_tables(spark, output_dir, data_dict):
     logger.info(f"Entity Delta table written to: {entity_table_path}")
 
     # ClusterMember
-    cluster_member_schema = StructType([
-        StructField("cluster_id", StringType(), False),
-        StructField("entity_id", StringType(), False),
-        StructField("is_representative", StringType(), False),
-        StructField("is_seed", StringType(), False),
-        StructField("score", StringType(), False),
-    ])
+    cluster_member_schema = StructType(
+        [
+            StructField("cluster_id", StringType(), False),
+            StructField("entity_id", StringType(), False),
+            StructField("is_representative", StringType(), False),
+            StructField("is_seed", StringType(), False),
+            StructField("score", StringType(), False),
+        ]
+    )
 
     cluster_member_df = spark.createDataFrame(data_dict["cluster_member_data"], cluster_member_schema)
     cluster_member_path = os.path.join(output_dir, "ClusterMember")
@@ -389,11 +401,13 @@ def save_delta_tables(spark, output_dir, data_dict):
     logger.info(f"ClusterMember Delta table written to: {cluster_member_path}")
 
     # CrossReference
-    cross_reference_schema = StructType([
-        StructField("entity_id", StringType(), False),
-        StructField("xref_type", StringType(), False),
-        StructField("xref_value", StringType(), False),
-    ])
+    cross_reference_schema = StructType(
+        [
+            StructField("entity_id", StringType(), False),
+            StructField("xref_type", StringType(), False),
+            StructField("xref_value", StringType(), False),
+        ]
+    )
 
     cross_reference_df = spark.createDataFrame(data_dict["cross_reference_data"], cross_reference_schema)
     cross_reference_path = os.path.join(output_dir, "CrossReference")
