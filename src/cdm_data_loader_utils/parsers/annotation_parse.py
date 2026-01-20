@@ -1,6 +1,9 @@
 """
-Usage: 
-python scripts/annotation_parse.py \
+
+RefSeq annotation parser for transforming NCBI Datasets API JSON into CDM-formatted Delta Lake tables.
+
+Usage:
+    python src/cdm_data_loader_utils/parsers/annotation_parse.py \
   --accession GCF_000869125.1 \
   --output-path output/refseq/GCF_000869125.1 \
   --query
@@ -8,11 +11,10 @@ python scripts/annotation_parse.py \
 """
 
 from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Optional
 
 import requests
 from pyspark.sql import SparkSession
@@ -26,6 +28,7 @@ from cdm_data_loader_utils.parsers.kbase_cdm_pyspark import schema as cdm_schema
 # Accession-based annotation fetch
 # ---------------------------------------------------------------------
 def fetch_annotation_json(accession: str) -> dict:
+    """Fetch annotation JSON from NCBI Datasets API."""
     url = f"https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession/{accession}/annotation_report"
     resp = requests.get(url, headers={"Accept": "application/json"}, timeout=60)
     resp.raise_for_status()
@@ -36,13 +39,11 @@ def fetch_annotation_json(accession: str) -> dict:
 # SPARK SESSION
 # ---------------------------------------------------------------------
 def build_spark_session(app_name: str = "RefSeqAnnotationToCDM") -> SparkSession:
+    """Configure and return Spark session with Delta support."""
     builder = (
         SparkSession.builder.appName(app_name)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
     )
     return configure_spark_with_delta_pip(builder).getOrCreate()
 
@@ -65,72 +66,64 @@ CONTIG_X_CONTIG_COLLECTION_SCHEMA = cdm_schemas["Contig_x_ContigCollection"]
 # CDM PREFIX NORMALIZATION
 # ---------------------------------------------------------------------
 def apply_prefix(identifier: str) -> str:
-    """
-    Normalize identifiers to CDM-style prefixed IDs.
-    """
-
-    # Normalize GeneID
+    """Normalize identifiers to CDM-prefixed formats."""
     if identifier.startswith("GeneID:"):
         return identifier.replace("GeneID:", "ncbigene:")
-
-    # Normalize RefSeq protein accessions
     if identifier.startswith(("YP_", "XP_", "WP_", "NP_", "NC_")):
         return f"refseq:{identifier}"
-
-    # Normalize RefSeq assembly or contig collection IDs
     if identifier.startswith("GCF_"):
         return f"insdc.gcf:{identifier}"
-
     return identifier
+
+
+# ---------------------------------------------------------------------
+# Safe integer conversion
+# ---------------------------------------------------------------------
+def to_int(val: str) -> int | None:
+    try:
+        return int(val)
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------
 # IDENTIFIERS
 # ---------------------------------------------------------------------
-def load_identifiers(
-    input_json: Path,
-) -> List[Tuple[str, str, str, str, Optional[str]]]:
+def load_identifiers(input_json: Path) -> list[tuple[str, str, str, str, str | None]]:
+    """Extract Identifier table records."""
     data = json.loads(input_json.read_text())
     out = []
-
     for report in data.get("reports", []):
         ann = report.get("annotation", {})
         gene_id = ann.get("gene_id")
-        name = ann.get("name")  # used as description
-
         if not gene_id:
             continue
-
         entity_id = apply_prefix(f"GeneID:{gene_id}")
-        relationship = ann.get("relationship", None)  # may be None
-
-        out.append((entity_id, gene_id, name, "RefSeq", relationship))
-
+        out.append((entity_id, gene_id, ann.get("name"), "RefSeq", ann.get("relationship")))
     return out
 
 
 # ---------------------------------------------------------------------
 # NAME EXTRACTION
 # ---------------------------------------------------------------------
-def load_names(input_json: Path) -> list[tuple]:
+def load_names(input_json: Path) -> list[tuple[str, str, str, str]]:
+    """Extract Name table records."""
     data = json.loads(input_json.read_text())
     out = []
-
     for report in data.get("reports", []):
         ann = report.get("annotation", {})
         gene_id = ann.get("gene_id")
-
         if not gene_id:
             continue
-
         entity_id = apply_prefix(f"GeneID:{gene_id}")
-        if ann.get("symbol"):
-            out.append((entity_id, ann["symbol"], "RefSeq gene symbol", "RefSeq"))
-        if ann.get("name"):
-            out.append((entity_id, ann["name"], "RefSeq gene name", "RefSeq"))
-        if ann.get("locus_tag"):
-            out.append((entity_id, ann["locus_tag"], "RefSeq locus tag", "RefSeq"))
-
+        for label, desc in [
+            ("symbol", "RefSeq gene symbol"),
+            ("name", "RefSeq gene name"),
+            ("locus_tag", "RefSeq locus tag"),
+        ]:
+            val = ann.get(label)
+            if val:
+                out.append((entity_id, val, desc, "RefSeq"))
     return out
 
 
@@ -138,24 +131,15 @@ def load_names(input_json: Path) -> list[tuple]:
 # FEATURE LOCATIONS
 # ---------------------------------------------------------------------
 def load_feature_records(input_json: Path) -> list[tuple]:
-    def to_int(val):  # for safe int conversion
-        try:
-            return int(val)
-        except Exception:
-            return None
-
+    """Extract Feature table records."""
     data = json.loads(input_json.read_text())
     features = []
-
     for report in data.get("reports", []):
         ann = report.get("annotation", {})
         gene_id = ann.get("gene_id")
-
         if not gene_id:
             continue
-
         feature_id = apply_prefix(f"GeneID:{gene_id}")
-
         for region in ann.get("genomic_regions", []):
             for r in region.get("gene_range", {}).get("range", []):
                 strand = {
@@ -163,30 +147,27 @@ def load_feature_records(input_json: Path) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-
-                features.append(
-                    (
-                        feature_id,
-                        None,
-                        None,
-                        None,
-                        to_int(r.get("end")),
-                        None,
-                        to_int(r.get("begin")),
-                        strand,
-                        "RefSeq",
-                        None,
-                        "gene",
-                    )
-                )
-
+                features.append((
+                    feature_id,
+                    None,
+                    None,
+                    None,
+                    to_int(r.get("end")),
+                    None,
+                    to_int(r.get("begin")),
+                    strand,
+                    "RefSeq",
+                    None,
+                    "gene",
+                ))
     return features
 
 
 # ---------------------------------------------------------------------
 # PARSE CONTIG_COLLECTION <-> FEATURE
 # ---------------------------------------------------------------------
-def load_contig_collection_x_feature(input_json: Path) -> List[Tuple[str, str]]:
+def load_contig_collection_x_feature(input_json: Path) -> list[tuple[str, str]]:
+    """Parse ContigCollection ↔ Feature links."""
     data = json.loads(input_json.read_text())
     links = []
 
@@ -208,7 +189,7 @@ def load_contig_collection_x_feature(input_json: Path) -> List[Tuple[str, str]]:
 # ---------------------------------------------------------------------
 # PARSE CONTIG_COLLECTION <-> PROTEIN
 # ---------------------------------------------------------------------
-def load_contig_collection_x_protein(input_json: Path) -> list[tuple]:
+def load_contig_collection_x_protein(input_json: Path) -> list[tuple[str, str]]:
     data = json.loads(input_json.read_text())
     links = []
 
@@ -239,7 +220,7 @@ def load_contig_collection_x_protein(input_json: Path) -> list[tuple]:
 # ---------------------------------------------------------------------
 # PARSE FEATURE <-> PROTEIN
 # ---------------------------------------------------------------------
-def load_feature_x_protein(input_json: Path) -> List[Tuple[str, str]]:
+def load_feature_x_protein(input_json: Path) -> list[tuple[str, str]]:
     data = json.loads(input_json.read_text())
     links = []
 
@@ -265,49 +246,25 @@ def load_feature_x_protein(input_json: Path) -> List[Tuple[str, str]]:
 # ---------------------------------------------------------------------
 # PARSE CONTIGS
 # ---------------------------------------------------------------------
-def load_contigs(
-    input_json: Path,
-) -> List[Tuple[str, Optional[str], Optional[float], Optional[int]]]:
+def load_contigs(input_json: Path) -> list[tuple[str, str | None, float | None, int | None]]:
+    """Parse Contig table."""
     data = json.loads(input_json.read_text())
-
-    contigs: dict[str, dict[str, Optional[object]]] = {}
+    contigs = {}
 
     for report in data.get("reports", []):
-        annotation = report.get("annotation", {})
+        for region in report.get("annotation", {}).get("genomic_regions", []):
+            acc = region.get("gene_range", {}).get("accession_version")
+            if acc:
+                contig_id = apply_prefix(acc)
+                contigs.setdefault(contig_id, {"hash": None, "gc_content": None, "length": None})
 
-        for region in annotation.get("genomic_regions", []):
-            accession = region.get("gene_range", {}).get("accession_version")
-            if not accession:
-                continue
-
-            contig_id = apply_prefix(accession)
-
-            if contig_id not in contigs:
-                contigs[contig_id] = {
-                    "hash": None,
-                    "gc_content": None,
-                    "length": None,
-                }
-
-    rows: List[Tuple[str, Optional[str], Optional[float], Optional[int]]] = []
-
-    for contig_id, meta in contigs.items():
-        rows.append(
-            (
-                contig_id,
-                meta["hash"],
-                meta["gc_content"],
-                meta["length"],
-            )
-        )
-
-    return rows
+    return [(cid, meta["hash"], meta["gc_content"], meta["length"]) for cid, meta in contigs.items()]
 
 
 # ---------------------------------------------------------------------
 # PARSE CONTIG <-> CONTIG_COLLECTION
 # ---------------------------------------------------------------------
-def load_contig_x_contig_collection(input_json: Path) -> list[tuple]:
+def load_contig_x_contig_collection(input_json: Path) -> list[tuple[str, str]]:
     data = json.loads(input_json.read_text())
     links = []
 
@@ -338,20 +295,20 @@ def write_to_delta(
     records: list[tuple],
     output_path: str,
     schema: StructType,
-):
+) -> None:
+    """Write records to Delta table."""
     if not records:
-        return None
+        return
 
     df = spark.createDataFrame(records, schema=schema)
     df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(output_path)
-
-    return df
 
 
 # ---------------------------------------------------------------------
 # SQL PREVIEW
 # ---------------------------------------------------------------------
-def run_sql_query(spark: SparkSession, delta_path: str):
+def run_sql_query(spark: SparkSession, delta_path: str) -> None:
+    """Run SQL queries to preview Delta tables."""
     for name in [
         "cdm_identifiers",
         "cdm_names",
@@ -371,36 +328,26 @@ def run_sql_query(spark: SparkSession, delta_path: str):
 # ---------------------------------------------------------------------
 # CLI ENTRY
 # ---------------------------------------------------------------------
-def main():
+def main() -> None:
+    """Entry point for RefSeq Annotation parser."""
     parser = argparse.ArgumentParser(description="RefSeq Annotation Parser to CDM")
     parser.add_argument("--accession", required=True)
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--query", action="store_true")
-
     args = parser.parse_args()
 
     base_output = Path(args.output_path)
     base_output.mkdir(parents=True, exist_ok=True)
-    data = fetch_annotation_json(args.accession)
 
+    data = fetch_annotation_json(args.accession)
     input_path = Path(f"/tmp/{args.accession}.json")
     input_path.write_text(json.dumps(data, indent=2))
 
     spark = build_spark_session()
 
-    write_to_delta(
-        spark,
-        load_identifiers(input_path),
-        str(base_output / "cdm_identifiers"),
-        IDENTIFIER_SCHEMA,
-    )
+    write_to_delta(spark, load_identifiers(input_path), str(base_output / "cdm_identifiers"), IDENTIFIER_SCHEMA)
     write_to_delta(spark, load_names(input_path), str(base_output / "cdm_names"), NAME_SCHEMA)
-    write_to_delta(
-        spark,
-        load_feature_records(input_path),
-        str(base_output / "cdm_features"),
-        FEATURE_SCHEMA,
-    )
+    write_to_delta(spark, load_feature_records(input_path), str(base_output / "cdm_features"), FEATURE_SCHEMA)
     write_to_delta(
         spark,
         load_contig_collection_x_feature(input_path),
@@ -419,14 +366,7 @@ def main():
         str(base_output / "cdm_feature_x_protein"),
         FEATURE_X_PROTEIN_SCHEMA,
     )
-
-    write_to_delta(
-        spark,
-        load_contigs(input_path),
-        str(base_output / "cdm_contigs"),
-        CONTIG_SCHEMA,
-    )
-
+    write_to_delta(spark, load_contigs(input_path), str(base_output / "cdm_contigs"), CONTIG_SCHEMA)
     write_to_delta(
         spark,
         load_contig_x_contig_collection(input_path),
