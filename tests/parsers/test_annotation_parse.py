@@ -108,11 +108,7 @@ def test_load_identifiers(tmp_path, input_data, expected_output):
         ),
         # Case 2: only gene_name present
         (
-            {
-                "reports": [
-                    {"annotation": {"gene_id": "5678", "name": "Hypothetical protein"}}
-                ]
-            },
+            {"reports": [{"annotation": {"gene_id": "5678", "name": "Hypothetical protein"}}]},
             [
                 (
                     "ncbigene:5678",
@@ -263,9 +259,7 @@ def test_load_names(tmp_path, input_data, expected_output):
                     {
                         "annotation": {
                             "gene_id": "9999",
-                            "genomic_regions": [
-                                {"gene_range": {"range": [{"begin": "1", "end": "2"}]}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"range": [{"begin": "1", "end": "2"}]}}],
                         }
                     }
                 ]
@@ -371,9 +365,7 @@ def test_load_feature_records(tmp_path, input_data, expected_output):
                     {
                         "annotation": {
                             "gene_id": "12345",
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000001.11"}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}],
                         }
                     }
                 ]
@@ -382,17 +374,7 @@ def test_load_feature_records(tmp_path, input_data, expected_output):
         ),
         # Case 2: no gene_id
         (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000002.11"}}
-                            ]
-                        }
-                    }
-                ]
-            },
+            {"reports": [{"annotation": {"genomic_regions": [{"gene_range": {"accession_version": "NC_000002.11"}}]}}]},
             [],
         ),
         # Case 3: no genomic_regions
@@ -468,11 +450,7 @@ def test_load_contig_collection_x_feature(tmp_path, input_data, expected_output)
         ),
         # Case 3: No annotations
         (
-            {
-                "reports": [
-                    {"annotation": {"proteins": [{"accession_version": "XP_789"}]}}
-                ]
-            },
+            {"reports": [{"annotation": {"proteins": [{"accession_version": "XP_789"}]}}]},
             [],
         ),
         # Case 4: Missing assembly_accession
@@ -545,11 +523,7 @@ def test_load_contig_collection_x_protein(tmp_path, input_data, expected_output)
         ),
         # Case 2: no gene_id
         (
-            {
-                "reports": [
-                    {"annotation": {"proteins": [{"accession_version": "XP_999"}]}}
-                ]
-            },
+            {"reports": [{"annotation": {"proteins": [{"accession_version": "XP_999"}]}}]},
             [],
         ),
         # Case 3: gene with no proteins
@@ -599,9 +573,7 @@ def test_load_feature_x_protein(tmp_path, input_data, expected_output):
                 "reports": [
                     {
                         "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000001.11"}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}],
                             "annotations": [{"assembly_accession": "GCF_000001.1"}],
                         }
                     }
@@ -611,30 +583,12 @@ def test_load_feature_x_protein(tmp_path, input_data, expected_output):
         ),
         # Case 2: Missing genomic_regions
         (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "annotations": [{"assembly_accession": "GCF_000002.1"}]
-                        }
-                    }
-                ]
-            },
+            {"reports": [{"annotation": {"annotations": [{"assembly_accession": "GCF_000002.1"}]}}]},
             [],
         ),
         # Case 3: Missing annotations
         (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000003.11"}}
-                            ]
-                        }
-                    }
-                ]
-            },
+            {"reports": [{"annotation": {"genomic_regions": [{"gene_range": {"accession_version": "NC_000003.11"}}]}}]},
             [],
         ),
         # Case 4: Missing accession_version in region
@@ -657,9 +611,7 @@ def test_load_feature_x_protein(tmp_path, input_data, expected_output):
                 "reports": [
                     {
                         "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000005.11"}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000005.11"}}],
                             "annotations": [{}],
                         }
                     }
@@ -673,17 +625,13 @@ def test_load_feature_x_protein(tmp_path, input_data, expected_output):
                 "reports": [
                     {
                         "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000006.11"}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000006.11"}}],
                             "annotations": [{"assembly_accession": "GCF_000006.1"}],
                         }
                     },
                     {
                         "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000007.11"}}
-                            ],
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000007.11"}}],
                             "annotations": [{}],
                         }
                     },
@@ -706,17 +654,7 @@ def test_load_contig_x_contig_collection(tmp_path, input_data, expected_output):
     [
         # Case 1: Valid contig with accession_version
         (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "genomic_regions": [
-                                {"gene_range": {"accession_version": "NC_000001.11"}}
-                            ]
-                        }
-                    }
-                ]
-            },
+            {"reports": [{"annotation": {"genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}]}}]},
             [("refseq:NC_000001.11", None, None, None)],
         ),
         # Case 2: Multiple contigs, different accession_versions
