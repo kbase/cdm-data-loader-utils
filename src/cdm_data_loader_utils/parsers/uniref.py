@@ -41,18 +41,17 @@ import logging
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
 from urllib.error import URLError
-from datetime import timezone
 from urllib.request import urlretrieve
+
 import click
 from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StringType, StructField, StructType
-from pathlib import Path
 
 from cdm_data_loader_utils.parsers.xml_utils import get_text, parse_properties
-
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +101,7 @@ def get_timestamps(
     if not uniref_id:
         raise ValueError("get_timestamps: uniref_id must be a non-empty string")
 
-    now_dt = now or datetime.now(timezone.utc)
+    now_dt = now or datetime.now(UTC)
     updated_time = now_dt.isoformat(timespec="seconds")
 
     created_time = existing_created.get(uniref_id) or updated_time
@@ -187,7 +186,6 @@ def get_accession_and_seed(dbref: ET.Element | None, ns: dict[str, str]) -> tupl
     """
     Extract UniProtKB accession and is_seed status from a dbReference element.
     """
-
     if dbref is None:
         return None, False
 

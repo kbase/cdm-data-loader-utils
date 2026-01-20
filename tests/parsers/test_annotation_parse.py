@@ -1,15 +1,16 @@
-import pytest
 import json
 
+import pytest
+
 from cdm_data_loader_utils.parsers.annotation_parse import (
-    load_identifiers,
-    load_names,
-    load_feature_records,
     load_contig_collection_x_feature,
     load_contig_collection_x_protein,
-    load_feature_x_protein,
     load_contig_x_contig_collection,
     load_contigs,
+    load_feature_records,
+    load_feature_x_protein,
+    load_identifiers,
+    load_names,
 )
 
 

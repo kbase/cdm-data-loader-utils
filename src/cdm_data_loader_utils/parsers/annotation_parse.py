@@ -147,19 +147,21 @@ def load_feature_records(input_json: Path) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-                features.append((
-                    feature_id,
-                    None,
-                    None,
-                    None,
-                    to_int(r.get("end")),
-                    None,
-                    to_int(r.get("begin")),
-                    strand,
-                    "RefSeq",
-                    None,
-                    "gene",
-                ))
+                features.append(
+                    (
+                        feature_id,
+                        None,
+                        None,
+                        None,
+                        to_int(r.get("end")),
+                        None,
+                        to_int(r.get("begin")),
+                        strand,
+                        "RefSeq",
+                        None,
+                        "gene",
+                    )
+                )
     return features
 
 
