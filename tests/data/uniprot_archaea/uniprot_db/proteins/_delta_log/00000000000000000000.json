@@ -1,3 +1,0 @@
-{"commitInfo":{"timestamp":1766549213854,"operation":"CREATE TABLE","operationParameters":{"partitionBy":"[]","clusterBy":"[]","description":null,"isManaged":"false","properties":"{}"},"isolationLevel":"Serializable","isBlindAppend":true,"operationMetrics":{},"engineInfo":"Apache-Spark/4.0.1 Delta-Lake/4.0.0","txnId":"f388a99f-68e0-4d03-bb65-73143a71106f"}}
-{"metaData":{"id":"cf52e24b-c8bf-4037-bc85-ecc2167e63b8","format":{"provider":"parquet","options":{}},"schemaString":"{\"type\":\"struct\",\"fields\":[]}","partitionColumns":[],"configuration":{},"createdTime":1766549213818}}
-{"protocol":{"minReaderVersion":1,"minWriterVersion":2}}
