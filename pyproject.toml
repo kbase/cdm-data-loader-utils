@@ -156,7 +156,7 @@ convention = "google"
 requires = ["uv_build>=0.9.9,<0.10.0"]
 build-backend = "uv_build"
 
-[tool.pytest]
+[tool.pytest.ini_options]
 pythonpath = ["src"]
 log_cli = true
 log_cli_level = "INFO"

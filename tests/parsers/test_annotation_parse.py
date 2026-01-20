@@ -1,7 +1,7 @@
 import pytest
 import json
 
-from annotation_parse import (
+from cdm_data_loader_utils.parsers.annotation_parse import (
     load_identifiers,
     load_names,
     load_feature_records,
