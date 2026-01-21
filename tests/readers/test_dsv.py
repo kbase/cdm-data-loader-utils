@@ -59,6 +59,7 @@ def test_read_errors(spark: SparkSession, delimiter: str | None, fmt: str, caplo
     assert caplog.records[0].levelno == logging.ERROR
     assert caplog.records[0].message == f"Failed to load {fmt} from /path/to/nowhere"
 
+
 @pytest.mark.requires_spark
 @pytest.mark.parametrize("mode", INGEST_MODES)
 @pytest.mark.parametrize("csv_lines", [VALID, MISSING_REQUIRED, TYPE_MISMATCH, TOO_FEW_COLS, TOO_MANY_COLS, ALL_LINES])
