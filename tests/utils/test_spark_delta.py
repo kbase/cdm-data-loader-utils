@@ -29,14 +29,6 @@ DEFAULT_SAMPLE_DATA = {"a": "A1", "b": "B1"}
 TENANT_NAME = "The_Breakers"
 
 
-@pytest.fixture
-def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
-    """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
-    spark = get_spark("test_delta_app", local=True, delta_lake=True, override={SAVE_DIR: tmp_path})
-    yield spark
-    spark.stop()
-
-
 def gen_ns_save_dir(current_save_dir: str, namespace: str, tenant_name: str | None) -> tuple[str, str]:
     """Generate the projected namespace and save directory, given a file path, a namespace, and a tenant name."""
     db_location = f"tenant/{tenant_name}/{namespace}.db" if tenant_name else f"user/some_user/{namespace}.db"
