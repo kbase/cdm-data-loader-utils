@@ -4,9 +4,9 @@ from berdl_notebook_utils.setup_spark_session import get_spark_session
 from berdl_notebook_utils.spark.database import create_namespace_if_not_exists
 from pyspark.sql import DataFrame, DataFrameWriter, SparkSession
 
-from cdm_data_loader_utils.utils.logging import get_logger
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
-logger = get_logger()
+logger = get_cdm_logger()
 
 APPEND = "append"
 OVERWRITE = "overwrite"
@@ -207,9 +207,6 @@ def write_delta(spark: SparkSession, sdf: DataFrame, delta_ns: str, table: str, 
     except Exception:
         logger.exception("Error writing managed table %s", db_table)
         raise
-
-
-DELTA_METHOD = True
 
 
 def write_delta_to_file(

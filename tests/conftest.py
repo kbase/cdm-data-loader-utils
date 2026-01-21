@@ -1,60 +1,50 @@
 """Global configuration settings for tests."""
 
+import datetime
+from collections.abc import Generator
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 import pytest
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.types import (
+    ArrayType,
+    BooleanType,
+    DateType,
+    FloatType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
-stats_output = {
-    "FW305-3-2-15-C-TSA1_scaffolds.fna": {
-        "scaffolds": 59,
-        "contigs": 61,
-        "gc_avg": 0.65985,
-        "gc_std": 0.02052,
-        "filename": "/home/runner/work/cdm-data-loader-utils/cdm-data-loader-utils/tests/data/FW305-3-2-15-C-TSA1/FW305-3-2-15-C-TSA1_scaffolds.fna",
-    },
-    "FW305-C-112.1_scaffolds.fna": {
-        "scaffolds": 28,
-        "contigs": 31,
-        "gc_avg": 0.69368,
-        "gc_std": 0.03501,
-        "filename": "/home/runner/work/cdm-data-loader-utils/cdm-data-loader-utils/tests/data/FW305-C-112.1/FW305-C-112.1_scaffolds.fna",
-    },
-}
+from cdm_data_loader_utils.audit.schema import (
+    NAMESPACE,
+    PIPELINE,
+    ROW_ERRORS,
+    RUN_ID,
+    SOURCE,
+)
+from cdm_data_loader_utils.core.pipeline_run import PipelineRun
+from cdm_data_loader_utils.readers.dsv import INVALID_DATA_FIELD
+from cdm_data_loader_utils.utils.spark_delta import get_spark
 
-checkm2_output = {
-    "FW305-3-2-15-C-TSA1_scaffolds": {
-        "checkm2_completeness": 99.99,
-        "checkm2_contamination": 1.09,
-    },
-    "FW305-C-112.1_scaffolds": {"checkm2_completeness": None, "checkm2_contamination": 12.27},
-}
-
-RESULTS = {
-    "single": {
-        "stats": {"FW305-3-2-15-C-TSA1_scaffolds.fna": stats_output["FW305-3-2-15-C-TSA1_scaffolds.fna"]},
-        "checkm2": {"FW305-3-2-15-C-TSA1_scaffolds": checkm2_output["FW305-3-2-15-C-TSA1_scaffolds"]},
-    },
-    "multi": {"stats": stats_output, "checkm2": checkm2_output},
-}
+SAVE_DIR = "spark.sql.warehouse.dir"
 
 
-@pytest.fixture(scope="session")
-def checkm2_stats_results() -> dict[str, Any]:
-    """Expected results from parsing checkm2 and bbmap stats files."""
-    return RESULTS
+@pytest.fixture
+def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
+    """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
+    spark = get_spark("test_delta_app", local=True, delta_lake=True, override={SAVE_DIR: tmp_path})
+    yield spark
+    spark.stop()
 
 
 @pytest.fixture(scope="session")
 def test_data_dir() -> Path:
     """Test data directory."""
     return Path("tests") / "data"
-
-
-@pytest.fixture(scope="session")
-def genome_paths_file() -> str:
-    """Input file for tests."""
-    return "tests/data/genome_paths.json"
 
 
 @pytest.fixture(scope="session")
@@ -80,3 +70,365 @@ def json_test_strings() -> dict[str, Any]:
         "array_of_objects": '[{"key": "value"}]',
         "object": '{"key": "value"}',
     }
+
+
+@pytest.fixture
+def empty_df_schema() -> list[StructField]:
+    """List of fields corresponding to the empty dataframe."""
+    return [
+        StructField("name", StringType(), nullable=True),
+        StructField("id", IntegerType(), nullable=False),
+    ]
+
+
+@pytest.fixture
+def empty_df(spark: SparkSession, empty_df_schema: list[StructField]) -> Generator[DataFrame, Any]:
+    """Empty dataframe for testing usage."""
+    df = spark.createDataFrame([], schema=StructType(empty_df_schema))
+    yield df
+    assert df.schema == StructType(empty_df_schema)
+
+
+# Various CSV permutations for testing
+VALID = "valid_csv"
+MISSING_REQUIRED = "invalid_csv_missing_required"
+TYPE_MISMATCH = "invalid_csv_type_mismatch"
+TOO_FEW_COLS = "invalid_csv_too_few_cols"
+TOO_MANY_COLS = "invalid_csv_too_many_cols"
+ALL_LINES = "all_lines"
+
+
+@pytest.fixture(scope="session")
+def csv_schema() -> list[StructField]:
+    """List of fields for parsing the various CSV snippets."""
+    return [
+        StructField("col1", IntegerType(), nullable=False),
+        StructField("col2", DateType(), nullable=False),
+        StructField("col3", FloatType(), nullable=False),
+        StructField("col4", BooleanType(), nullable=False),
+        StructField("col5", StringType(), nullable=False),
+    ]
+
+
+@pytest.fixture(scope="session")
+def valid_csv(test_data_dir: Path) -> Path:
+    """Valid CSV data.
+
+    1,20250301,1.2345,true,EcoCyc:EG10986-MONOMER
+    2,20250201,0.2,false,MetaCyc:EG10986-MONOMER
+    3,20250801,23,True,4261555
+    4,00010101,.1234,False,col5
+
+    """
+    return test_data_dir / "dsv" / "valid.csv"
+
+
+@pytest.fixture(scope="session")
+def invalid_csv_missing_required(test_data_dir: Path) -> Path:
+    """CSV data with required fields missing.
+
+    # correct number of cols, but some cols are empty
+    1,,,,col5
+    # missing leading cols
+    ,,2.345,True,col5
+    # missing trailing cols
+    3,20250531,23.45,,
+    # all missing
+    ,,,,
+    """
+    return test_data_dir / "dsv" / "missing_required.csv"
+
+
+@pytest.fixture(scope="session")
+def invalid_csv_missing_required_annots() -> list[list[str]]:
+    """Generate the expected error annotations for the lines in invalid_csv_missing_required.
+
+    :return: list of list of error strings
+    :rtype: list[list[str]]
+    """
+    valid_invalid_fields = [[1, 0, 0, 0, 1], [0, 0, 1, 1, 1], [1, 1, 1, 0, 0], [0, 0, 0, 0, 0]]
+    return [[f"missing_required: col{n + 1}" for n in range(5) if not row[n]] for row in valid_invalid_fields]
+
+
+@pytest.fixture(scope="session")
+def invalid_csv_type_mismatch(test_data_dir: Path) -> Path:
+    """CSV data with incorrect data types.
+
+    # Y, N, Y, N, Y
+    1,2,3,4,5
+    # N, N, Y, N, Y
+    1.234,2.3456,3.45,4.5,5
+    # N, N, N, Y, Y
+    true,false,true,false,true
+    # Y, Y, N, N, Y
+    00200202,00200202,00200202,00200202,00200202
+    """
+    return test_data_dir / "dsv" / "type_mismatch.csv"
+
+
+@pytest.fixture(scope="session")
+def invalid_csv_too_few_cols(test_data_dir: Path) -> Path:
+    """CSV data containing rows with too few columns.
+
+    # too few cols
+    1
+    2,20250502,0.2345
+    3,,23.56,False
+    ,,,
+    """
+    return test_data_dir / "dsv" / "too_few_cols.csv"
+
+
+@pytest.fixture(scope="session")
+def invalid_csv_too_many_cols(test_data_dir: Path) -> Path:
+    """CSV data containing rows with too many columns.
+
+    # too many cols - all have 6 cols
+    ,,,,,
+    2,20250710,col3,True,,col6
+    # empty trailing
+    3,20250101,,,,
+    # empty leading
+    ,,,,,col6
+    """
+    return test_data_dir / "dsv" / "too_many_cols.csv"
+
+
+@pytest.fixture(scope="session")
+def all_lines(test_data_dir: Path) -> Path:
+    """All the CSV lines in a single fixture!"""
+    return test_data_dir / "dsv" / "all_lines.csv"
+
+
+@pytest.fixture(scope="session")
+def annotated_df_schema(csv_schema: list[StructField]) -> StructType:
+    """The schema for the annotated dataframe produced by validating one of the CSV files above."""
+    actual_csv_schema = list(csv_schema)
+    for r in actual_csv_schema:
+        r.nullable = True
+
+    return StructType([*actual_csv_schema, INVALID_DATA_FIELD, StructField(ROW_ERRORS, ArrayType(StringType()))])
+
+
+@pytest.fixture(scope="session")
+def annotated_df_data() -> list[dict[str, Any]]:
+    """The output of running all_lines (above) through the dsv parser and df_nullable_fields validator."""
+    return deepcopy(
+        [
+            {
+                "col1": 1,
+                "col2": datetime.date(2025, 3, 1),
+                "col3": 1.2345000505447388,
+                "col4": True,
+                "col5": "EcoCyc:EG10986-MONOMER",
+                "__invalid_data__": None,
+                "errors_in_record": [],
+            },
+            {
+                "col1": 2,
+                "col2": datetime.date(2025, 2, 1),
+                "col3": 0.20000000298023224,
+                "col4": False,
+                "col5": "MetaCyc:EG10986-MONOMER",
+                "__invalid_data__": None,
+                "errors_in_record": [],
+            },
+            {
+                "col1": 3,
+                "col2": datetime.date(2025, 8, 1),
+                "col3": 23.0,
+                "col4": True,
+                "col5": "4261555",
+                "__invalid_data__": None,
+                "errors_in_record": [],
+            },
+            {
+                "col1": 4,
+                "col2": datetime.date(1, 1, 1),
+                "col3": 0.1234000027179718,
+                "col4": False,
+                "col5": "col5",
+                "__invalid_data__": None,
+                "errors_in_record": [],
+            },
+            {
+                "col1": 1,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": "col5",
+                "__invalid_data__": None,
+                "errors_in_record": ["missing_required: col2", "missing_required: col3", "missing_required: col4"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": 2.3450000286102295,
+                "col4": True,
+                "col5": "col5",
+                "__invalid_data__": None,
+                "errors_in_record": ["missing_required: col1", "missing_required: col2"],
+            },
+            {
+                "col1": 3,
+                "col2": datetime.date(2025, 5, 31),
+                "col3": 23.450000762939453,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": None,
+                "errors_in_record": ["missing_required: col4", "missing_required: col5"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": None,
+                "errors_in_record": [
+                    "missing_required: col1",
+                    "missing_required: col2",
+                    "missing_required: col3",
+                    "missing_required: col4",
+                    "missing_required: col5",
+                ],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": ",,,,,",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 2,
+                "col2": datetime.date(2025, 7, 10),
+                "col3": None,
+                "col4": True,
+                "col5": None,
+                "__invalid_data__": "2,20250710,col3,True,,col6",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 3,
+                "col2": datetime.date(2025, 1, 1),
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": "3,20250101,,,,",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": ",,,,,col6",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 1,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": "1",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 2,
+                "col2": datetime.date(2025, 5, 2),
+                "col3": 0.2345000058412552,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": "2,20250502,0.2345",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 3,
+                "col2": None,
+                "col3": 23.559999465942383,
+                "col4": False,
+                "col5": None,
+                "__invalid_data__": "3,,23.56,False",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": None,
+                "col4": None,
+                "col5": None,
+                "__invalid_data__": ",,,",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 1,
+                "col2": None,
+                "col3": 3.0,
+                "col4": None,
+                "col5": "5",
+                "__invalid_data__": "1,2,3,4,5",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": 3.450000047683716,
+                "col4": None,
+                "col5": "5",
+                "__invalid_data__": "1.234,2.3456,3.45,4.5,5",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": None,
+                "col2": None,
+                "col3": None,
+                "col4": False,
+                "col5": "true",
+                "__invalid_data__": "true,false,true,false,true",
+                "errors_in_record": ["parse_error"],
+            },
+            {
+                "col1": 200202,
+                "col2": datetime.date(20, 2, 2),
+                "col3": 200202.0,
+                "col4": None,
+                "col5": "00200202",
+                "__invalid_data__": "00200202,00200202,00200202,00200202,00200202",
+                "errors_in_record": ["parse_error"],
+            },
+        ]
+    )
+
+
+@pytest.fixture(scope="session")
+def annotated_df_errors(annotated_df_data: list[dict[str, Any]]) -> set[str]:
+    """Unique errors found in annotated_df_data."""
+    list_of_errors = []
+    for r in annotated_df_data:
+        list_of_errors.extend(r[ROW_ERRORS])
+
+    return set(list_of_errors)
+
+
+# Audit-related stuff
+
+TEST_NS = "TEST_NS"
+PIPELINE_RUN = {RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"}
+ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"}
+
+
+@pytest.fixture(scope="package")
+def pipeline_run() -> PipelineRun:
+    """Generate a pipeline run."""
+    return PipelineRun(**{**PIPELINE_RUN, NAMESPACE: TEST_NS})
+
+
+@pytest.fixture(scope="package")
+def alt_pipeline_run() -> PipelineRun:
+    """Generate a different pipeline run."""
+    return PipelineRun(**{**ALT_PIPELINE_RUN, NAMESPACE: TEST_NS})
