@@ -25,7 +25,7 @@ def compress_files(directory: Path | str, file_glob: str) -> None:
 
     if not directory.exists() or not directory.is_dir():
         msg = f"Directory {directory!s} not found: check the path is correct"
-        raise ValueError(msg)
+        raise FileNotFoundError(msg)
 
     to_compress = list(directory.glob(file_glob))
     logger.info("Found %d file(s) to compress", len(to_compress))

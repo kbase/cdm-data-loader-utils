@@ -90,7 +90,7 @@ def test_compress_files_multiple(tmp_path: Path, caplog: pytest.LogCaptureFixtur
 
     assert len(caplog.records) == n_files + 2
     for r in caplog.records:
-        assert r.levelno == logging.info
+        assert r.levelno == logging.INFO
     assert "Found 3 file(s) to compress" in caplog.records[0].message
     for r in caplog.records[1:4]:
         assert f"Created output file {tmp_path!s}/file" in r.message

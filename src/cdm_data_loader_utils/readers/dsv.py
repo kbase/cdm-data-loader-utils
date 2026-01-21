@@ -68,9 +68,9 @@ def read(
         **options,
     }
 
-    # if dsv_options["mode"] not in (PERMISSIVE, FAILFAST):
-    #     msg = "The only permitted read modes are PERMISSIVE and FAILFAST."
-    #     log_and_die(msg, ValueError)
+    if dsv_options["mode"] not in (PERMISSIVE, FAILFAST):
+        msg = "The only permitted read modes are PERMISSIVE and FAILFAST."
+        log_and_die(msg, ValueError)
 
     format_name = get_format_name(options.get("delimiter", options.get("sep")))
 

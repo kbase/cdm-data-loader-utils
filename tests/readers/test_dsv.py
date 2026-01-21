@@ -84,6 +84,11 @@ def test_csv_read_modes(  # noqa: PLR0913
         "mode": mode,
     }
 
+    if mode == DROP:
+        with pytest.raises(ValueError, match="The only permitted read modes are PERMISSIVE and FAILFAST"):
+            read(spark, str(csv_lines_path), csv_schema, options=read_options)
+        return
+
     # spark will happily read in the data and report that it loaded the max number of lines
     test_df = read(spark, str(csv_lines_path), csv_schema, options=read_options)
     assert isinstance(test_df, DataFrame)
