@@ -1,6 +1,6 @@
 """Utilities for running tests."""
 
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType
 
 
