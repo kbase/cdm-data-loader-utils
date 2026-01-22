@@ -1,16 +1,17 @@
 """Tests for parser error handling, schema compliance, and so on."""
 
 import logging
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from py4j.protocol import Py4JJavaError
 from pyspark.errors import AnalysisException
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
 
-from cdm_data_loader_utils.readers.dsv import read
+from cdm_data_loader_utils.readers.dsv import read, read_csv, read_tsv
 from tests.conftest import ALL_LINES, MISSING_REQUIRED, TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, VALID
 
 PERMISSIVE = "PERMISSIVE"
@@ -58,6 +59,33 @@ def test_read_errors(spark: SparkSession, delimiter: str | None, fmt: str, caplo
     assert len(caplog.records) == 1
     assert caplog.records[0].levelno == logging.ERROR
     assert caplog.records[0].message == f"Failed to load {fmt} from /path/to/nowhere"
+
+
+@pytest.mark.requires_spark
+def test_read_tsv_csv(spark: SparkSession, csv_schema: list[StructField], all_lines: Path, all_lines_tsv: Path) -> None:
+    """Ensure that the TSV and CSV reader shortcuts work as expected."""
+    read_options = {
+        "header": False,
+        "comment": "#",
+        "dateFormat": "yyyyMMdd",
+        "ignoreLeadingWhiteSpace": False,
+        "ignoreTrailingWhiteSpace": False,
+    }
+    csv_options = {"delimiter": ","}
+    tsv_options = {"delimiter": "\t"}
+
+    test_df_csv = read(spark, str(all_lines), csv_schema, options={**read_options, **csv_options})
+    test_df_tsv = read(spark, str(all_lines_tsv), csv_schema, options={**read_options, **tsv_options})
+
+    csv_df = read_csv(spark, str(all_lines), csv_schema, read_options)
+    tsv_df = read_tsv(spark, str(all_lines_tsv), csv_schema, read_options)
+
+    for df in [test_df_tsv, csv_df, tsv_df]:
+        assertSchemaEqual(test_df_csv.schema, df.schema)
+
+    assertDataFrameEqual(test_df_tsv, tsv_df)
+    assertDataFrameEqual(test_df_csv, csv_df)
+    # TODO: compare the TSV and CSV versions?
 
 
 @pytest.mark.requires_spark

@@ -3,7 +3,6 @@
 from typing import Any
 
 import pytest
-from py4j.protocol import Py4JJavaError
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StringType, StructField
 

@@ -105,7 +105,7 @@ def read_tsv(
     """
     if not options:
         options = {}
-    options["separator"] = "\t"
+    options["delimiter"] = "\t"
     return read(spark, path, schema_fields, options)
 
 
@@ -127,5 +127,5 @@ def read_csv(
     """
     if not options:
         options = {}
-    options["separator"] = ","
+    options["delimiter"] = ","
     return read(spark, path, schema_fields, options)
