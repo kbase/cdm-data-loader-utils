@@ -98,7 +98,7 @@ TOO_MANY_COLS = "invalid_csv_too_many_cols"
 ALL_LINES = "all_lines"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def csv_schema() -> list[StructField]:
     """List of fields for parsing the various CSV snippets."""
     return [
@@ -139,7 +139,7 @@ def invalid_csv_missing_required(test_data_dir: Path) -> Path:
     return test_data_dir / "dsv" / "missing_required.csv"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def invalid_csv_missing_required_annots() -> list[list[str]]:
     """Generate the expected error annotations for the lines in invalid_csv_missing_required.
 
@@ -201,6 +201,12 @@ def all_lines(test_data_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def all_lines_tsv(test_data_dir: Path) -> Path:
+    """All the CSV lines in a single fixture!"""
+    return test_data_dir / "dsv" / "all_lines.tsv"
+
+
+@pytest.fixture
 def annotated_df_schema(csv_schema: list[StructField]) -> StructType:
     """The schema for the annotated dataframe produced by validating one of the CSV files above."""
     actual_csv_schema = list(csv_schema)

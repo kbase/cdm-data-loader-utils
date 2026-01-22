@@ -1,16 +1,17 @@
 """Tests for parser error handling, schema compliance, and so on."""
 
 import logging
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from py4j.protocol import Py4JJavaError
 from pyspark.errors import AnalysisException
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
 
-from cdm_data_loader_utils.readers.dsv import read
+from cdm_data_loader_utils.readers.dsv import read, read_csv, read_tsv
 from tests.conftest import ALL_LINES, MISSING_REQUIRED, TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, VALID
 
 PERMISSIVE = "PERMISSIVE"
@@ -61,6 +62,33 @@ def test_read_errors(spark: SparkSession, delimiter: str | None, fmt: str, caplo
 
 
 @pytest.mark.requires_spark
+def test_read_tsv_csv(spark: SparkSession, csv_schema: list[StructField], all_lines: Path, all_lines_tsv: Path) -> None:
+    """Ensure that the TSV and CSV reader shortcuts work as expected."""
+    read_options = {
+        "header": False,
+        "comment": "#",
+        "dateFormat": "yyyyMMdd",
+        "ignoreLeadingWhiteSpace": False,
+        "ignoreTrailingWhiteSpace": False,
+    }
+    csv_options = {"delimiter": ","}
+    tsv_options = {"delimiter": "\t"}
+
+    test_df_csv = read(spark, str(all_lines), csv_schema, options={**read_options, **csv_options})
+    test_df_tsv = read(spark, str(all_lines_tsv), csv_schema, options={**read_options, **tsv_options})
+
+    csv_df = read_csv(spark, str(all_lines), csv_schema, read_options)
+    tsv_df = read_tsv(spark, str(all_lines_tsv), csv_schema, read_options)
+
+    for df in [test_df_tsv, csv_df, tsv_df]:
+        assertSchemaEqual(test_df_csv.schema, df.schema)
+
+    assertDataFrameEqual(test_df_tsv, tsv_df)
+    assertDataFrameEqual(test_df_csv, csv_df)
+    # TODO: compare the TSV and CSV versions?
+
+
+@pytest.mark.requires_spark
 @pytest.mark.parametrize("mode", INGEST_MODES)
 @pytest.mark.parametrize("csv_lines", [VALID, MISSING_REQUIRED, TYPE_MISMATCH, TOO_FEW_COLS, TOO_MANY_COLS, ALL_LINES])
 def test_csv_read_modes(  # noqa: PLR0913
@@ -85,8 +113,8 @@ def test_csv_read_modes(  # noqa: PLR0913
         "mode": mode,
     }
 
-    if mode == DROP:
-        with pytest.raises(ValueError, match="The only permitted read modes are PERMISSIVE and FAILFAST"):
+    if mode in (DROP, FAILFAST):
+        with pytest.raises(ValueError, match="The only permitted read mode is PERMISSIVE"):
             read(spark, str(csv_lines_path), csv_schema, options=read_options)
         return
 
@@ -101,11 +129,6 @@ def test_csv_read_modes(  # noqa: PLR0913
         == f"Loaded {n_rows * 5 if csv_lines == ALL_LINES else n_rows} CSV records from {csv_lines_path!s}"
     )
 
-    if mode == FAILFAST and csv_lines in (TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, ALL_LINES):
-        with pytest.raises(Py4JJavaError, match="An error occurred while calling "):
-            test_df.collect()
-        return
-
     read(spark, str(csv_lines_path), csv_schema, options=read_options)
 
     data_rows = [r.asDict() for r in test_df.collect()]
@@ -117,13 +140,9 @@ def test_csv_read_modes(  # noqa: PLR0913
         return
 
     if csv_lines in (TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH):
-        if mode == DROP:
-            # dropmalformed will not parse any content from these files as all lines are invalid
-            assert len(data_rows) == 0
-        else:
-            # permissive will pull in all the data
-            assert len(data_rows) == n_rows
+        # permissive will pull in all the data
+        assert len(data_rows) == n_rows
         return
 
     # ALL_LINES: permissive will pull in all, DROP will just pull in the VALID + MISSING_REQUIRED lines
-    assert len(data_rows) == n_rows * 5 if mode == PERMISSIVE else n_rows * 2
+    assert len(data_rows) == n_rows * 5

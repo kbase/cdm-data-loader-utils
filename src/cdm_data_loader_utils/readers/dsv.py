@@ -68,14 +68,15 @@ def read(
         **options,
     }
 
-    if dsv_options["mode"] not in (PERMISSIVE, FAILFAST):
-        msg = "The only permitted read modes are PERMISSIVE and FAILFAST."
+    if dsv_options["mode"] != PERMISSIVE:
+        msg = "The only permitted read mode is PERMISSIVE."
         log_and_die(msg, ValueError)
 
     format_name = get_format_name(options.get("delimiter", options.get("sep")))
 
     try:
         df = spark.read.options(**dsv_options).csv(path, schema=dsv_schema)
+        df.head(1)  # force spark to read NOW instead of being lazy
     except Exception:
         # Log the full stack trace and re-raise to be handled by the caller
         logger.exception("Failed to load %s from %s", format_name, path)
@@ -104,7 +105,7 @@ def read_tsv(
     """
     if not options:
         options = {}
-    options["separator"] = "\t"
+    options["delimiter"] = "\t"
     return read(spark, path, schema_fields, options)
 
 
@@ -126,5 +127,5 @@ def read_csv(
     """
     if not options:
         options = {}
-    options["separator"] = ","
+    options["delimiter"] = ","
     return read(spark, path, schema_fields, options)
