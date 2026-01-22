@@ -53,14 +53,16 @@ def write_rejects(
         logger.info("%s %s: nothing to write to '%s' audit table.", run.pipeline, run.run_id, REJECTS)
         return
 
-    invalid_df: DataFrame = annotated_df.filter(sf.size(ROW_ERRORS) > 0)
-    if invalid_df.count() == 0:
+    # add in a dummy column so that spark doesn't optimise away everything except the error col
+    invalid_df: DataFrame = annotated_df.withColumn("_dummy", sf.lit(1)).filter(sf.size(ROW_ERRORS) > 0)
+    if not invalid_df.select("_dummy").head(1):
         # nothing to do here
         logger.info("%s %s: nothing to write to '%s' audit table.", run.pipeline, run.run_id, REJECTS)
         return
 
     data_fields = [f.name for f in schema_fields]
-
+    # drop the dummy column
+    invalid_df = invalid_df.drop("_dummy")
     rejects_df = invalid_df.select(
         sf.lit(run.run_id).alias(RUN_ID),
         sf.lit(run.pipeline).alias(PIPELINE),

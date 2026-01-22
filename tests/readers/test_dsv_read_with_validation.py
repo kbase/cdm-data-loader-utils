@@ -93,13 +93,8 @@ def test_csv_read_with_validation_errors(  # noqa: PLR0913
     }
 
     # DROPMALFORMED won't be run
-    if mode == DROP:
-        with pytest.raises(ValueError, match="The only permitted read modes are PERMISSIVE and FAILFAST"):
-            read_with_validation(spark, pipeline_run, str(csv_lines_path), csv_schema, options=read_options)
-        return
-
-    if mode == FAILFAST and csv_lines in (TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, ALL_LINES):
-        with pytest.raises(Py4JJavaError, match="An error occurred while calling "):
+    if mode in (FAILFAST, DROP):
+        with pytest.raises(ValueError, match="The only permitted read mode is PERMISSIVE"):
             read_with_validation(spark, pipeline_run, str(csv_lines_path), csv_schema, options=read_options)
         return
 
@@ -140,5 +135,5 @@ def test_csv_read_with_validation_errors(  # noqa: PLR0913
 
     if csv_lines == ALL_LINES:
         assert result[N_VALID] == n_rows
-        assert result[N_READ] == n_rows * 5 if mode == PERMISSIVE else n_rows
-        assert result[N_INVALID] == n_rows * 4 if mode == PERMISSIVE else n_rows
+        assert result[N_READ] == n_rows * 5
+        assert result[N_INVALID] == n_rows * 4

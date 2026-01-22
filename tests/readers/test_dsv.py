@@ -85,8 +85,8 @@ def test_csv_read_modes(  # noqa: PLR0913
         "mode": mode,
     }
 
-    if mode == DROP:
-        with pytest.raises(ValueError, match="The only permitted read modes are PERMISSIVE and FAILFAST"):
+    if mode in (DROP, FAILFAST):
+        with pytest.raises(ValueError, match="The only permitted read mode is PERMISSIVE"):
             read(spark, str(csv_lines_path), csv_schema, options=read_options)
         return
 
@@ -101,11 +101,6 @@ def test_csv_read_modes(  # noqa: PLR0913
         == f"Loaded {n_rows * 5 if csv_lines == ALL_LINES else n_rows} CSV records from {csv_lines_path!s}"
     )
 
-    if mode == FAILFAST and csv_lines in (TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, ALL_LINES):
-        with pytest.raises(Py4JJavaError, match="An error occurred while calling "):
-            test_df.collect()
-        return
-
     read(spark, str(csv_lines_path), csv_schema, options=read_options)
 
     data_rows = [r.asDict() for r in test_df.collect()]
@@ -117,13 +112,9 @@ def test_csv_read_modes(  # noqa: PLR0913
         return
 
     if csv_lines in (TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH):
-        if mode == DROP:
-            # dropmalformed will not parse any content from these files as all lines are invalid
-            assert len(data_rows) == 0
-        else:
-            # permissive will pull in all the data
-            assert len(data_rows) == n_rows
+        # permissive will pull in all the data
+        assert len(data_rows) == n_rows
         return
 
     # ALL_LINES: permissive will pull in all, DROP will just pull in the VALID + MISSING_REQUIRED lines
-    assert len(data_rows) == n_rows * 5 if mode == PERMISSIVE else n_rows * 2
+    assert len(data_rows) == n_rows * 5
