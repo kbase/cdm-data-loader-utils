@@ -1,0 +1,8 @@
+# correct number of cols, cols empty
+1,,,,col5
+# missing leading cols
+,,2.345,True,col5
+# missing trailing cols
+3,20250531,23.45,,
+# all missing
+,,,,

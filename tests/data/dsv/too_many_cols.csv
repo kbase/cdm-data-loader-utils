@@ -1,0 +1,7 @@
+# too many cols - all have 6 cols
+,,,,,
+2,20250710,col3,True,,col6
+# empty trailing
+3,20250101,,,,
+# empty leading
+,,,,,col6
