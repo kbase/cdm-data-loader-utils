@@ -54,7 +54,9 @@ def write_rejects(
         return
 
     # add in a dummy column so that spark doesn't optimise away everything except the error col
-    invalid_df: DataFrame = annotated_df.withColumn("_dummy", sf.lit(1)).filter((sf.size(ROW_ERRORS) > 0) & (sf.col("_dummy") == 1))
+    invalid_df: DataFrame = annotated_df.withColumn("_dummy", sf.lit(1)).filter(
+        (sf.size(ROW_ERRORS) > 0) & (sf.col("_dummy") == 1)
+    )
     if not invalid_df.select("_dummy").head(1):
         # nothing to do here
         logger.info("%s %s: nothing to write to '%s' audit table.", run.pipeline, run.run_id, REJECTS)
