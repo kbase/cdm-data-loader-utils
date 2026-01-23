@@ -91,7 +91,7 @@ def get_files(metalink_xml_path: Path | str, files_to_find: list[str] | None = N
     if files_to_find:
         not_found = {f for f in files_to_find if f not in files}
         if not_found:
-            msg = "The following files were not found: " + ", ".join(not_found)
+            msg = "The following files were not found: " + ", ".join(sorted(not_found))
             logger.warning(msg)
 
     return files
