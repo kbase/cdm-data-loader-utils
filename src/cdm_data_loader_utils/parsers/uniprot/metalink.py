@@ -12,10 +12,9 @@ from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import parse
 
-from cdm_data_loader_utils.parsers.uniprot.xml_utils import get_text
 from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger, log_and_die
 
-NS = {"ns": "http://www.metalinker.org/"}
+NS = {"": "http://www.metalinker.org/"}
 NOW = datetime.datetime.now(tz=datetime.UTC)
 COLUMNS = ["id", "db", "xref"]
 
@@ -39,10 +38,10 @@ def generate_data_source_table(metalink_xml_path: Path | str) -> dict[str, Any]:
         return {}
 
     data_source = {
-        "license": get_text(root.find("./ns:license/ns:name", NS)),
-        "publisher": get_text(root.find("./ns:publisher/ns:name", NS)),
+        "license": root.findtext("./license/name", namespaces=NS),
+        "publisher": root.findtext("./publisher/name", namespaces=NS),
         "resource_type": "dataset",
-        "version": get_text(root.find("./ns:version", NS)),
+        "version": root.findtext("./version", namespaces=NS),
     }
     missing = [k for k in data_source if not data_source[k]]
     if missing:
@@ -65,21 +64,21 @@ def get_files(metalink_xml_path: Path | str, files_to_find: list[str] | None = N
         return {}
 
     files = {}
-    for f in root.findall("./ns:files/ns:file", NS):
+    for f in root.findall("./files/file", NS):
         # get the name, size, any verification info
         name = f.get("name")
         # skip now if the file is not of interest
         if files_to_find and name not in files_to_find:
             continue
 
-        size = get_text(f.find("./ns:size", NS))
-        checksum = f.find("./ns:verification/ns:hash", NS)
+        size = f.findtext("./size", namespaces=NS)
+        checksum = f.find("./verification/hash", NS)
         if checksum is not None:
             checksum_fn = checksum.get("type")
-            checksum_value = get_text(checksum)
+            checksum_value = checksum.text
         else:
             checksum_fn = checksum_value = None
-        dl_url = get_text(f.find("./ns:resources/ns:url[@location='us']", NS))
+        dl_url = f.findtext("./resources/url[@location='us']", namespaces=NS)
         files[name] = {
             "name": name,
             "size": size,
