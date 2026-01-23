@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from cdm_data_loader_utils.parsers.uniprot import (
+from cdm_data_loader_utils.parsers.uniprotkb import (
     build_datasource_record,
     generate_cdm_id,
     parse_associations,
