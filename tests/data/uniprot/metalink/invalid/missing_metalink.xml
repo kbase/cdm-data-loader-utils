@@ -1,0 +1,12 @@
+<metalink xmlns="http://www.metalinker.org/" version="3.0">
+  <publisher>
+    <name></name>
+    <title>UniProt Consortium</title>
+    <url>http://www.uniprot.org/</url>
+  </publisher>
+  <license>
+    <url>http://creativecommons.org/licenses/by/4.0/</url>
+  </license>
+  <description>UniProt</description>
+  <version>2025_04</version>
+</metalink>
