@@ -13,8 +13,8 @@ def test_get_checkm2_data_empty(tmp_path: Path) -> None:
     """Test that an error is thrown by a non-existent file."""
     full_path = tmp_path / "some-file"
     with pytest.raises(
-        RuntimeError,
-        match=re.escape("error parsing checkm2_file: [Errno 2] No such file or directory"),
+        FileNotFoundError,
+        match=re.escape("[Errno 2] No such file or directory"),
     ):
         get_checkm2_data(full_path)
 
