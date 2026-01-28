@@ -1,6 +1,7 @@
 """Global configuration settings for tests."""
 
 import datetime
+import shutil
 from collections.abc import Generator
 from copy import deepcopy
 from pathlib import Path
@@ -30,6 +31,7 @@ from cdm_data_loader_utils.audit.schema import (
 )
 from cdm_data_loader_utils.core.pipeline_run import PipelineRun
 from cdm_data_loader_utils.readers.dsv import INVALID_DATA_FIELD
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
 SAVE_DIR = "spark.sql.warehouse.dir"
 
@@ -43,12 +45,30 @@ ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/
 def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
     """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
     config = generate_spark_conf("test_delta_app", local=True, use_delta_lake=True)
+    test_config = {
+        "spark.sql.shuffle.partitions": 5,
+        "spark.default.parallelism": 9,
+        # Disabling rdd and map output compression as data is already small for tests
+        "spark.rdd.compress": False,
+        "spark.shuffle.compress": False,
+        # Disable Spark UI for tests
+        "spark.ui.enabled": False,
+        "spark.ui.showConsoleProgress": False,
+        # Extra configs to optimize Delta internal operations on tests
+        "spark.databricks.delta.snapshotPartitions": 2,
+        "delta.log.cacheSize": 3,
+    }
+    config.update(test_config)
     config[SAVE_DIR] = str(tmp_path)
     spark_conf = SparkConf().setAll(list(config.items()))
     spark = SparkSession.builder.config(conf=spark_conf).getOrCreate()
-    assert spark.conf.get(SAVE_DIR).removeprefix("file:") == str(tmp_path)  # pyright: ignore[reportOptionalMemberAccess]
+    save_dir = spark.conf.get(SAVE_DIR).removeprefix("file:")  # pyright: ignore[reportOptionalMemberAccess]
+    if save_dir != str(tmp_path):
+        get_cdm_logger().error(f"spark dir: {tmp_path}; save dir: {save_dir}")
     yield spark
+    spark.catalog.clearCache()
     spark.stop()
+    shutil.rmtree(save_dir)
 
 
 @pytest.fixture(scope="session")

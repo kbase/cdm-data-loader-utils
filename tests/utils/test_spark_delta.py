@@ -268,15 +268,8 @@ def check_query_output(spark: SparkSession, db_table: str, expected: list[dict[s
     assert spark.catalog.tableExists(db_table)
     # run the query
     results = spark.sql(f"SELECT * FROM {db_table}").collect()
-    results_as_dict = [row.asDict() for row in results]
-    assert len(results) == len(expected)
     expected_df = spark.createDataFrame(expected)
     assertDataFrameEqual(results, expected_df)
-    # TODO: make this less clunky
-    for row in results_as_dict:
-        assert row in expected
-    for row in expected:
-        assert row in results_as_dict
 
 
 def check_logger_output_successful_write(records: list[logging.LogRecord], db_table: str, mode: str, rows: int) -> None:
