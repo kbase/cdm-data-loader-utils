@@ -15,7 +15,7 @@ def test_parse_relnotes(test_data_dir: Path) -> None:
     parsed = parse_relnotes(relnotes_path)
     assert parsed == {
         "version": "2025_03",
-        "date_published": datetime.datetime(2025, 6, 18, 0, 0, 0),
+        "date_published": datetime.datetime(2025, 6, 18, 0, 0, 0),  # noqa: DTZ001
         "UniProtKB/Swiss-Prot": "573,661",
         "UniProtKB/TrEMBL": "253,061,697",
         "UniProtKB": "253,635,358",
@@ -24,6 +24,14 @@ def test_parse_relnotes(test_data_dir: Path) -> None:
         "UniRef50": "70,198,728",
         "UniParc": "982,121,738",
     }
+
+
+def test_format_change() -> None:
+    """Test parsing a file with the important intro stuff (version/date information) missing."""
+    content = """# Some unrelated header line\nUniProtKB Release 2025_03 consists of 1,000 entries (UniProtKB/Swiss-Prot:\n100 entries and UniProtKB/TrEMBL: 900 entries)\nUniRef100 Release 2025_03 consists of 5,000 entries"""
+
+    with pytest.raises(RuntimeError, match=r"Could not find double line break. Relnotes file format may have changed"):
+        parse(content)
 
 
 def test_missing_intro_regex() -> None:

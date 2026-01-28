@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from cdm_data_loader_utils.utils.cdm_logger import log_and_die
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
 RELEASE_VERSION_DATE: re.Pattern[str] = re.compile(
     r"is pleased to announce UniProt Knowledgebase \(UniProtKB\) Release\s+(\w+) \((\d{1,2}-[a-zA-Z]+-\d{4})\)\."
@@ -36,6 +36,9 @@ UNIPROT_TREMBL_STATS: re.Pattern[str] = re.compile(
 RELEASE_STATS: re.Pattern[str] = re.compile(r"(\w+) Release .*? consists of ([\d,]+) entries")
 
 DATE_FORMAT = "%d-%b-%Y"
+
+
+logger = get_cdm_logger()
 
 
 def parse_relnotes(relnotes_path: Path) -> dict[str, Any]:
@@ -63,7 +66,9 @@ def parse(relnotes: str) -> dict[str, Any]:
 
     relnotes_parts = relnotes.strip().split("\n\n", 1)
     if len(relnotes_parts) != 2:
-        log_and_die("Could not find double line break. Relnotes file format may have changed", RuntimeError)
+        msg = "Could not find double line break. Relnotes file format may have changed."
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     (intro_str, stats_str) = relnotes_parts
 
@@ -100,6 +105,7 @@ def parse(relnotes: str) -> dict[str, Any]:
     errors.extend([f"No stats for UniRef{n} found." for n in ["50", "90", "100"] if f"UniRef{n}" not in stats])
 
     if errors:
-        log_and_die("\n".join(errors), RuntimeError)
+        logger.error("\n".join(errors))
+        raise RuntimeError("\n".join(errors))
 
     return stats

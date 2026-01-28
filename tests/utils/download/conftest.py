@@ -24,23 +24,19 @@ class DownloaderAdapter:
 def downloader_adapter(request: pytest.FixtureRequest) -> DownloaderAdapter:
     """Fixture to generate sync or async file download clients."""
 
-    def make_sync(handler: Callable, **kwargs) -> FileDownloader:
+    def make_sync(handler: Callable, **kwargs) -> FileDownloader:  # noqa: ANN003
         client = httpx.Client(transport=httpx.MockTransport(handler))
         return FileDownloader(client, **kwargs)
 
-    def make_async(handler: Callable, **kwargs) -> AsyncFileDownloader:
+    def make_async(handler: Callable, **kwargs) -> AsyncFileDownloader:  # noqa: ANN003
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
         return AsyncFileDownloader(client, **kwargs)
 
-    # async def download_sync(downloader: FileDownloader, url: str, dest: Path) -> None:
-    #     # Call sync method inside async test
-    #     downloader.download(url, dest)
-
-    async def download_sync(downloader: FileDownloader, *args, **kwargs) -> Path | None:
+    async def download_sync(downloader: FileDownloader, *args, **kwargs) -> Path | None:  # noqa: ANN002, ANN003
         # Call sync method inside async test
         return downloader.download(*args, **kwargs)
 
-    async def download_async(downloader: AsyncFileDownloader, *args, **kwargs) -> Path | None:
+    async def download_async(downloader: AsyncFileDownloader, *args, **kwargs) -> Path | None:  # noqa: ANN002, ANN003
         return await downloader.download(*args, **kwargs)
 
     if request.param == "sync":

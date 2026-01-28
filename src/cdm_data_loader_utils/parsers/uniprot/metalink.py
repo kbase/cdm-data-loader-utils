@@ -12,7 +12,7 @@ from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import parse
 
-from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger, log_and_die
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
 NS = {"": "http://www.metalinker.org/"}
 NOW = datetime.datetime.now(tz=datetime.UTC)
@@ -27,8 +27,9 @@ def parse_metalink(metalink_xml_path: Path | str) -> Element | None:
     root = document.getroot()
     if root is not None:
         return root
-
-    return log_and_die("Could not find root for metalink file", RuntimeError)
+    msg = f"Could not find root in metalink file: {metalink_xml_path!s}"
+    logger.error(msg)
+    raise RuntimeError(msg)
 
 
 def generate_data_source_table(metalink_xml_path: Path | str) -> dict[str, Any]:
@@ -45,10 +46,9 @@ def generate_data_source_table(metalink_xml_path: Path | str) -> dict[str, Any]:
     }
     missing = [k for k in data_source if not data_source[k]]
     if missing:
-        log_and_die(
-            f"Missing required elements from metalink file: {', '.join(missing)}",
-            RuntimeError,
-        )
+        msg = f"Missing required elements from metalink file: {', '.join(missing)}"
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     return data_source
 
@@ -56,8 +56,7 @@ def generate_data_source_table(metalink_xml_path: Path | str) -> dict[str, Any]:
 def get_files(metalink_xml_path: Path | str, files_to_find: list[str] | None = None) -> dict[str, Any]:
     """Generate the data source information for the ID Mapping data."""
     root = parse_metalink(metalink_xml_path)
-    if root is None:
-        return {}
+    assert root is not None
 
     if files_to_find is not None and files_to_find == []:
         logger.warning("Empty file list supplied to get_files: aborting.")

@@ -120,11 +120,6 @@ def read_and_write(spark: SparkSession, pipeline_run: PipelineRun, id_mapping_ts
     help="Full path to the source directory containing ID mapping file(s). Does not need to specify the Bucket (i.e. cdm-lake) but should specify everything else.",
 )
 @click.option(
-    "--output-dir",
-    required=True,
-    help="Output directory for Delta tables; should be relative to the user/tenant warehouse. It will contain the output data in a directory named <namespace>.db.",
-)
-@click.option(
     "--namespace",
     default="uniprot",
     show_default=True,
@@ -135,19 +130,17 @@ def read_and_write(spark: SparkSession, pipeline_run: PipelineRun, id_mapping_ts
     default=None,
     help="Tenant warehouse to save processed data to; defaults to saving data to the user warehouse if a tenant is not specified",
 )
-def main(source: str, output_dir: str, namespace: str, tenant_name: str | None) -> None:
+def main(source: str, namespace: str, tenant_name: str | None) -> None:
     """Run the UniProt ID Mapping importer.
 
     :param source: full path to the source directory containing ID mapping file(s)
     :type source: str
-    :param output_dir: Output directory for Delta tables; should be relative to the user/tenant warehouse. It will contain the output data in a directory named <namespace>.db.
-    :type output_dir: str
     :param namespace: Delta Lake database name
     :type namespace: str
     :param tenant_name: Tenant warehouse to save processed data to; defaults to saving data to the user warehouse if a tenant is not specified
     :type tenant_name: str | None
     """
-    (spark, delta_ns) = set_up_workspace(APP_NAME, f"{output_dir.removesuffix('/')}/{namespace}", tenant_name)
+    (spark, delta_ns) = set_up_workspace(APP_NAME, namespace, tenant_name)
     for file in list_remote_dir_contents(source):
         # file names are in the 'Key' value
         # 'tenant-general-warehouse/kbase/datasets/uniprot/id_mapping/id_mapping_part_001.tsv.gz'

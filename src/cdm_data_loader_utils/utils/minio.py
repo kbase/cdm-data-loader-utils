@@ -40,7 +40,7 @@ def list_remote_dir_contents(remote_dir: str) -> list[dict[str, Any]]:
     response = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=remote_dir)
     if response["IsTruncated"]:
         logger.warning("list_remote_dir_contents did not return all files in %s", remote_dir)
-    return response["Content"]
+    return response["Contents"]
 
 
 def upload_file(file_path: Path | str, destination_dir: str, object_name: str | None = None) -> bool:

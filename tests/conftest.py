@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pyspark.sql import SparkSession, DataFrame
+from berdl_notebook_utils.setup_spark_session import generate_spark_conf
+from pyspark.conf import SparkConf
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import (
     ArrayType,
     BooleanType,
@@ -28,15 +30,23 @@ from cdm_data_loader_utils.audit.schema import (
 )
 from cdm_data_loader_utils.core.pipeline_run import PipelineRun
 from cdm_data_loader_utils.readers.dsv import INVALID_DATA_FIELD
-from cdm_data_loader_utils.utils.spark_delta import get_spark
 
 SAVE_DIR = "spark.sql.warehouse.dir"
+
+
+TEST_NS = "test_ns"
+PIPELINE_RUN = {RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"}
+ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"}
 
 
 @pytest.fixture
 def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
     """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
-    spark = get_spark("test_delta_app", local=True, delta_lake=True, override={SAVE_DIR: tmp_path})
+    config = generate_spark_conf("test_delta_app", local=True, use_delta_lake=True)
+    config[SAVE_DIR] = str(tmp_path)
+    spark_conf = SparkConf().setAll(list(config.items()))
+    spark = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+    assert spark.conf.get(SAVE_DIR).removeprefix("file:") == str(tmp_path)  # pyright: ignore[reportOptionalMemberAccess]
     yield spark
     spark.stop()
 
@@ -422,12 +432,6 @@ def annotated_df_errors(annotated_df_data: list[dict[str, Any]]) -> set[str]:
 
 
 # Audit-related stuff
-
-TEST_NS = "TEST_NS"
-PIPELINE_RUN = {RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"}
-ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"}
-
-
 @pytest.fixture(scope="package")
 def pipeline_run() -> PipelineRun:
     """Generate a pipeline run."""

@@ -21,6 +21,7 @@ from cdm_data_loader_utils.audit.schema import (
 )
 from cdm_data_loader_utils.core.pipeline_run import PipelineRun
 from cdm_data_loader_utils.parsers.uniprot.idmapping import ingest
+from cdm_data_loader_utils.utils.spark_delta import write_delta
 from tests.audit.conftest import (
     INIT_TIMESTAMP_FIELDS,
 )
@@ -31,22 +32,36 @@ SAVE_DIR = "spark.sql.warehouse.dir"
 
 @pytest.mark.requires_spark
 @pytest.mark.parametrize("file_name", ["ECOLI_83333_idmapping.txt", "ECOLI_83333_idmapping.tsv.gz"])
-def test_ingest(test_data_dir: Path, file_name: str, pipeline_run: PipelineRun, spark: SparkSession) -> None:
+@pytest.mark.parametrize("parse_only", [True, False])
+def test_ingest(
+    test_data_dir: Path,
+    pipeline_run: PipelineRun,
+    spark: SparkSession,
+    file_name: str,
+    parse_only: bool,
+) -> None:
     """Test basic ingestion of UniProt ID Mapping data."""
     # prep the appropriate tables
     for t in AUDIT_SCHEMA:
         create_empty_delta_table(spark, pipeline_run.namespace, t, AUDIT_SCHEMA[t])
 
     test_mapping = test_data_dir / "uniprot" / "idmapping" / file_name
-    df = ingest(spark, pipeline_run, str(test_mapping))
+
+    if parse_only:
+        df = ingest(spark, pipeline_run, str(test_mapping))
+    else:
+        table_name = "uniprot_identifier"
+        # the test will write the delta table; we will check the results
+        write_delta(spark, ingest(spark, pipeline_run, str(test_mapping)), pipeline_run.namespace, table_name, "append")
+        df = spark.table(f"{pipeline_run.namespace}.{table_name}")
+
     assert isinstance(df, DataFrame)
     assert df.columns == ["uniprot_id", "db", "xref", "description", "source", "relationship"]
     n_rows = 331510
     assert df.count() == n_rows
     assert df.select("uniprot_id").filter(~sf.col("uniprot_id").startswith("UniProt:")).count() == 0
-    assert df.select()
-    # a few sanity checks on the data
 
+    # a few sanity checks on the data
     n_entries = 4598
     # 4598 NCBI_TaxID, UniProtKB-ID, CRC64
     for db in ["NCBI_TaxID", "CRC64", "UniProtKB-ID"]:

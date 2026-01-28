@@ -66,7 +66,7 @@ def test_complete_run(
     spark: SparkSession,
     pipeline: str,
     source: str,
-    add_default_data: bool,  # noqa: FBT001
+    add_default_data: bool,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that completing a run updates the appropriate run table."""
@@ -115,7 +115,7 @@ def test_fail_run(
     spark: SparkSession,
     pipeline: str,
     source: str,
-    add_default_data: bool,  # noqa: FBT001
+    add_default_data: bool,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that failing a run does the appropriate fun stuff."""

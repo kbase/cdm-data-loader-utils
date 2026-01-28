@@ -12,10 +12,7 @@ dependencies = [
     "berdl-notebook-utils",
     "biopython>=1.86",
     "click>=8.3.1",
-    "xmlschema>=4.2.0",
-    "xsdata[cli,lxml]>=25.7",
     "lxml>=6.0.2",
-    "pytest-asyncio>=1.3.0",
     "ruff>=0.14.13",
 ]
 
@@ -24,8 +21,17 @@ dev = [
     "hypothesis>=6.148.9",
     "mutmut>=3.4.0",
     "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "pytest-env>=1.2.0",
+]
+models = [
+    "genson>=1.3.0",
+    "json2python-models>=0.3.1",
+]
+xml = [
+    "xmlschema>=4.3.1",
+    "xsdata[cli,lxml]>=26.1",
 ]
 
 [tool.ruff]
@@ -146,7 +152,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["T201"] # ignore printing in notebooks
-"tests/**/*.py" = ["S101", "T201"] # use of assert
+"tests/**/*.py" = ["S101", "T201", "FBT001", "FBT002"]  # use of assert
 "**/__init__.py" = ["D104"]
 
 [tool.ruff.lint.mccabe]
@@ -164,8 +170,9 @@ build-backend = "uv_build"
 pythonpath = ["src"]
 log_cli = true
 log_cli_level = "INFO"
+log_level = "INFO"
 addopts = ["-v"]
-markers = ["requires_spark: must be run in an environment where spark is available"]
+markers = ["requires_spark: must be run in an environment where spark is available", "slow_test: does what it says on the tin"]
 
 # environment settings for running tests
 [tool.pytest_env]

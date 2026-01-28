@@ -1,3 +1,5 @@
+"""Tests of the Spark / Delta utilities."""
+
 import logging
 from collections.abc import Generator
 from pathlib import Path
@@ -5,6 +7,7 @@ from typing import Any
 
 import pytest
 from pyspark.sql import DataFrame, DataFrameWriter, Row, SparkSession
+from pyspark.testing import assertDataFrameEqual
 
 from cdm_data_loader_utils.utils import spark_delta
 from cdm_data_loader_utils.utils.spark_delta import (
@@ -71,7 +74,7 @@ def spark_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[tuple
         fake_create_namespace_if_not_exists,
     )
 
-    def set_up_test_workspace(*args, **kwargs) -> tuple[SparkSession, str]:
+    def set_up_test_workspace(*args: str, **kwargs: str | bool) -> tuple[SparkSession, str]:  # noqa: ARG001
         """Local override of set_up_workspace."""
         return original_set_up_ws_fn(*args, local=True, delta_lake=True, override={SAVE_DIR: str(tmp_path)})
 
@@ -88,7 +91,7 @@ def spark_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[tuple
 def test_get_spark(app_name: str | None, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test of the get_spark utility's ability to fill in the app name if not provided."""
 
-    def fake_get_spark_session(*args: str, **kwargs) -> str:
+    def fake_get_spark_session(*args: str, **kwargs: str | bool) -> str:  # noqa: ARG001
         if app_name == "my_fave_app":
             assert args[0] == app_name
         else:
@@ -114,6 +117,7 @@ def test_get_spark_live(app_name: str | None) -> None:
     spark = get_spark(app_name, local=True)
     assert isinstance(spark, SparkSession)
     assert spark.conf.get("spark.app.name") == "my_fave_app" if app_name == "my_fave_app" else DEFAULT_APP_NAME
+    spark.stop()
 
 
 @pytest.mark.parametrize("app_name", [None, "", "my_fave_app"])
@@ -129,11 +133,11 @@ def test_set_up_workspace_defaults(
 ) -> None:
     """Check the default values when setting up a workspace."""
 
-    def fake_get_spark_session(*args: str, **kwargs) -> str:
+    def fake_get_spark_session(*args: str, **kwargs: str | bool) -> str:  # noqa: ARG001
         assert args[0] == app_name if app_name else DEFAULT_APP_NAME
         return "spark session"
 
-    def fake_create_ns(*args, **kwargs) -> str:
+    def fake_create_ns(*args: str, **kwargs: str | bool) -> str:
         assert args[0] == "spark session"
         if namespace:
             assert args[1] == namespace
@@ -166,6 +170,7 @@ def test_set_up_workspace_defaults(
 @pytest.mark.parametrize("tenant_name", [pytest.param(_, id=f"tenant_{_}") for _ in [None, "some_tenant"]])
 @pytest.mark.parametrize("namespace", [pytest.param(_, id=f"ns_{_}") for _ in [None, "some_namespace"]])
 def test_set_up_workspace_creates_database(
+    spark: SparkSession,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     tenant_name: str | None,
@@ -190,13 +195,14 @@ def test_set_up_workspace_creates_database(
         },
     }
 
-    spark = get_spark(app_name, local=True)
     expected = delta_ns[namespace][tenant_name]
     assert not spark.catalog.databaseExists(expected)
-    spark.stop()
 
     def fake_create_namespace_if_not_exists(
-        spark: SparkSession, namespace: str = "default", append_target: bool = True, tenant_name: str | None = None
+        spark: SparkSession,
+        namespace: str = "default",
+        append_target: bool = True,  # noqa: ARG001
+        tenant_name: str | None = None,
     ) -> str:
         """Mock create_namespace_if_not_exists without external calls."""
         namespace = f"tenant__{tenant_name}__{namespace}" if tenant_name else f"user__some_user__{namespace}"
@@ -210,7 +216,7 @@ def test_set_up_workspace_creates_database(
         fake_create_namespace_if_not_exists,
     )
 
-    def set_up_test_workspace(*args, **kwargs) -> tuple[SparkSession, str]:
+    def set_up_test_workspace(*args: str, **kwargs: str | bool) -> tuple[SparkSession, str]:  # noqa: ARG001
         """Local override of set_up_workspace."""
         return original_set_up_ws_fn(*args, local=True, delta_lake=True, override={SAVE_DIR: str(tmp_path)})
 
@@ -227,7 +233,7 @@ def test_set_up_workspace_creates_database(
 @pytest.mark.parametrize("dataframe", [None, [1, 2, 3], {}, True])
 def test_write_delta_no_data(
     spark: SparkSession,
-    dataframe: DataFrame | bool | list | dict | None,  # noqa: FBT001
+    dataframe: DataFrame | bool | list | dict | None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Ensure that the appropriate message is logged if there is no data to save."""
@@ -264,6 +270,8 @@ def check_query_output(spark: SparkSession, db_table: str, expected: list[dict[s
     results = spark.sql(f"SELECT * FROM {db_table}").collect()
     results_as_dict = [row.asDict() for row in results]
     assert len(results) == len(expected)
+    expected_df = spark.createDataFrame(expected)
+    assertDataFrameEqual(results, expected_df)
     # TODO: make this less clunky
     for row in results_as_dict:
         assert row in expected
@@ -476,7 +484,7 @@ def test_write_delta_raise_error(
     table = "error_handling"
     db_table = f"{delta_ns}.{table}"
 
-    def save_as_oh_crap(*args, **kwargs) -> None:
+    def save_as_oh_crap(*args: str, **kwargs: str | bool) -> None:  # noqa: ARG001
         """Local override of set_up_workspace."""
         msg = "Oh crap!"
         raise RuntimeError(msg)
