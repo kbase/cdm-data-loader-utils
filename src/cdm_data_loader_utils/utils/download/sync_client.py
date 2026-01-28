@@ -32,12 +32,12 @@ from tenacity import (
     wait_exponential,
 )
 
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 from cdm_data_loader_utils.utils.download.core import (
     DownloadCore,
     DownloadError,
     NonRetryableDownloadError,
 )
-from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
 logger: logging.Logger = get_cdm_logger()
 

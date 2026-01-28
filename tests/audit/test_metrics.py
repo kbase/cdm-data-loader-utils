@@ -37,7 +37,7 @@ def test_write_metrics(  # noqa: PLR0913
     spark: SparkSession,
     pipeline: str,
     source: str,
-    add_default_data: bool,  # noqa: FBT001
+    add_default_data: bool,
     caplog: pytest.LogCaptureFixture,
     annotated_df_data: list[dict[str, Any]],
     annotated_df_schema: StructType,

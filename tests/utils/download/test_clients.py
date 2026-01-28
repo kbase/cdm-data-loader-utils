@@ -237,6 +237,7 @@ async def test_checksum_mismatch(tmp_path: Path, sample_content: bytes, download
     assert destination.read_bytes() == sample_content
 
 
+@pytest.mark.slow_test
 @pytest.mark.parametrize("max_attempts", range(1, 5))
 @pytest.mark.parametrize("response_type", ["error", "timeout"])
 @pytest.mark.asyncio
@@ -296,6 +297,7 @@ async def test_timeout_and_server_error_retries(  # noqa: PLR0913
         assert len(retry_possible_msgs) == successful_attempt - 1
 
 
+@pytest.mark.slow_test
 @pytest.mark.parametrize("max_attempts", range(1, 5))
 @pytest.mark.asyncio
 async def test_client_error_retries(

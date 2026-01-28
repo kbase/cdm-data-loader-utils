@@ -1,13 +1,16 @@
 """Global configuration settings for tests."""
 
 import datetime
+import shutil
 from collections.abc import Generator
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 import pytest
-from pyspark.sql import SparkSession, DataFrame
+from berdl_notebook_utils.setup_spark_session import generate_spark_conf
+from pyspark.conf import SparkConf
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import (
     ArrayType,
     BooleanType,
@@ -28,17 +31,44 @@ from cdm_data_loader_utils.audit.schema import (
 )
 from cdm_data_loader_utils.core.pipeline_run import PipelineRun
 from cdm_data_loader_utils.readers.dsv import INVALID_DATA_FIELD
-from cdm_data_loader_utils.utils.spark_delta import get_spark
+from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
 SAVE_DIR = "spark.sql.warehouse.dir"
+
+
+TEST_NS = "test_ns"
+PIPELINE_RUN = {RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"}
+ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"}
 
 
 @pytest.fixture
 def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
     """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
-    spark = get_spark("test_delta_app", local=True, delta_lake=True, override={SAVE_DIR: tmp_path})
+    config = generate_spark_conf("test_delta_app", local=True, use_delta_lake=True)
+    test_config = {
+        "spark.sql.shuffle.partitions": 5,
+        "spark.default.parallelism": 9,
+        # Disabling rdd and map output compression as data is already small for tests
+        "spark.rdd.compress": False,
+        "spark.shuffle.compress": False,
+        # Disable Spark UI for tests
+        "spark.ui.enabled": False,
+        "spark.ui.showConsoleProgress": False,
+        # Extra configs to optimize Delta internal operations on tests
+        "spark.databricks.delta.snapshotPartitions": 2,
+        "delta.log.cacheSize": 3,
+    }
+    config.update(test_config)
+    config[SAVE_DIR] = str(tmp_path)
+    spark_conf = SparkConf().setAll(list(config.items()))
+    spark = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+    save_dir = spark.conf.get(SAVE_DIR).removeprefix("file:")  # pyright: ignore[reportOptionalMemberAccess]
+    if save_dir != str(tmp_path):
+        get_cdm_logger().error(f"spark dir: {tmp_path}; save dir: {save_dir}")
     yield spark
+    spark.catalog.clearCache()
     spark.stop()
+    shutil.rmtree(save_dir)
 
 
 @pytest.fixture(scope="session")
@@ -422,12 +452,6 @@ def annotated_df_errors(annotated_df_data: list[dict[str, Any]]) -> set[str]:
 
 
 # Audit-related stuff
-
-TEST_NS = "TEST_NS"
-PIPELINE_RUN = {RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"}
-ALT_PIPELINE_RUN = {RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"}
-
-
 @pytest.fixture(scope="package")
 def pipeline_run() -> PipelineRun:
     """Generate a pipeline run."""

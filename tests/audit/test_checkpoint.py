@@ -83,7 +83,7 @@ def test_upsert_checkpoint_update(spark: SparkSession, pipeline: str, source: st
 @pytest.mark.parametrize("pipeline", [PIPELINE_RUN[PIPELINE], "some other pipeline"])
 @pytest.mark.parametrize("source", [PIPELINE_RUN[SOURCE], "/path/to/dir"])
 @pytest.mark.parametrize("add_default_data", [True, False])
-def test_load_checkpoint(spark: SparkSession, pipeline: str, source: str, add_default_data: bool) -> None:  # noqa: FBT001
+def test_load_checkpoint(spark: SparkSession, pipeline: str, source: str, add_default_data: bool) -> None:
     """Test loading a previously-saved checkpoint data."""
     is_saved_table = (
         add_default_data
@@ -119,10 +119,9 @@ def test_update_checkpoint_status(
     pipeline: str,
     source: str,
     caplog: pytest.LogCaptureFixture,
-    add_default_data: bool,  # noqa: FBT001
+    add_default_data: bool,
 ) -> None:
     """Test updating checkpoint status, with and without existing table data."""
-    caplog.set_level(logging.INFO)
     is_saved_table = (
         add_default_data
         and pipeline == DEFAULT_DATA[CHECKPOINT][PIPELINE]

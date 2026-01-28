@@ -59,7 +59,7 @@ INIT_TIMESTAMP_FIELDS = {CHECKPOINT: [UPDATED], RUN: [START_TIME], METRICS: [UPD
 END_TIMESTAMP_FIELDS = {RUN: [END_TIME]}
 
 
-def create_table(spark: SparkSession, table_name: str, add_default_data: bool = False) -> list[dict[str, Any]]:  # noqa: FBT001, FBT002
+def create_table(spark: SparkSession, table_name: str, add_default_data: bool = False) -> list[dict[str, Any]]:
     """Helper for creating audit tables for tests."""
     # ensure the db exists
     if table_name not in AUDIT_SCHEMA:
