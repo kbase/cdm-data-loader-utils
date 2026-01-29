@@ -16,6 +16,9 @@ dependencies = [
     "ruff>=0.14.13",
 ]
 
+[project.scripts]
+idmapping = "cdm_data_loader_utils.parsers.idmapping:main"
+
 [dependency-groups]
 dev = [
     "hypothesis>=6.148.9",
