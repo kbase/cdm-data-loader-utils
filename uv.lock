@@ -382,12 +382,14 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "hypothesis" },
-    { name = "mutmut" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-env" },
+]
+experimental = [
+    { name = "hypothesis" },
+    { name = "mutmut" },
 ]
 local = [
     { name = "berdl-notebook-utils" },
@@ -411,12 +413,14 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "hypothesis", specifier = ">=6.148.9" },
-    { name = "mutmut", specifier = ">=3.4.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-env", specifier = ">=1.2.0" },
+]
+experimental = [
+    { name = "hypothesis", specifier = ">=6.150.2" },
+    { name = "mutmut", specifier = ">=3.4.0" },
 ]
 local = [{ name = "berdl-notebook-utils", git = "https://github.com/BERDataLakehouse/spark_notebook.git?subdirectory=notebook_utils" }]
 models = [
