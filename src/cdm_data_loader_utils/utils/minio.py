@@ -7,9 +7,10 @@ import boto3
 import tqdm
 from berdl_notebook_utils.berdl_settings import get_settings
 
+from cdm_data_loader_utils.core.constants import CDM_LAKE_S3
 from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
 
-S3_BUCKET = "cdm-lake"
+S3_BUCKET = CDM_LAKE_S3.removeprefix("s3a://")
 
 # Get credentials from environment variables (automatically set in JupyterHub)
 
