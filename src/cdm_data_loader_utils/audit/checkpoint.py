@@ -50,11 +50,10 @@ def upsert_checkpoint(
         sf.lit(last_entry_id).alias(LAST_ENTRY_ID),
         sf.current_timestamp().alias(UPDATED),
     )
-    updates = spark.createDataFrame(df.rdd, schema=AUDIT_SCHEMA[CHECKPOINT])
 
     (
         delta.alias("t")
-        .merge(updates.alias("s"), current_run_expr())
+        .merge(df.alias("s"), current_run_expr())
         .whenMatchedUpdate(set={val: f"s.{val}" for val in [STATUS, RECORDS_PROCESSED, LAST_ENTRY_ID, UPDATED]})
         .whenNotMatchedInsertAll()
         .execute()
