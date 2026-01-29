@@ -155,7 +155,7 @@ def write_delta(spark: SparkSession, sdf: DataFrame, delta_ns: str, table: str, 
         raise ValueError(msg)
 
     db_table = f"{delta_ns}.{table}"
-    if sdf is None or not isinstance(sdf, DataFrame) or sdf.rdd.isEmpty():
+    if sdf is None or not isinstance(sdf, DataFrame) or sdf.isEmpty():
         logger.warning("No data to write to %s", db_table)
         return
 

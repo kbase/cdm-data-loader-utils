@@ -16,6 +16,7 @@ LOG_FILENAME = "cdm_data_loader.log"
 MAX_LOG_FILE_SIZE = 2**30  # 1 GiB
 MAX_LOG_BACKUPS = 5
 
+__LOGGER = None
 
 # TODO: adopt logging config, set just once
 LOGGING_CONFIG = {
@@ -47,6 +48,28 @@ LOGGING_CONFIG = {
 def get_cdm_logger(
     logger_name: str | None = None, log_level: str | None = None, log_dir: str | None = None
 ) -> logging.Logger:
+    """Retrieve the logger, initialising it if necessary.
+
+    If the logger name is not set, the default name "cdm_data_loader" will be used.
+
+    :param logger_name: name for the logger, defaults to None
+    :type logger_name: str | None, optional
+    :param log_level: logger level, defaults to None
+    :type log_level: str | None, optional
+    :param log_dir: directory to save log files to, optional. If no directory is specified, logs will just be emitted to the console.
+    :type log_dir: str | None
+    :return: initialised logger
+    :rtype: logging.Logger
+    """
+    global __LOGGER
+    if not __LOGGER:
+        __LOGGER = init_logger(logger_name, log_level, log_dir)
+    return __LOGGER
+
+
+def init_logger(
+    logger_name: str | None = None, log_level: str | None = None, log_dir: str | None = None
+) -> logging.Logger:
     """Initialise the logger for the module.
 
     If the logger name is not set, the default name "cdm_data_loader" will be used.
@@ -62,6 +85,7 @@ def get_cdm_logger(
     """
     if not logger_name:
         logger_name = DEFAULT_LOGGER_NAME
+
     # Always get the same logger by name
     logger = logging.getLogger(logger_name)
 
@@ -89,7 +113,6 @@ def get_cdm_logger(
             LOG_FILENAME, maxBytes=MAX_LOG_FILE_SIZE, backupCount=MAX_LOG_BACKUPS
         )
         logger.addHandler(file_handler)
-
     return logger
 
 

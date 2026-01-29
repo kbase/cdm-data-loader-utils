@@ -31,7 +31,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as sf
 from pyspark.sql.types import StringType, StructField
 
-from cdm_data_loader_utils.core.constants import INVALID_DATA_FIELD_NAME
+from cdm_data_loader_utils.core.constants import CDM_LAKE_S3, INVALID_DATA_FIELD_NAME
 from cdm_data_loader_utils.core.pipeline_run import PipelineRun
 from cdm_data_loader_utils.readers.dsv import read
 from cdm_data_loader_utils.utils.cdm_logger import get_cdm_logger
@@ -117,7 +117,7 @@ def read_and_write(spark: SparkSession, pipeline_run: PipelineRun, id_mapping_ts
 @click.option(
     "--source",
     required=True,
-    help="Full path to the source directory containing ID mapping file(s). S3 buckets should include the full path with s3a:// prefix; otherwise, the path will be assumed to be local.",
+    help="Full path to the source directory containing ID mapping file(s). Files are assumed to be in the CDM s3 minio bucket, and the s3a://cdm-lake prefix may be omitted.",
 )
 @click.option(
     "--namespace",
@@ -141,17 +141,16 @@ def cli(source: str, namespace: str, tenant_name: str | None) -> None:
     :type tenant_name: str | None
     """
     (spark, delta_ns) = set_up_workspace(APP_NAME, namespace, tenant_name)
-    bucket_list = []
-    if "://" in source and source.startswith("s3a://"):
-        # we're golden
-        bucket_list = list_remote_dir_contents(source)
-    # TODO: other locations
 
+    # TODO: other locations / local files?
+    bucket_list = list_remote_dir_contents(source.removeprefix("s3a://cdm-lake/"))
     for file in bucket_list:
         # file names are in the 'Key' value
         # 'tenant-general-warehouse/kbase/datasets/uniprot/id_mapping/id_mapping_part_001.tsv.gz'
-        pipeline_run = PipelineRun(str(uuid4()), APP_NAME, file["Key"], delta_ns)
-        read_and_write(spark, pipeline_run, file["Key"])
+        file_path = f"{CDM_LAKE_S3}/{file['Key']}"
+        pipeline_run = PipelineRun(str(uuid4()), APP_NAME, file_path, delta_ns)
+        logger.info("Reading in mappings from %s", file_path)
+        read_and_write(spark, pipeline_run, file_path)
 
 
 if __name__ == "__main__":

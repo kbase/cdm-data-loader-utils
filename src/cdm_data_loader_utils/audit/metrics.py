@@ -75,7 +75,6 @@ def write_metrics(
         sf.lit(metrics.validation_errors).alias(VALIDATION_ERRORS),
         sf.current_timestamp().alias(UPDATED),
     )
-    updates = spark.createDataFrame(df.rdd, schema=AUDIT_SCHEMA[METRICS])
 
     target = DeltaTable.forName(
         spark,
@@ -85,7 +84,7 @@ def write_metrics(
     (
         target.alias("t")
         .merge(
-            updates.alias("s"),
+            df.alias("s"),
             current_run_expr(),
         )
         .whenMatchedUpdate(set={k: f"s.{k}" for k in [N_READ, N_VALID, N_INVALID, VALIDATION_ERRORS, UPDATED]})

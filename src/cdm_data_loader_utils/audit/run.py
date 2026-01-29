@@ -48,10 +48,7 @@ def start_run(spark: SparkSession, run: PipelineRun) -> None:
         sf.lit(sf.lit(None).cast("timestamp")).alias(END_TIME),
         sf.lit(None).cast("string").alias(ERROR),
     )
-
-    spark.createDataFrame(df.rdd, schema=AUDIT_SCHEMA[RUN]).write.format("delta").mode("append").saveAsTable(
-        f"{run.namespace}.{RUN}"
-    )
+    df.write.format("delta").mode("append").saveAsTable(f"{run.namespace}.{RUN}")
 
 
 def complete_run(spark: SparkSession, run: PipelineRun, records_processed: int) -> None:
