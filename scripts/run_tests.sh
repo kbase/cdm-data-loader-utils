@@ -6,7 +6,9 @@ SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
 # Change the current working directory to SCRIPT_DIR
 cd "$SCRIPT_DIR"
 
-# uv venv docker_venv
-# source docker_venv/bin/activate
+# use the system packages in this virtual environment
+uv venv --system-site-packages
+source .venv/bin/activate
 
-uv run --frozen pytest --cov=src --cov-report=xml
+# run the tests using the active venv and with the dev dependencies installed.
+uv run --active --frozen --group dev pytest --cov=src --cov-report=xml
