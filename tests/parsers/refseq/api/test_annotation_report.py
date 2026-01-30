@@ -2,8 +2,13 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
+from pyspark.sql import SparkSession
+from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
+
+from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
 from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
     apply_prefix,
     load_contig_collection_x_feature,
@@ -17,15 +22,13 @@ from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
     parse_annotation_data,
     to_int,
 )
-from pyspark.sql import SparkSession
-from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
-
-from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
 from tests.conftest import TEST_NS
+
+CDM_SCHEMA_LC = {k.lower(): v for k, v in CDM_SCHEMA.items()}
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         (
             {
@@ -68,13 +71,13 @@ from tests.conftest import TEST_NS
         ),
     ],
 )
-def test_load_identifiers(input_data, expected_output):
+def test_load_identifiers(input_data: dict[str, Any], expected_output: list[tuple]) -> None:
     result = load_identifiers(input_data)
     assert result == expected_output
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: all name fields present
         (
@@ -133,13 +136,13 @@ def test_load_identifiers(input_data, expected_output):
         ),
     ],
 )
-def test_load_names(input_data, expected_output):
+def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) -> None:
     result = load_names(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: basic valid input with plus strand
         (
@@ -334,13 +337,13 @@ def test_load_names(input_data, expected_output):
         ),
     ],
 )
-def test_load_feature_records(input_data, expected_output):
+def test_load_feature_records(input_data: dict[str, Any], expected_output: list[tuple]):
     result = load_feature_records(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: valid mapping
         (
@@ -387,13 +390,13 @@ def test_load_feature_records(input_data, expected_output):
         ),
     ],
 )
-def test_load_contig_collection_x_feature(input_data, expected_output):
+def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_output) -> None:
     result = load_contig_collection_x_feature(input_data)
     assert result == expected_output
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: Valid report with multiple proteins
         (
@@ -471,13 +474,13 @@ def test_load_contig_collection_x_feature(input_data, expected_output):
         ),
     ],
 )
-def test_load_contig_collection_x_protein(input_data, expected_output):
+def test_load_contig_collection_x_protein(input_data: dict[str, Any], expected_output: list[tuple]) -> None:
     result = load_contig_collection_x_protein(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: valid gene with multiple proteins
         (
@@ -534,13 +537,13 @@ def test_load_contig_collection_x_protein(input_data, expected_output):
         ({"reports": []}, []),
     ],
 )
-def test_load_feature_x_protein(input_data, expected_output):
+def test_load_feature_x_protein(input_data: dict[str, Any], expected_output: list[tuple[str, str]]) -> None:
     result = load_feature_x_protein(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: Valid contig and assembly
         (
@@ -616,13 +619,13 @@ def test_load_feature_x_protein(input_data, expected_output):
         ),
     ],
 )
-def test_load_contig_x_contig_collection(input_data, expected_output):
+def test_load_contig_x_contig_collection(input_data: dict[str, Any], expected_output: list[tuple[str, str]]) -> None:
     result = load_contig_x_contig_collection(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output",
+    ("input_data", "expected_output"),
     [
         # Case 1: Valid contig with accession_version
         (
@@ -676,14 +679,14 @@ def test_load_contig_x_contig_collection(input_data, expected_output):
         ),
     ],
 )
-def test_load_contigs(input_data, expected_output):
+def test_load_contigs(input_data: dict[str, Any], expected_output: list[tuple]) -> None:
     result = load_contigs(input_data)
     assert sorted(result) == sorted(expected_output)
 
 
 ### add new test: to_int
 @pytest.mark.parametrize(
-    "input_id, expected",
+    ("input_id", "expected"),
     [
         ("GeneID:123", "ncbigene:123"),
         ("YP_009725307.1", "refseq:YP_009725307.1"),
@@ -691,59 +694,35 @@ def test_load_contigs(input_data, expected_output):
         ("random", "random"),
     ],
 )
-def test_apply_prefix(input_id, expected):
+def test_apply_prefix(input_id: str, expected: str) -> None:
     assert apply_prefix(input_id) == expected
 
 
-@pytest.mark.parametrize("val, expected", [("123", 123), ("abc", None), ("", None)])
-def test_to_int(val, expected):
+@pytest.mark.parametrize(("val", "expected"), [("123", 123), ("abc", None), ("", None)])
+def test_to_int(val: str, expected: int | None) -> None:
     assert to_int(val) == expected
-
-
-TABLE_NAME_MAP = {
-    "contig": "Contig",
-    "feature": "Feature",
-    "identifier": "Identifier",
-    "name": "Name",
-    "contig_x_contigcollection": "Contig_x_ContigCollection",
-    "contigcollection_x_feature": "ContigCollection_x_Feature",
-    "contigcollection_x_protein": "ContigCollection_x_Protein",
-    "feature_x_protein": "Feature_x_Protein",
-}
 
 
 @pytest.mark.requires_spark
 def test_parse_annotation_data(spark: SparkSession, test_data_dir: Path) -> None:
-    """Test the parsing of the annotation data."""
+    """
+    Test that parse_annotation_data produces expected tables with correct schemas and non-empty output.
+    """
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {TEST_NS}")
-    spark.catalog.setCurrentDatabase(TEST_NS)
-
-    # Load NCBI dataset from NCBI API
+    # Load and parse test JSON
     sample_api_response = test_data_dir / "refseq" / "annotation_report.json"
     dataset = json.load(sample_api_response.open())
-
-    # Run parse function
+    # Run the parser
     parse_annotation_data(spark, [dataset], TEST_NS)
 
-    # Expected tables to validate from output
-    expected_tables = [
-        "contig",
-        "contig_x_contigcollection",
-        "contigcollection_x_feature",
-        "contigcollection_x_protein",
-        "feature",
-        "feature_x_protein",
-        "identifier",
-        "name",
-    ]
+    # Load expected results JSON
+    sample_api_response = test_data_dir / "refseq" / "annotation_report.parsed.json"
+    expected_tables = json.load(sample_api_response.open())
+    result_df = {table.name: spark.table(f"{TEST_NS}.{table.name}") for table in spark.catalog.listTables(TEST_NS)}
 
-    for table_name in expected_tables:
+    for table_name in result_df:
         result_df = spark.table(f"{TEST_NS}.{table_name}")
-        schema_key = TABLE_NAME_MAP[table_name]
-
-        # Construct expected_df just for schema comparison
-        rows = [r.asDict() for r in result_df.collect()]
-        expected_df = spark.createDataFrame(rows, schema=CDM_SCHEMA[schema_key])
+        expected_df = spark.createDataFrame(expected_tables[table_name], schema=CDM_SCHEMA_LC[table_name])
 
         # Assert schema match
         assertSchemaEqual(
@@ -755,3 +734,6 @@ def test_parse_annotation_data(spark: SparkSession, test_data_dir: Path) -> None
             expected_df,
             result_df,
         )
+
+    # make sure that all expected tables are present
+    assert set(expected_tables) == set(result_df)
