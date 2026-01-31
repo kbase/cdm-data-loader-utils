@@ -3,7 +3,7 @@
 RefSeq annotation parser for transforming NCBI Datasets API JSON into CDM-formatted Delta Lake tables.
 
 Usage:
-uv run python src/cdm_data_loader_utils/parsers/annotation_parse.py \
+uv run python src/cdm_data_loader_utils/parsers/refseq/api/annotation_report.py \
   --accession GCF_000869125.1 \
   --namespace refseq_api \
   --query
@@ -143,21 +143,19 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-                features.append(
-                    (
-                        feature_id,
-                        None,
-                        None,
-                        None,
-                        to_int(r.get("end")),
-                        None,
-                        to_int(r.get("begin")),
-                        strand,
-                        "RefSeq",
-                        None,
-                        "gene",
-                    )
-                )
+                features.append((
+                    feature_id,
+                    None,
+                    None,
+                    None,
+                    to_int(r.get("end")),
+                    None,
+                    to_int(r.get("begin")),
+                    strand,
+                    "RefSeq",
+                    None,
+                    "gene",
+                ))
     return list({tuple(row) for row in features})
 
 
@@ -182,7 +180,7 @@ def load_contig_collection_x_feature(data: dict) -> list[tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------
-# PARSE CONTIG_COLLECTION <-> PROTEIN
+# PARSE CONTIG_COLLECTION <-> PROTEIN %%%
 # ---------------------------------------------------------------------
 def load_contig_collection_x_protein(data: dict) -> list[tuple[str, str]]:
     links = []
@@ -255,14 +253,79 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         assembly = annotations[0].get("assembly_accession")
 
         if contig and assembly:
-            links.append(
-                (
-                    f"refseq:{contig}",
-                    apply_prefix(assembly),
-                )
-            )
+            links.append((
+                f"refseq:{contig}",
+                apply_prefix(assembly),
+            ))
 
     return list(set(links))
+
+
+def load_contig_x_feature(data: dict) -> list[tuple[str, str]]:
+    """Extract (contig_id, feature_id) pairs."""
+    links = []
+
+    for gene_id, ann in unique_annotations(data):
+        feature_id = f"ncbigene:{gene_id}"
+
+        for region in ann.get("genomic_regions", []):
+            acc = region.get("gene_range", {}).get("accession_version")
+            if acc:
+                contig_id = apply_prefix(acc)
+                links.append((contig_id, feature_id))
+
+    return list(set(links))
+
+
+def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
+    links = []
+
+    for _, ann in unique_annotations(data):
+        contig_id = None
+
+        for region in ann.get("genomic_regions", []):
+            acc = region.get("gene_range", {}).get("accession_version")
+            if acc:
+                contig_id = apply_prefix(acc)
+                break  # only take first
+
+        if contig_id:
+            for p in ann.get("proteins", []):
+                pid = p.get("accession_version")
+                if pid:
+                    links.append((contig_id, apply_prefix(pid)))
+
+    return list({tuple(row) for row in links})
+
+
+### contig collection has 34 rows
+
+
+def load_contig_collections(data: dict) -> list[tuple]:
+    schema = CDM_SCHEMA["ContigCollection"]
+
+    records = []
+
+    for report in data.get("reports", []):
+        for item in report.get("contigcollection", []):
+            row = tuple(item.get(f) for f in schema.fieldNames())
+            records.append(row)
+
+    return records
+
+
+def load_protein(data: dict) -> list[tuple[str, str | None, str | None, str | None, int | None, str | None]]:
+    """Extract Protein table rows."""
+    out = []
+
+    for _, ann in unique_annotations(data):
+        for p in ann.get("proteins", []):
+            pid = apply_prefix(p.get("accession_version"))
+            name = p.get("name")
+            length = p.get("length")
+            out.append((pid, None, name, None, length, None))
+
+    return list({tuple(row) for row in out})
 
 
 # ---------------------------------------------------------------------
@@ -274,10 +337,26 @@ def write_to_table(
     table_name: str,
     database: str = "default",
 ) -> None:
-    if records:
-        spark.createDataFrame(records, CDM_SCHEMA[table_name]).write.format("delta").mode("overwrite").option(
-            "overwriteSchema", "true"
-        ).saveAsTable(f"{database}.{table_name}")
+    if not records:
+        print(f"[DEBUG] {table_name}: no records")
+        return
+
+    # print(f"\n[DEBUG] Writing table: {table_name}")
+    # print(f"[DEBUG] Record sample: {records[0]}")
+    # print(f"[DEBUG] Record field count: {len(records[0])}")
+    # print(f"[DEBUG] Schema field count: {len(CDM_SCHEMA[table_name])}")
+    # print(f"[DEBUG] Schema fields: {[f.name for f in CDM_SCHEMA[table_name]]}")
+
+    df = spark.createDataFrame(records, CDM_SCHEMA[table_name])
+    # print(f"[DEBUG] DataFrame row count: {df.count()}")
+
+    df.printSchema()
+    df.show(truncate=False)
+
+    df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{database}.{table_name}")
+    print(f"[DEBUG] Writing to {database}.{table_name}, number of records: {len(records)}")
+
+    df.createOrReplaceTempView(table_name)
 
 
 # ---------------------------------------------------------------------
@@ -293,14 +372,22 @@ CDM_TABLES = [
     "Feature_x_Protein",
     "Contig",
     "Contig_x_ContigCollection",
+    "ContigCollection",
+    "Protein",
+    "Contig_x_Feature",
+    "Contig_x_Protein",
 ]
 
 
 def run_sql_query(spark: SparkSession, database: str = "default") -> None:
     spark.sql(f"USE {database}")
     for table in CDM_TABLES:
-        print(f"\n[SQL Preview] {table}")
-        spark.sql(f"SELECT * FROM {table} LIMIT 20").show(truncate=False)
+        full_table_name = f"{database}.{table}"
+        print(f"\n[SQL Preview] {full_table_name}")
+        try:
+            spark.sql(f"SELECT * FROM {full_table_name} LIMIT 20").show(truncate=False)
+        except Exception as e:
+            print(f"[WARNING] Could not query table {full_table_name}: {e}")
 
 
 def parse_annotation_data(spark: SparkSession, datasets: list[dict], namespace: str) -> None:
@@ -361,6 +448,34 @@ def parse_annotation_data(spark: SparkSession, datasets: list[dict], namespace: 
             spark,
             load_contig_x_contig_collection(data),
             "Contig_x_ContigCollection",
+            namespace,
+        )
+
+        write_to_table(
+            spark,
+            load_contig_x_feature(data),
+            "Contig_x_Feature",
+            namespace,
+        )
+
+        write_to_table(
+            spark,
+            load_contig_x_protein(data),
+            "Contig_x_Protein",
+            namespace,
+        )
+
+        write_to_table(
+            spark,
+            load_contig_collections(data),
+            "ContigCollection",
+            namespace,
+        )
+
+        write_to_table(
+            spark,
+            load_protein(data),
+            "Protein",
             namespace,
         )
 

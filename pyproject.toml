@@ -22,7 +22,8 @@ uniprot = "cdm_data_loader_utils.parsers.uniprot.uniprot_kb:cli"
 uniref = "cdm_data_loader_utils.pasers.uniprot.uniref:cli"
 
 
-[dependency-groups]
+##[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
