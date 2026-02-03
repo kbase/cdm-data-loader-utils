@@ -8,7 +8,7 @@ cd "$SCRIPT_DIR"
 
 # use the system packages in this virtual environment
 uv venv --system-site-packages
-source .venv/bin/activate
+source $(SCRIPT_DIR)/.venv/bin/activate
 
 # run the tests using the active venv and with the dev dependencies installed.
 uv run --active --frozen --group dev pytest --cov=src --cov-report=xml
