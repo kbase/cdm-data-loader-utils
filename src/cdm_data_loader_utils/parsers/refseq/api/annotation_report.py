@@ -177,19 +177,21 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-                features.append((
-                    feature_id,
-                    None,
-                    None,
-                    None,
-                    to_int(r.get("end")),
-                    None,
-                    to_int(r.get("begin")),
-                    strand,
-                    "RefSeq",
-                    None,
-                    "gene",
-                ))
+                features.append(
+                    (
+                        feature_id,
+                        None,
+                        None,
+                        None,
+                        to_int(r.get("end")),
+                        None,
+                        to_int(r.get("begin")),
+                        strand,
+                        "RefSeq",
+                        None,
+                        "gene",
+                    )
+                )
     return list({tuple(row) for row in features})
 
 
@@ -287,10 +289,12 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         assembly = annotations[0].get("assembly_accession")
 
         if contig and assembly:
-            links.append((
-                f"refseq:{contig}",
-                apply_prefix(assembly),
-            ))
+            links.append(
+                (
+                    f"refseq:{contig}",
+                    apply_prefix(assembly),
+                )
+            )
 
     return list(set(links))
 
@@ -333,10 +337,12 @@ def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
 
 
 ### contig collection has 34 rows
-CONTIG_COLLECTION_MIN_SCHEMA = StructType([
-    StructField("contig_collection_id", StringType(), nullable=False),
-    StructField("hash", StringType(), nullable=True),
-])
+CONTIG_COLLECTION_MIN_SCHEMA = StructType(
+    [
+        StructField("contig_collection_id", StringType(), nullable=False),
+        StructField("hash", StringType(), nullable=True),
+    ]
+)
 
 
 def load_contig_collections(data: dict) -> list[tuple]:
