@@ -133,12 +133,17 @@ def unique_annotations(data: dict):
 # ---------------------------------------------------------------------
 def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
     """Extract Identifier table records."""
-    out = []
-
+    records = []
     for gene_id, ann in unique_annotations(data):
         entity_id = f"ncbigene:{gene_id}"
-        out.append((entity_id, gene_id, ann.get("name"), "RefSeq", ann.get("relationship")))
-    return list({tuple(row) for row in out})  # deduplicate
+        records.append((
+            entity_id,
+            gene_id,
+            ann.get("name"),
+            "RefSeq",
+            ann.get("relationship"),
+        ))
+    return list(set(records))
 
 
 # ---------------------------------------------------------------------
@@ -146,8 +151,7 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
 # ---------------------------------------------------------------------
 def load_names(data: dict) -> list[tuple[str, str, str, str]]:
     """Extract Name table records."""
-    out = []
-
+    records = []
     for gene_id, ann in unique_annotations(data):
         entity_id = f"ncbigene:{gene_id}"
         for label, desc in [
@@ -157,8 +161,8 @@ def load_names(data: dict) -> list[tuple[str, str, str, str]]:
         ]:
             val = ann.get(label)
             if val:
-                out.append((entity_id, val, desc, "RefSeq"))
-    return list({tuple(row) for row in out})
+                records.append((entity_id, val, desc, "RefSeq"))
+    return list(set(records))
 
 
 # ---------------------------------------------------------------------
@@ -166,8 +170,7 @@ def load_names(data: dict) -> list[tuple[str, str, str, str]]:
 # ---------------------------------------------------------------------
 def load_feature_records(data: dict) -> list[tuple]:
     """Extract Feature table records."""
-    features = []
-
+    records = []
     for gene_id, ann in unique_annotations(data):
         feature_id = f"ncbigene:{gene_id}"
         for region in ann.get("genomic_regions", []):
@@ -177,22 +180,20 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-                features.append(
-                    (
-                        feature_id,
-                        None,
-                        None,
-                        None,
-                        to_int(r.get("end")),
-                        None,
-                        to_int(r.get("begin")),
-                        strand,
-                        "RefSeq",
-                        None,
-                        "gene",
-                    )
-                )
-    return list({tuple(row) for row in features})
+                records.append((
+                    feature_id,
+                    None,
+                    None,
+                    None,
+                    to_int(r.get("end")),
+                    None,
+                    to_int(r.get("begin")),
+                    strand,
+                    "RefSeq",
+                    None,
+                    "gene",
+                ))
+    return list(set(records))
 
 
 # ---------------------------------------------------------------------
@@ -289,12 +290,10 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         assembly = annotations[0].get("assembly_accession")
 
         if contig and assembly:
-            links.append(
-                (
-                    f"refseq:{contig}",
-                    apply_prefix(assembly),
-                )
-            )
+            links.append((
+                f"refseq:{contig}",
+                apply_prefix(assembly),
+            ))
 
     return list(set(links))
 
@@ -337,12 +336,10 @@ def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
 
 
 ### contig collection has 34 rows
-CONTIG_COLLECTION_MIN_SCHEMA = StructType(
-    [
-        StructField("contig_collection_id", StringType(), nullable=False),
-        StructField("hash", StringType(), nullable=True),
-    ]
-)
+CONTIG_COLLECTION_MIN_SCHEMA = StructType([
+    StructField("contig_collection_id", StringType(), nullable=False),
+    StructField("hash", StringType(), nullable=True),
+])
 
 
 def load_contig_collections(data: dict) -> list[tuple]:
