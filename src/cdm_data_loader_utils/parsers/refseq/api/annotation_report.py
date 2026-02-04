@@ -78,30 +78,14 @@ def init_spark_and_db(app_name: str, database: str) -> SparkSession:
 # ---------------------------------------------------------------------
 # CDM PREFIX NORMALIZATION
 # ---------------------------------------------------------------------
-def apply_prefix(identifier: str | None) -> str | None:
-    """Normalize identifier by applying CDM-compliant prefixes."""
-    if not identifier:
-        return None
-
-    PREFIX_MAP = {
-        "GeneID:": "ncbigene:",
-        "YP_": "refseq:",
-        "XP_": "refseq:",
-        "WP_": "refseq:",
-        "NP_": "refseq:",
-        "NC_": "refseq:",
-        "GCF_": "insdc.gcf:",
-    }
-
-    for prefix, replacement in PREFIX_MAP.items():
-        if identifier.startswith(prefix):
-            # Only replace "GeneID:" completely
-            return (
-                replacement + identifier[len(prefix) :]
-                if ":" not in prefix
-                else identifier.replace(prefix, replacement)
-            )
-
+def apply_prefix(identifier: str) -> str:
+    """Standardize ID with known prefixes. Preserve RefSeq accessions like YP_123456 and NC_012345."""
+    if identifier.startswith(("YP_", "XP_", "WP_", "NP_", "NC_")):
+        return f"refseq:{identifier}"
+    if identifier.startswith(("GCF_", "GCA_")):
+        return f"insdc.gcf:{identifier}"
+    if identifier.isdigit():
+        return f"ncbigene:{identifier}"
     return identifier
 
 
@@ -132,18 +116,61 @@ def unique_annotations(data: dict):
 # IDENTIFIERS
 # ---------------------------------------------------------------------
 def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
-    """Extract Identifier table records."""
-    records = []
-    for gene_id, ann in unique_annotations(data):
-        entity_id = f"ncbigene:{gene_id}"
-        records.append((
-            entity_id,
-            gene_id,
-            ann.get("name"),
-            "RefSeq",
-            ann.get("relationship"),
-        ))
-    return list(set(records))
+    records: set[tuple] = set()
+
+    for _, ann in unique_annotations(data):
+        # 1. Genome-level (GCF_)
+        assembly_accession = ann.get("assembly_accession")
+        if assembly_accession and assembly_accession.startswith("GCF_"):
+            genome_id = apply_prefix(assembly_accession)
+            records.add((
+                genome_id,
+                genome_id,
+                "RefSeq genome ID",
+                "RefSeq",
+                None,
+            ))
+
+        # 2. Contig/Assembly (NC_) from gene_range
+        for region in ann.get("genomic_regions", []):
+            gene_range = region.get("gene_range", {})
+            acc = gene_range.get("accession_version")
+            if acc and acc.startswith("NC_"):
+                contig_id = apply_prefix(acc)
+                records.add((
+                    contig_id,
+                    contig_id,
+                    "RefSeq assembly ID",
+                    "RefSeq",
+                    None,
+                ))
+
+        # 3. Gene ID
+        gene_id = ann.get("gene_id")
+        if gene_id:
+            gene_entity = apply_prefix(gene_id)
+            records.add((
+                gene_entity,
+                gene_entity,
+                "NCBI gene ID",
+                "RefSeq",
+                None,
+            ))
+
+        # 4. Protein ID (YP)
+        for p in ann.get("proteins", []):
+            pid = p.get("accession_version")
+            if pid:
+                protein_id = apply_prefix(pid)
+                records.add((
+                    protein_id,
+                    protein_id,
+                    "RefSeq protein ID",
+                    "RefSeq",
+                    None,
+                ))
+
+    return list(records)
 
 
 # ---------------------------------------------------------------------
@@ -151,28 +178,31 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
 # ---------------------------------------------------------------------
 def load_names(data: dict) -> list[tuple[str, str, str, str]]:
     """Extract Name table records."""
-    records = []
+    records = set()
     for gene_id, ann in unique_annotations(data):
         entity_id = f"ncbigene:{gene_id}"
-        for label, desc in [
+        for label, desc in (
             ("symbol", "RefSeq gene symbol"),
             ("name", "RefSeq gene name"),
             ("locus_tag", "RefSeq locus tag"),
-        ]:
+        ):
             val = ann.get(label)
             if val:
-                records.append((entity_id, val, desc, "RefSeq"))
-    return list(set(records))
+                records.add((entity_id, val, desc, "RefSeq"))
+    return list(records)
 
 
 # ---------------------------------------------------------------------
 # FEATURE LOCATIONS
 # ---------------------------------------------------------------------
 def load_feature_records(data: dict) -> list[tuple]:
-    """Extract Feature table records."""
-    records = []
+    """Extract Feature table records from RefSeq annotation JSON."""
+    records = set()
+
     for gene_id, ann in unique_annotations(data):
         feature_id = f"ncbigene:{gene_id}"
+        gene_type = ann.get("gene_type", "unknown")
+
         for region in ann.get("genomic_regions", []):
             for r in region.get("gene_range", {}).get("range", []):
                 strand = {
@@ -180,47 +210,52 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "minus": "negative",
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
-                records.append((
-                    feature_id,
-                    None,
-                    None,
-                    None,
-                    to_int(r.get("end")),
-                    None,
-                    to_int(r.get("begin")),
-                    strand,
-                    "RefSeq",
-                    None,
-                    "gene",
+
+                records.add((
+                    feature_id,  # feature_id
+                    None,  # hash
+                    None,  # cds_phase
+                    None,  # e_value
+                    to_int(r.get("end")),  # end
+                    None,  # p_value
+                    to_int(r.get("begin")),  # start
+                    strand,  # strand
+                    "ncbigene",  # source_database
+                    None,  # protocol_id
+                    gene_type,  # type: from JSON "protein-coding"
                 ))
-    return list(set(records))
+
+    return list(records)
 
 
 # ---------------------------------------------------------------------
 # PARSE CONTIG_COLLECTION <-> FEATURE
 # ---------------------------------------------------------------------
 def load_contig_collection_x_feature(data: dict) -> list[tuple[str, str]]:
-    """Parse ContigCollection Feature links."""
-    links = []
+    """Parse ContigCollection <-> Feature links from RefSeq annotations."""
+    links = set()
 
     for gene_id, ann in unique_annotations(data):
-        regions = ann.get("genomic_regions", [])
-
-        if not regions:
+        # extract assembly accession from annotations
+        annotations = ann.get("annotations", [])
+        if not annotations:
             continue
 
-        acc = regions[0].get("gene_range", {}).get("accession_version")
-        if acc:
-            links.append((apply_prefix(acc), f"ncbigene:{gene_id}"))
+        accession = annotations[0].get("assembly_accession")
+        if accession:
+            contig_collection_id = f"insdc.gcf:{accession}"
+            feature_id = f"ncbigene:{gene_id}"
+            links.add((contig_collection_id, feature_id))
 
-    return list(set(links))
+    return list(links)
 
 
 # ---------------------------------------------------------------------
-# PARSE CONTIG_COLLECTION <-> PROTEIN %%%
+# PARSE CONTIG_COLLECTION <-> PROTEIN
 # ---------------------------------------------------------------------
 def load_contig_collection_x_protein(data: dict) -> list[tuple[str, str]]:
-    links = []
+    """Extract links between ContigCollection and Protein."""
+    links = set()
 
     for report in data.get("reports", []):
         ann = report.get("annotation", {})
@@ -232,27 +267,27 @@ def load_contig_collection_x_protein(data: dict) -> list[tuple[str, str]]:
         for p in ann.get("proteins", []):
             pid = p.get("accession_version")
             if pid:
-                links.append((contig_id, apply_prefix(pid)))
+                links.add((contig_id, apply_prefix(pid)))
 
-    return list(set(links))
+    return list(links)
 
 
 # ---------------------------------------------------------------------
 # PARSE FEATURE <-> PROTEIN
 # ---------------------------------------------------------------------
 def load_feature_x_protein(data: dict) -> list[tuple[str, str]]:
-    links = []
+    """Extract Feature ↔ Protein links."""
+    links = set()
 
     for gene_id, ann in unique_annotations(data):
         feature_id = f"ncbigene:{gene_id}"
 
-        for p in ann.get("proteins", []):
-            pid = p.get("accession_version")
+        for protein in ann.get("proteins", []):
+            pid = protein.get("accession_version")
             if pid:
-                protein_id = apply_prefix(pid)
-                links.append((feature_id, protein_id))
+                links.add((feature_id, apply_prefix(pid)))
 
-    return list(set(links))
+    return list(links)
 
 
 # ---------------------------------------------------------------------
@@ -263,23 +298,24 @@ def load_contigs(data: dict) -> list[tuple[str, str | None, float | None, int | 
 
     for report in data.get("reports", []):
         for region in report.get("annotation", {}).get("genomic_regions", []):
-            acc = region.get("gene_range", {}).get("accession_version")
-            if acc:
-                contig_id = apply_prefix(acc)
+            accession = region.get("gene_range", {}).get("accession_version")
+            if accession:
+                contig_id = apply_prefix(accession)
                 # Only track first occurrence of each contig
                 contigs.setdefault(contig_id, {"hash": None, "gc_content": None, "length": None})
 
-    return [(cid, meta["hash"], meta["gc_content"], meta["length"]) for cid, meta in contigs.items()]
+    return [(contig_id, meta["hash"], meta["gc_content"], meta["length"]) for contig_id, meta in contigs.items()]
 
 
 # ---------------------------------------------------------------------
 # PARSE CONTIG <-> CONTIG_COLLECTION
 # ---------------------------------------------------------------------
 def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
-    links = []
+    links = set()
 
     for report in data.get("reports", []):
         ann = report.get("annotation", {})
+
         regions = ann.get("genomic_regions", [])
         annotations = ann.get("annotations", [])
 
@@ -289,33 +325,46 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         contig = regions[0].get("gene_range", {}).get("accession_version")
         assembly = annotations[0].get("assembly_accession")
 
-        if contig and assembly:
-            links.append((
-                f"refseq:{contig}",
-                apply_prefix(assembly),
-            ))
+        if not contig or not assembly:
+            continue
 
-    return list(set(links))
+        links.add((
+            f"refseq:{contig}",
+            apply_prefix(assembly),
+        ))
+
+    return list(links)
 
 
+# ---------------------------------------------------------------------
+# PARSE CONTIG <-> FEATURE
+# ---------------------------------------------------------------------
 def load_contig_x_feature(data: dict) -> list[tuple[str, str]]:
     """Extract (contig_id, feature_id) pairs."""
-    links = []
+    links = set()
 
     for gene_id, ann in unique_annotations(data):
         feature_id = f"ncbigene:{gene_id}"
 
         for region in ann.get("genomic_regions", []):
             acc = region.get("gene_range", {}).get("accession_version")
-            if acc:
-                contig_id = apply_prefix(acc)
-                links.append((contig_id, feature_id))
 
-    return list(set(links))
+            if not acc:
+                continue
+
+            links.add((
+                apply_prefix(acc),
+                feature_id,
+            ))
+
+    return list(links)
 
 
+# ---------------------------------------------------------------------
+# PARSE CONTIG <-> PROTEIN
+# ---------------------------------------------------------------------
 def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
-    links = []
+    links = set()
 
     for _, ann in unique_annotations(data):
         contig_id = None
@@ -327,49 +376,66 @@ def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
                 break  # only take first
 
         if contig_id:
-            for p in ann.get("proteins", []):
-                pid = p.get("accession_version")
+            for protein in ann.get("proteins", []):
+                pid = protein.get("accession_version")
                 if pid:
-                    links.append((contig_id, apply_prefix(pid)))
+                    protein_id = apply_prefix(pid)
+                    links.add((contig_id, protein_id))
 
-    return list({tuple(row) for row in links})
+    return list(links)
 
 
-### contig collection has 34 rows
+# ---------------------------------------------------------------------
+# PARSE CONTIG_COLLECTION
+# ---------------------------------------------------------------------
 CONTIG_COLLECTION_MIN_SCHEMA = StructType([
     StructField("contig_collection_id", StringType(), nullable=False),
     StructField("hash", StringType(), nullable=True),
 ])
 
 
-def load_contig_collections(data: dict) -> list[tuple]:
-    records = []
-    seen_ids = set()
+def load_contig_collections(data: dict) -> list[tuple[str, None]]:
+    """
+    Extract unique contig_collection records.
+
+    Each record is a tuple: (contig_collection_id, hash)
+    """
+    records = set()
 
     for report in data.get("reports", []):
-        annotations = report.get("annotation", {}).get("annotations", [])
-        for ann in annotations:
-            raw_accession = ann.get("assembly_accession")
-            prefixed_id = apply_prefix(raw_accession)
-            if prefixed_id and prefixed_id not in seen_ids:
-                seen_ids.add(prefixed_id)
+        for ann in report.get("annotation", {}).get("annotations", []):
+            accession = ann.get("assembly_accession")
+            if not accession:
+                continue
 
-                records.append((prefixed_id, None))
+            collection_id = apply_prefix(accession)
+            records.add((collection_id, None))
 
-    return records
+    return list(records)
 
 
-def load_protein(data: dict) -> list[tuple[str, str | None, str | None, str | None, int | None, str | None]]:
-    out = []
+# ---------------------------------------------------------------------
+# PARSE PROTEIN
+# ---------------------------------------------------------------------
+def load_protein(data: dict) -> list[tuple[str, None, str | None, None, int | None, None]]:
+    """
+    Extract Protein table records.
+    """
+    records = set()
 
     for _, ann in unique_annotations(data):
-        for p in ann.get("proteins", []):
-            pid = apply_prefix(p.get("accession_version"))
-            name = p.get("name")
-            length = p.get("length")
-            out.append((pid, None, name, None, length, None))
+        for protein in ann.get("proteins", []):
+            accession = protein.get("accession_version")
+            if not accession:
+                continue
 
-    return list({tuple(row) for row in out})
+            protein_id = apply_prefix(accession)
+            name = protein.get("name")
+            length = protein.get("length")
+
+            records.add((protein_id, None, name, None, length, None))
+
+    return list(records)
 
 
 # ---------------------------------------------------------------------
@@ -421,7 +487,7 @@ CDM_TABLES = [
 ]
 
 
-def run_sql_query(spark: SparkSession, database: str = "default", limit: int = 20) -> None:
+def run_sql_query(spark: SparkSession, database: str = "default", limit: int = 50) -> None:
     """Preview the contents of each CDM table in the given database."""
     spark.sql(f"USE {database}")
     print(f"\n[INFO] Running SQL preview in database: {database}\n")

@@ -1,9 +1,8 @@
-### uv run pytest tests/parsers/test_annotation_parse.py
+### uv run pytest tests/parsers/refseq/api/test_annotation_report.py
 
 import json
 from pathlib import Path
 from typing import Any
-
 import pytest
 from pyspark.sql import SparkSession
 from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
@@ -19,12 +18,35 @@ from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
     load_feature_x_protein,
     load_identifiers,
     load_names,
+    load_protein,
+    load_contig_collections,
+    load_contig_x_protein,
+    load_contig_x_feature,
     parse_annotation_data,
     to_int,
 )
 from tests.conftest import TEST_NS
 
 CDM_SCHEMA_LC = {k.lower(): v for k, v in CDM_SCHEMA.items()}
+
+
+@pytest.mark.parametrize(
+    ("input_id", "expected"),
+    [
+        ("123", "ncbigene:123"),
+        ("YP_009725307.1", "refseq:YP_009725307.1"),
+        ("NC_008187.1", "refseq:NC_008187.1"),
+        ("GCF_000001405.39", "insdc.gcf:GCF_000001405.39"),
+        ("random", "random"),
+    ],
+)
+def test_apply_prefix(input_id: str, expected: str) -> None:
+    assert apply_prefix(input_id) == expected
+
+
+@pytest.mark.parametrize(("val", "expected"), [("123", 123), ("abc", None), ("", None)])
+def test_to_int(val: str, expected: int | None) -> None:
+    assert to_int(val) == expected
 
 
 @pytest.mark.parametrize(
@@ -35,45 +57,63 @@ CDM_SCHEMA_LC = {k.lower(): v for k, v in CDM_SCHEMA.items()}
                 "reports": [
                     {
                         "annotation": {
+                            "assembly_accession": "GCF_000869125",
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_008187.1"}}],
                             "gene_id": "1234",
-                            "name": "hypothetical protein",
-                            "relationship": "RefSeq gene symbol",
+                            "proteins": [{"accession_version": "YP_654573.1"}],
                         }
                     }
                 ]
             },
             [
                 (
-                    "ncbigene:1234",
-                    "1234",
-                    "hypothetical protein",
+                    "insdc.gcf:GCF_000869125",
+                    "insdc.gcf:GCF_000869125",
+                    "RefSeq genome ID",
                     "RefSeq",
-                    "RefSeq gene symbol",
-                )
+                    None,
+                ),
+                (
+                    "refseq:NC_008187.1",
+                    "refseq:NC_008187.1",
+                    "RefSeq assembly ID",
+                    "RefSeq",
+                    None,
+                ),
+                (
+                    "ncbigene:1234",
+                    "ncbigene:1234",
+                    "NCBI gene ID",
+                    "RefSeq",
+                    None,
+                ),
+                (
+                    "refseq:YP_654573.1",
+                    "refseq:YP_654573.1",
+                    "RefSeq protein ID",
+                    "RefSeq",
+                    None,
+                ),
             ],
         ),
         (
-            {"reports": [{"annotation": {"gene_id": "5678", "name": "some protein"}}]},
-            [("ncbigene:5678", "5678", "some protein", "RefSeq", None)],
+            {"reports": [{"annotation": {"gene_id": "5678"}}]},
+            [
+                (
+                    "ncbigene:5678",
+                    "ncbigene:5678",
+                    "NCBI gene ID",
+                    "RefSeq",
+                    None,
+                )
+            ],
         ),
-        (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "name": "no gene id here",
-                            "relationship": "RefSeq locus tag",
-                        }
-                    }
-                ]
-            },
-            [],
-        ),
+        ({"reports": [{"annotation": {"name": "no gene id here"}}]}, []),
     ],
 )
 def test_load_identifiers(input_data: dict[str, Any], expected_output: list[tuple]) -> None:
     result = load_identifiers(input_data)
-    assert result == expected_output
+    assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
@@ -178,9 +218,9 @@ def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) ->
                     None,
                     100,
                     "positive",
-                    "RefSeq",
+                    "ncbigene",
                     None,
-                    "gene",
+                    "unknown",
                 )
             ],
         ),
@@ -223,9 +263,9 @@ def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) ->
                     None,
                     300,
                     "negative",
-                    "RefSeq",
+                    "ncbigene",
                     None,
-                    "gene",
+                    "unknown",
                 ),
                 (
                     "ncbigene:5678",
@@ -236,9 +276,9 @@ def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) ->
                     None,
                     600,
                     "positive",
-                    "RefSeq",
+                    "ncbigene",
                     None,
-                    "gene",
+                    "unknown",
                 ),
             ],
         ),
@@ -264,9 +304,9 @@ def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) ->
                     None,
                     1,
                     "unknown",
-                    "RefSeq",
+                    "ncbigene",
                     None,
-                    "gene",
+                    "unknown",
                 )
             ],
         ),
@@ -329,9 +369,9 @@ def test_load_names(input_data: dict[str, Any], expected_output: list[tuple]) ->
                     None,
                     None,
                     "positive",
-                    "RefSeq",
+                    "ncbigene",
                     None,
-                    "gene",
+                    "unknown",
                 )
             ],
         ),
@@ -345,54 +385,45 @@ def test_load_feature_records(input_data: dict[str, Any], expected_output: list[
 @pytest.mark.parametrize(
     ("input_data", "expected_output"),
     [
-        # Case 1: valid mapping
+        # Case 1: valid mapping with assembly accession
         (
             {
                 "reports": [
                     {
                         "annotation": {
                             "gene_id": "12345",
-                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}],
+                            "annotations": [{"assembly_accession": "GCF_000001.1"}],
                         }
                     }
                 ]
             },
-            [("refseq:NC_000001.11", "ncbigene:12345")],
+            [("insdc.gcf:GCF_000001.1", "ncbigene:12345")],
         ),
-        # Case 2: no gene_id
+        # Case 2: missing gene_id
         (
-            {"reports": [{"annotation": {"genomic_regions": [{"gene_range": {"accession_version": "NC_000002.11"}}]}}]},
+            {"reports": [{"annotation": {"annotations": [{"assembly_accession": "GCF_000002.1"}]}}]},
             [],
         ),
-        # Case 3: no genomic_regions
+        # Case 3: missing annotations field
         (
             {"reports": [{"annotation": {"gene_id": "67890"}}]},
             [],
         ),
-        # Case 4: empty genomic_regions list
+        # Case 4: annotations list is empty
         (
-            {"reports": [{"annotation": {"gene_id": "99999", "genomic_regions": []}}]},
+            {"reports": [{"annotation": {"gene_id": "99999", "annotations": []}}]},
             [],
         ),
-        # Case 5: missing accession_version
+        # Case 5: missing assembly_accession in first annotations element
         (
-            {
-                "reports": [
-                    {
-                        "annotation": {
-                            "gene_id": "13579",
-                            "genomic_regions": [{"gene_range": {}}],
-                        }
-                    }
-                ]
-            },
+            {"reports": [{"annotation": {"gene_id": "13579", "annotations": [{}]}}]},
             [],
         ),
     ],
 )
-def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_output) -> None:
+def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_output: list[tuple[str, str]]) -> None:
     result = load_contig_collection_x_feature(input_data)
-    assert result == expected_output
+    assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.parametrize(
@@ -404,11 +435,11 @@ def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_o
                 "reports": [
                     {
                         "annotation": {
+                            "annotations": [{"assembly_accession": "GCF_000001"}],
                             "proteins": [
                                 {"accession_version": "XP_123"},
                                 {"accession_version": "XP_456"},
                             ],
-                            "annotations": [{"assembly_accession": "GCF_000001"}],
                         }
                     }
                 ]
@@ -424,8 +455,8 @@ def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_o
                 "reports": [
                     {
                         "annotation": {
-                            "proteins": [],
                             "annotations": [{"assembly_accession": "GCF_000002"}],
+                            "proteins": [],
                         }
                     }
                 ]
@@ -434,17 +465,26 @@ def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_o
         ),
         # Case 3: No annotations
         (
-            {"reports": [{"annotation": {"proteins": [{"accession_version": "XP_789"}]}}]},
-            [],
-        ),
-        # Case 4: Missing assembly_accession
-        (
             {
                 "reports": [
                     {
                         "annotation": {
                             "proteins": [{"accession_version": "XP_789"}],
+                            # 'annotations' key missing
+                        }
+                    }
+                ]
+            },
+            [],
+        ),
+        # Case 4: Missing assembly_accession in annotations[0]
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
                             "annotations": [{}],
+                            "proteins": [{"accession_version": "XP_789"}],
                         }
                     }
                 ]
@@ -457,12 +497,12 @@ def test_load_contig_collection_x_feature(input_data: dict[str, Any], expected_o
                 "reports": [
                     {
                         "annotation": {
+                            "annotations": [{"assembly_accession": "GCF_000003"}],
                             "proteins": [
                                 {"accession_version": "XP_111"},
                                 {},
                                 {"accession_version": "XP_222"},
                             ],
-                            "annotations": [{"assembly_accession": "GCF_000003"}],
                         }
                     }
                 ]
@@ -684,23 +724,229 @@ def test_load_contigs(input_data: dict[str, Any], expected_output: list[tuple]) 
     assert sorted(result) == sorted(expected_output)
 
 
-### add new test: to_int
 @pytest.mark.parametrize(
-    ("input_id", "expected"),
+    ("input_data", "expected_output"),
     [
-        ("GeneID:123", "ncbigene:123"),
-        ("YP_009725307.1", "refseq:YP_009725307.1"),
-        ("GCF_000001405.39", "insdc.gcf:GCF_000001405.39"),
-        ("random", "random"),
+        # Case 1: Valid input with one contig
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "12345",
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}],
+                        }
+                    }
+                ]
+            },
+            [("refseq:NC_000001.11", "ncbigene:12345")],
+        ),
+        # Case 2: Multiple contigs for the same gene
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "67890",
+                            "genomic_regions": [
+                                {"gene_range": {"accession_version": "NC_000002.11"}},
+                                {"gene_range": {"accession_version": "NC_000003.11"}},
+                            ],
+                        }
+                    }
+                ]
+            },
+            [
+                ("refseq:NC_000002.11", "ncbigene:67890"),
+                ("refseq:NC_000003.11", "ncbigene:67890"),
+            ],
+        ),
+        # Case 3: Missing accession_version in gene_range
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "99999",
+                            "genomic_regions": [{"gene_range": {}}],
+                        }
+                    }
+                ]
+            },
+            [],
+        ),
+        # Case 4: Missing gene_id in annotation
+        (
+            {"reports": [{"annotation": {"genomic_regions": [{"gene_range": {"accession_version": "NC_000004.11"}}]}}]},
+            [],
+        ),
+        # Case 5: accession_version starting with GCF_ (tests apply_prefix logic)
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "13579",
+                            "genomic_regions": [{"gene_range": {"accession_version": "GCF_000005.1"}}],
+                        }
+                    }
+                ]
+            },
+            [("insdc.gcf:GCF_000005.1", "ncbigene:13579")],
+        ),
     ],
 )
-def test_apply_prefix(input_id: str, expected: str) -> None:
-    assert apply_prefix(input_id) == expected
+def test_load_contig_x_feature(input_data: dict[str, Any], expected_output: list[tuple[str, str]]) -> None:
+    result = load_contig_x_feature(input_data)
+    assert sorted(result) == sorted(expected_output)
 
 
-@pytest.mark.parametrize(("val", "expected"), [("123", 123), ("abc", None), ("", None)])
-def test_to_int(val: str, expected: int | None) -> None:
-    assert to_int(val) == expected
+@pytest.mark.parametrize(
+    ("input_data", "expected_output"),
+    [
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "789",
+                            "annotations": [
+                                {
+                                    "genomic_regions": [{"gene_range": {"accession_version": "NC_000003.11"}}],
+                                    "proteins": [],
+                                }
+                            ],
+                        }
+                    }
+                ]
+            },
+            [],
+        ),
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "999",
+                            "annotations": [{"proteins": [{"accession_version": "YP_999999.1"}]}],
+                        }
+                    }
+                ]
+            },
+            [],
+        ),
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "555",
+                            "annotations": [
+                                {
+                                    "genomic_regions": [{"gene_range": {"accession_version": "NC_000004.11"}}],
+                                    "proteins": [{}],
+                                }
+                            ],
+                        }
+                    }
+                ]
+            },
+            [],
+        ),
+    ],
+)
+def test_load_contig_x_protein(
+    input_data: dict[str, Any],
+    expected_output: list[tuple[str, str]],
+) -> None:
+    result = load_contig_x_protein(input_data)
+    assert sorted(result) == sorted(expected_output)
+
+
+@pytest.mark.parametrize(
+    ("input_data", "expected_output"),
+    [
+        # Case 1: Basic valid accession
+        (
+            {"reports": [{"annotation": {"annotations": [{"assembly_accession": "GCF_000001.1"}]}}]},
+            [("insdc.gcf:GCF_000001.1", None)],
+        ),
+        # Case 2: Multiple annotations with same accession (deduplicated)
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "annotations": [
+                                {"assembly_accession": "GCF_000002.1"},
+                                {"assembly_accession": "GCF_000002.1"},
+                            ]
+                        }
+                    }
+                ]
+            },
+            [("insdc.gcf:GCF_000002.1", None)],
+        ),
+        # Case 3: Mixed valid and missing accession
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "annotations": [
+                                {"assembly_accession": "GCF_000003.1"},
+                                {},
+                            ]
+                        }
+                    }
+                ]
+            },
+            [("insdc.gcf:GCF_000003.1", None)],
+        ),
+        # Case 4: No `annotations` field
+        (
+            {"reports": [{"annotation": {}}]},
+            [],
+        ),
+        # Case 5: Empty `reports` list
+        (
+            {"reports": []},
+            [],
+        ),
+        # Case 6: No `assembly_accession`
+        (
+            {"reports": [{"annotation": {"annotations": [{}]}}]},
+            [],
+        ),
+    ],
+)
+def test_load_contig_collections(input_data: dict[str, Any], expected_output: list[tuple[str, None]]) -> None:
+    result = load_contig_collections(input_data)
+    assert sorted(result) == sorted(expected_output)
+
+
+@pytest.mark.parametrize(
+    ("input_data", "expected_output"),
+    [
+        (
+            {"reports": [{"annotation": {"proteins": [{"name": "Nucleocapsid", "length": 419}]}}]},
+            [],
+        ),
+        (
+            {"reports": [{"annotation": {"proteins": []}}]},
+            [],
+        ),
+        (
+            {"reports": [{"annotation": {}}]},
+            [],
+        ),
+    ],
+)
+def test_load_protein(
+    input_data: dict[str, Any], expected_output: list[tuple[str, None, str | None, None, int | None, None]]
+) -> None:
+    result = load_protein(input_data)
+    assert sorted(result) == sorted(expected_output)
 
 
 @pytest.mark.requires_spark
