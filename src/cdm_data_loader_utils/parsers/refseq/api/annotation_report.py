@@ -387,7 +387,7 @@ def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
             acc = region.get("gene_range", {}).get("accession_version")
             if acc:
                 contig_id = apply_prefix(acc)
-                break  # only take first
+                break
 
         if contig_id:
             for protein in ann.get("proteins", []):

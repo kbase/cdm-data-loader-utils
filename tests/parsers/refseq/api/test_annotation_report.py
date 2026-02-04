@@ -853,6 +853,25 @@ def test_load_contig_x_feature(input_data: dict[str, Any], expected_output: list
             },
             [],
         ),
+        (
+            {
+                "reports": [
+                    {
+                        "annotation": {
+                            "gene_id": "666",
+                            "genomic_regions": [{"gene_range": {"accession_version": "NC_000001.11"}}],
+                            "proteins": [{"accession_version": "YP_000001.1"}],
+                        },
+                    }
+                ]
+            },
+            [
+                (
+                    apply_prefix("NC_000001.11"),
+                    apply_prefix("YP_000001.1"),
+                )
+            ],
+        ),
     ],
 )
 def test_load_contig_x_protein(
