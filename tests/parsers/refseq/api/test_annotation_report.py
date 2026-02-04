@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Any
 import pytest
 from pyspark.sql import SparkSession
-from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
+
+# from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
+
+from tests.helpers import assertDataFrameEqual
+from pyspark.testing import assertSchemaEqual
 
 from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
 from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
@@ -995,10 +999,7 @@ def test_parse_annotation_data(spark: SparkSession, test_data_dir: Path) -> None
             result_df.schema,
         )
         # Assert content match
-        assertDataFrameEqual(
-            expected_df,
-            result_df,
-        )
+        assertDataFrameEqual(expected_df.collect(), result_df.collect())
 
     # make sure that all expected tables are present
     assert set(expected_tables) == set(result_df)
