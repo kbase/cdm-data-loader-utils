@@ -123,13 +123,15 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
         assembly_accession = ann.get("assembly_accession")
         if assembly_accession and assembly_accession.startswith("GCF_"):
             genome_id = apply_prefix(assembly_accession)
-            records.add((
-                genome_id,
-                genome_id,
-                "RefSeq genome ID",
-                "RefSeq",
-                None,
-            ))
+            records.add(
+                (
+                    genome_id,
+                    genome_id,
+                    "RefSeq genome ID",
+                    "RefSeq",
+                    None,
+                )
+            )
 
         # 2. Contig/Assembly (NC_) from gene_range
         for region in ann.get("genomic_regions", []):
@@ -137,38 +139,44 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
             acc = gene_range.get("accession_version")
             if acc and acc.startswith("NC_"):
                 contig_id = apply_prefix(acc)
-                records.add((
-                    contig_id,
-                    contig_id,
-                    "RefSeq assembly ID",
-                    "RefSeq",
-                    None,
-                ))
+                records.add(
+                    (
+                        contig_id,
+                        contig_id,
+                        "RefSeq assembly ID",
+                        "RefSeq",
+                        None,
+                    )
+                )
 
         # 3. Gene ID
         gene_id = ann.get("gene_id")
         if gene_id:
             gene_entity = apply_prefix(gene_id)
-            records.add((
-                gene_entity,
-                gene_entity,
-                "NCBI gene ID",
-                "RefSeq",
-                None,
-            ))
+            records.add(
+                (
+                    gene_entity,
+                    gene_entity,
+                    "NCBI gene ID",
+                    "RefSeq",
+                    None,
+                )
+            )
 
         # 4. Protein ID (YP)
         for p in ann.get("proteins", []):
             pid = p.get("accession_version")
             if pid:
                 protein_id = apply_prefix(pid)
-                records.add((
-                    protein_id,
-                    protein_id,
-                    "RefSeq protein ID",
-                    "RefSeq",
-                    None,
-                ))
+                records.add(
+                    (
+                        protein_id,
+                        protein_id,
+                        "RefSeq protein ID",
+                        "RefSeq",
+                        None,
+                    )
+                )
 
     return list(records)
 
@@ -211,19 +219,21 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
 
-                records.add((
-                    feature_id,  # feature_id
-                    None,  # hash
-                    None,  # cds_phase
-                    None,  # e_value
-                    to_int(r.get("end")),  # end
-                    None,  # p_value
-                    to_int(r.get("begin")),  # start
-                    strand,  # strand
-                    "ncbigene",  # source_database
-                    None,  # protocol_id
-                    gene_type,  # type: from JSON "protein-coding"
-                ))
+                records.add(
+                    (
+                        feature_id,  # feature_id
+                        None,  # hash
+                        None,  # cds_phase
+                        None,  # e_value
+                        to_int(r.get("end")),  # end
+                        None,  # p_value
+                        to_int(r.get("begin")),  # start
+                        strand,  # strand
+                        "ncbigene",  # source_database
+                        None,  # protocol_id
+                        gene_type,  # type: from JSON "protein-coding"
+                    )
+                )
 
     return list(records)
 
@@ -328,10 +338,12 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         if not contig or not assembly:
             continue
 
-        links.add((
-            f"refseq:{contig}",
-            apply_prefix(assembly),
-        ))
+        links.add(
+            (
+                f"refseq:{contig}",
+                apply_prefix(assembly),
+            )
+        )
 
     return list(links)
 
@@ -352,10 +364,12 @@ def load_contig_x_feature(data: dict) -> list[tuple[str, str]]:
             if not acc:
                 continue
 
-            links.add((
-                apply_prefix(acc),
-                feature_id,
-            ))
+            links.add(
+                (
+                    apply_prefix(acc),
+                    feature_id,
+                )
+            )
 
     return list(links)
 
@@ -388,10 +402,12 @@ def load_contig_x_protein(data: dict) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------
 # PARSE CONTIG_COLLECTION
 # ---------------------------------------------------------------------
-CONTIG_COLLECTION_MIN_SCHEMA = StructType([
-    StructField("contig_collection_id", StringType(), nullable=False),
-    StructField("hash", StringType(), nullable=True),
-])
+CONTIG_COLLECTION_MIN_SCHEMA = StructType(
+    [
+        StructField("contig_collection_id", StringType(), nullable=False),
+        StructField("hash", StringType(), nullable=True),
+    ]
+)
 
 
 def load_contig_collections(data: dict) -> list[tuple[str, None]]:
