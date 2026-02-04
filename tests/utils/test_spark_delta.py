@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from pyspark.sql import DataFrame, DataFrameWriter, Row, SparkSession
-from pyspark.testing import assertDataFrameEqual
+from tests.helpers import assertDataFrameEqual
 
 from cdm_data_loader_utils.utils import spark_delta
 from cdm_data_loader_utils.utils.spark_delta import (
