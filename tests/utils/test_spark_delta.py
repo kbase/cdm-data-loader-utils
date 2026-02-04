@@ -7,7 +7,6 @@ from typing import Any
 
 import pytest
 from pyspark.sql import DataFrame, DataFrameWriter, Row, SparkSession
-from tests.helpers import assertDataFrameEqual
 
 from cdm_data_loader_utils.utils import spark_delta
 from cdm_data_loader_utils.utils.spark_delta import (
@@ -23,6 +22,7 @@ from cdm_data_loader_utils.utils.spark_delta import (
     preview_or_skip,
     write_delta,
 )
+from tests.helpers import assertDataFrameEqual
 
 original_set_up_ws_fn = spark_delta.set_up_workspace
 
@@ -268,8 +268,8 @@ def check_query_output(spark: SparkSession, db_table: str, expected: list[dict[s
     assert spark.catalog.tableExists(db_table)
     # run the query
     results = spark.sql(f"SELECT * FROM {db_table}").collect()
-    expected_df = spark.createDataFrame(expected)
-    assertDataFrameEqual(results, expected_df)
+    expected_collected = spark.createDataFrame(expected).collect()
+    assertDataFrameEqual(results, expected_collected)
 
 
 def check_logger_output_successful_write(records: list[logging.LogRecord], db_table: str, mode: str, rows: int) -> None:
