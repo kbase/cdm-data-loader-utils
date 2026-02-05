@@ -11,4 +11,4 @@ uv venv --system-site-packages
 source .venv/bin/activate
 
 # run the tests using the active venv and with the dev dependencies installed.
-uv run --active --frozen --group dev pytest --cov=src --cov-report=xml tests/parsers/refseq/api/test_annotation_report.py
+uv run --active --frozen --group dev pytest --cov=src --cov-report=xml
