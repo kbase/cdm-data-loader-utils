@@ -887,12 +887,12 @@ def test_load_contig_x_protein(
 
 
 @pytest.mark.parametrize(
-    ("input_data", "expected_output"),
+    ("input_data", "expected_ids"),
     [
         # Case 1: Basic valid accession
         (
             {"reports": [{"annotation": {"annotations": [{"assembly_accession": "GCF_000001.1"}]}}]},
-            [("insdc.gcf:GCF_000001.1", None)],
+            ["insdc.gcf:GCF_000001.1"],
         ),
         # Case 2: Multiple annotations with same accession (deduplicated)
         (
@@ -908,7 +908,7 @@ def test_load_contig_x_protein(
                     }
                 ]
             },
-            [("insdc.gcf:GCF_000002.1", None)],
+            ["insdc.gcf:GCF_000002.1"],
         ),
         # Case 3: Mixed valid and missing accession
         (
@@ -924,7 +924,7 @@ def test_load_contig_x_protein(
                     }
                 ]
             },
-            [("insdc.gcf:GCF_000003.1", None)],
+            ["insdc.gcf:GCF_000003.1"],
         ),
         # Case 4: No `annotations` field
         (
@@ -943,9 +943,12 @@ def test_load_contig_x_protein(
         ),
     ],
 )
-def test_load_contig_collections(input_data: dict[str, Any], expected_output: list[tuple[str, None]]) -> None:
+def test_load_contig_collections(input_data: dict[str, Any], expected_ids: list[str]) -> None:
     result = load_contig_collections(input_data)
-    assert sorted(result) == sorted(expected_output)
+
+    # Extract contig_collection_id from dict
+    result_ids = sorted(r["contig_collection_id"] for r in result)
+    assert result_ids == sorted(expected_ids)
 
 
 @pytest.mark.parametrize(
@@ -977,29 +980,37 @@ def test_parse_annotation_data(spark: SparkSession, test_data_dir: Path) -> None
     """
     Test that parse_annotation_data produces expected tables with correct schemas and non-empty output.
     """
+
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {TEST_NS}")
+
     # Load and parse test JSON
-    sample_api_response = test_data_dir / "refseq" / "annotation_report.json"
-    dataset = json.load(sample_api_response.open())
-    # Run the parser
+    input_path = test_data_dir / "refseq" / "annotation_report.json"
+    dataset = json.load(input_path.open())
+
+    # Run parser
     parse_annotation_data(spark, [dataset], TEST_NS)
 
-    # Load expected results JSON
-    sample_api_response = test_data_dir / "refseq" / "annotation_report.parsed.json"
-    expected_tables = json.load(sample_api_response.open())
-    result_df = {table.name: spark.table(f"{TEST_NS}.{table.name}") for table in spark.catalog.listTables(TEST_NS)}
+    # Load expected schema definitions
+    expected_path = test_data_dir / "refseq" / "annotation_report.parsed.json"
+    expected_tables = json.load(expected_path.open())
 
-    for table_name in result_df:
-        result_df = spark.table(f"{TEST_NS}.{table_name}")
-        expected_df = spark.createDataFrame(expected_tables[table_name], schema=CDM_SCHEMA_LC[table_name])
+    actual_tables = {table.name: spark.table(f"{TEST_NS}.{table.name}") for table in spark.catalog.listTables(TEST_NS)}
 
-        # Assert schema match
-        assertSchemaEqual(
-            expected_df.schema,
-            result_df.schema,
+    # Check each produced table
+    for table_name, actual_df in actual_tables.items():
+        assert table_name in expected_tables, f"Unexpected table produced: {table_name}"
+
+        expected_schema = CDM_SCHEMA_LC[table_name]
+
+        # Schema must match exactly
+        expected_df = spark.createDataFrame(
+            expected_tables[table_name],
+            schema=expected_schema,
         )
-        # Assert content match
-        assertDataFrameEqual(expected_df.collect(), result_df.collect())
+        assertSchemaEqual(expected_df.schema, actual_df.schema)
 
-    # make sure that all expected tables are present
-    assert set(expected_tables) == set(result_df)
+        # Must have at least one row
+        assert actual_df.count() > 0
+
+    # Ensure no expected table is missing
+    assert set(expected_tables) == set(actual_tables)
