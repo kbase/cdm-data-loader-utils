@@ -12,7 +12,7 @@ from tests.helpers import assertDataFrameEqual
 from pyspark.testing import assertSchemaEqual
 
 from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
-from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
+from cdm_data_loader_utils.parsers.refseq.api.update_annotation import (
     apply_prefix,
     load_contig_collection_x_feature,
     load_contig_collection_x_protein,
@@ -988,7 +988,7 @@ def test_parse_annotation_data(spark: SparkSession, test_data_dir: Path) -> None
     dataset = json.load(input_path.open())
 
     # Run parser
-    parse_annotation_data(spark, [dataset], TEST_NS)
+    parse_annotation_data(spark, [dataset], TEST_NS, use_metastore=True)
 
     # Load expected schema definitions
     expected_path = test_data_dir / "refseq" / "annotation_report.parsed.json"
