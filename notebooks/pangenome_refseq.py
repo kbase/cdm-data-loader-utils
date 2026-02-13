@@ -1,9 +1,11 @@
 import logging
 import urllib.request
 from pathlib import Path
+
 import click
-from typing import List, Optional
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import regexp_replace
+
 from berdl_notebook_utils.setup_spark_session import get_spark_session
 
 
@@ -14,12 +16,12 @@ REFSEQ_URL = "https://ftp.ncbi.nlm.nih.gov/genomes/refseq/assembly_summary_refse
 
 def download_refseq_summary(output_path: Path) -> Path:
     logger.info("Downloading RefSeq assembly summary from %s", REFSEQ_URL)
-    urllib.request.urlretrieve(REFSEQ_URL, output_path)
+    urllib.request.urlretrieve(REFSEQ_URL, output_path)  # noqa: S310
     return output_path
 
 
-def parse_refseq_gcf_ids(file_path: Path) -> List[str]:
-    assembly_ids: List[str] = []
+def parse_refseq_gcf_ids(file_path: Path) -> list[str]:
+    assembly_ids: list[str] = []
 
     with open(file_path, encoding="utf-8") as f:
         for line in f:
@@ -27,111 +29,83 @@ def parse_refseq_gcf_ids(file_path: Path) -> List[str]:
                 continue
 
             accession = line.split("\t", 1)[0]
-
             if accession.startswith("GCF_"):
                 assembly_ids.append(accession)
 
-    logger.info("Parsed %d GCF assemblies", len(assembly_ids))
     return assembly_ids
 
 
-def build_refseq_df(spark: SparkSession, assembly_ids: List[str]) -> DataFrame:
-    return spark.createDataFrame(
-        [(x,) for x in assembly_ids],
+@click.command()
+@click.option(
+    "--gtdb-table",
+    required=True,
+    help="Metastore table containing genome_id column",
+)
+@click.option(
+    "--output-dir",
+    required=True,
+    help="Directory where output text files will be written",
+)
+def main(gtdb_table: str, output_dir: str) -> None:
+    logging.basicConfig(level=logging.INFO)
+
+    spark: SparkSession = get_spark_session()
+
+    # Read the GTDB genome table:
+    r214_df = spark.table(gtdb_table).select("genome_id").distinct()
+
+    rm_prefix_df = (
+        r214_df.withColumn(
+            "assembly_id",
+            regexp_replace("genome_id", r"^(GB_|RS_)", ""),
+        )
+        .select("assembly_id")
+        .distinct()
+    )
+
+    logger.info("Total GTDB assemblies: %d", rm_prefix_df.count())
+
+    # Download RefSeq summary in BERDL temp directory
+    summary_path = Path("/tmp/assembly_summary_refseq.txt")
+    download_refseq_summary(summary_path)
+
+    # Parse RefSeq GCF IDs
+    refseq_ids = parse_refseq_gcf_ids(summary_path)
+
+    refseq_df = spark.createDataFrame(
+        [(x,) for x in refseq_ids],
         ["assembly_id"],
     )
 
-
-def compute_missing_refseq(
-    refseq_df: DataFrame,
-    existing_df: DataFrame,
-) -> DataFrame:
-    return refseq_df.join(
-        existing_df.select("assembly_id"),
+    # Compute missing values in GTDB
+    missing_df = refseq_df.join(
+        rm_prefix_df,
         on="assembly_id",
         how="left_anti",
     )
 
+    logger.info("Missing RefSeq assemblies: %d", missing_df.count())
 
-def read_existing_df(
-    spark: SparkSession,
-    existing_table: Optional[str],
-    existing_path: Optional[str],
-) -> DataFrame:
-    if existing_table:
-        logger.info("Reading existing table from metastore: %s", existing_table)
-        return spark.table(existing_table)
+    # Prepare output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    if existing_path:
-        logger.info("Reading existing Delta table from path: %s", existing_path)
-        return spark.read.format("delta").load(existing_path)
+    # Output 1: Write GTDB existing assemblies
+    gtdb_ids = rm_prefix_df.select("assembly_id").rdd.map(lambda x: x[0]).collect()
 
-    raise ValueError("Either --existing-table or --existing-path must be provided.")
+    with open(output_path / "r214_assemblies.txt", "w") as f:
+        for assembly_id in gtdb_ids:
+            f.write(f"{assembly_id}\n")
 
+    # Output 2: Write missing RefSeq assemblies
+    missing_ids = missing_df.select("assembly_id").rdd.map(lambda x: x[0]).collect()
 
-def write_output(df: DataFrame, output_path: str) -> None:
-    logger.info("Writing missing assemblies to %s", output_path)
+    with open(output_path / "missing_refseq_ids.txt", "w") as f:
+        for assembly_id in missing_ids:
+            f.write(f"{assembly_id}\n")
 
-    (df.coalesce(1).write.format("delta").mode("overwrite").save(output_path))
-
-
-# -------------------------------------------------------------------------
-# Pipeline Orchestration
-# -------------------------------------------------------------------------
-def run_pipeline(
-    spark: SparkSession,
-    existing_table: Optional[str],
-    existing_path: Optional[str],
-    output_path: str,
-) -> None:
-    summary_path = Path("assembly_summary_refseq.txt")
-
-    download_refseq_summary(summary_path)
-
-    assembly_ids = parse_refseq_gcf_ids(summary_path)
-
-    refseq_df = build_refseq_df(spark, assembly_ids)
-
-    existing_df = read_existing_df(
-        spark,
-        existing_table=existing_table,
-        existing_path=existing_path,
-    )
-
-    missing_df = compute_missing_refseq(refseq_df, existing_df)
-
-    missing_count = missing_df.count()
-    logger.info("Missing RefSeq assemblies: %d", missing_count)
-
-    write_output(missing_df, output_path)
-
-
-# -------------------------------------------------------------------------
-# CLI
-# -------------------------------------------------------------------------
-@click.command()
-@click.option("--existing-table", help="Existing table in metastore containing RefSeq assemblies")
-@click.option("--existing-path", help="Existing Delta path containing RefSeq assemblies")
-@click.option("--output-path", required=True, help="Output path for missing RefSeq assemblies (Delta format)")
-def main(
-    existing_table: Optional[str],
-    existing_path: Optional[str],
-    output_path: str,
-) -> None:
-    spark = get_spark_session()
-
-    run_pipeline(
-        spark=spark,
-        existing_table=existing_table,
-        existing_path=existing_path,
-        output_path=output_path,
-    )
-
-
-def cli():
-    logging.basicConfig(level=logging.INFO)
-    main(standalone_mode=False)
+    logger.info("Output files written to %s", output_dir)
 
 
 if __name__ == "__main__":
-    cli()
+    main()
