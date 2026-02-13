@@ -16,15 +16,51 @@ from pathlib import Path
 
 import requests
 import logging
+import os
 
 from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 
 from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
+from cdm_data_loader_utils.utils.spark_delta import set_up_workspace
+from cdm_data_loader_utils.utils.spark_delta import write_delta
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+DELTA_BASE_DIR = Path("/tmp/cdm_delta")
+
+
+# ============================================================
+# Spark init
+# ============================================================
+def init_spark(app_name: str, namespace: str, tenant: str | None):
+    # ---------- BERDL  ----------
+    if os.getenv("BERDL_POD_IP"):
+        return set_up_workspace(
+            app_name=app_name,
+            namespace=namespace,
+            tenant_name=tenant,
+        )
+
+    # ---------- local ----------
+    builder = (
+        SparkSession.builder.appName(app_name)
+        .master("local[*]")
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension",
+        )
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
+    )
+
+    spark = configure_spark_with_delta_pip(builder).getOrCreate()
+    return spark, namespace
 
 
 # ---------------------------------------------------------------------
@@ -43,36 +79,6 @@ def fetch_annotation_json(accession: str) -> dict:
     except requests.exceptions.RequestException as req_err:
         logger.error(f"Request failed for accession {accession}: {req_err}")
         raise
-
-
-# ---------------------------------------------------------------------
-# Spark initialization with Delta support
-# ---------------------------------------------------------------------
-def build_spark_session(app_name: str = "RefSeqAnnotationToCDM") -> SparkSession:
-    """Build and return a SparkSession with Delta Lake and Hive support."""
-    try:
-        builder = (
-            SparkSession.builder.appName(app_name)
-            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-            .enableHiveSupport()
-        )
-        return configure_spark_with_delta_pip(builder).getOrCreate()
-    except Exception as e:
-        logger.error(f"Failed to initialize SparkSession: {e}")
-        raise
-
-
-def init_spark_and_db(app_name: str, database: str) -> SparkSession:
-    """Initialize Spark session and set active database."""
-    spark = build_spark_session(app_name)
-    try:
-        spark.sql(f"CREATE DATABASE IF NOT EXISTS {database}")
-        spark.sql(f"USE {database}")
-    except Exception as e:
-        logger.error(f"Failed to create/use database `{database}`: {e}")
-        raise
-    return spark
 
 
 # ---------------------------------------------------------------------
@@ -123,15 +129,13 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
         assembly_accession = ann.get("assembly_accession")
         if assembly_accession and assembly_accession.startswith("GCF_"):
             genome_id = apply_prefix(assembly_accession)
-            records.add(
-                (
-                    genome_id,
-                    genome_id,
-                    "RefSeq genome ID",
-                    "RefSeq",
-                    None,
-                )
-            )
+            records.add((
+                genome_id,
+                genome_id,
+                "RefSeq genome ID",
+                "RefSeq",
+                None,
+            ))
 
         # 2. Contig/Assembly (NC_) from gene_range
         for region in ann.get("genomic_regions", []):
@@ -139,44 +143,38 @@ def load_identifiers(data: dict) -> list[tuple[str, str, str, str, str | None]]:
             acc = gene_range.get("accession_version")
             if acc and acc.startswith("NC_"):
                 contig_id = apply_prefix(acc)
-                records.add(
-                    (
-                        contig_id,
-                        contig_id,
-                        "RefSeq assembly ID",
-                        "RefSeq",
-                        None,
-                    )
-                )
+                records.add((
+                    contig_id,
+                    contig_id,
+                    "RefSeq assembly ID",
+                    "RefSeq",
+                    None,
+                ))
 
         # 3. Gene ID
         gene_id = ann.get("gene_id")
         if gene_id:
             gene_entity = apply_prefix(gene_id)
-            records.add(
-                (
-                    gene_entity,
-                    gene_entity,
-                    "NCBI gene ID",
-                    "RefSeq",
-                    None,
-                )
-            )
+            records.add((
+                gene_entity,
+                gene_entity,
+                "NCBI gene ID",
+                "RefSeq",
+                None,
+            ))
 
         # 4. Protein ID (YP)
         for p in ann.get("proteins", []):
             pid = p.get("accession_version")
             if pid:
                 protein_id = apply_prefix(pid)
-                records.add(
-                    (
-                        protein_id,
-                        protein_id,
-                        "RefSeq protein ID",
-                        "RefSeq",
-                        None,
-                    )
-                )
+                records.add((
+                    protein_id,
+                    protein_id,
+                    "RefSeq protein ID",
+                    "RefSeq",
+                    None,
+                ))
 
     return list(records)
 
@@ -219,21 +217,19 @@ def load_feature_records(data: dict) -> list[tuple]:
                     "unstranded": "unstranded",
                 }.get(r.get("orientation"), "unknown")
 
-                records.add(
-                    (
-                        feature_id,  # feature_id
-                        None,  # hash
-                        None,  # cds_phase
-                        None,  # e_value
-                        to_int(r.get("end")),  # end
-                        None,  # p_value
-                        to_int(r.get("begin")),  # start
-                        strand,  # strand
-                        "ncbigene",  # source_database
-                        None,  # protocol_id
-                        gene_type,  # type: from JSON "protein-coding"
-                    )
-                )
+                records.add((
+                    feature_id,  # feature_id
+                    None,  # hash
+                    None,  # cds_phase
+                    None,  # e_value
+                    to_int(r.get("end")),  # end
+                    None,  # p_value
+                    to_int(r.get("begin")),  # start
+                    strand,  # strand
+                    "ncbigene",  # source_database
+                    None,  # protocol_id
+                    gene_type,  # type: from JSON "protein-coding"
+                ))
 
     return list(records)
 
@@ -338,12 +334,10 @@ def load_contig_x_contig_collection(data: dict) -> list[tuple[str, str]]:
         if not contig or not assembly:
             continue
 
-        links.add(
-            (
-                f"refseq:{contig}",
-                apply_prefix(assembly),
-            )
-        )
+        links.add((
+            f"refseq:{contig}",
+            apply_prefix(assembly),
+        ))
 
     return list(links)
 
@@ -364,12 +358,10 @@ def load_contig_x_feature(data: dict) -> list[tuple[str, str]]:
             if not acc:
                 continue
 
-            links.add(
-                (
-                    apply_prefix(acc),
-                    feature_id,
-                )
-            )
+            links.add((
+                apply_prefix(acc),
+                feature_id,
+            ))
 
     return list(links)
 
@@ -449,31 +441,51 @@ def load_protein(data: dict) -> list[tuple[str, None, str | None, None, int | No
 # DELTA TABLE
 # ---------------------------------------------------------------------
 def write_to_table(
-    spark: SparkSession,
-    records: list[tuple],
-    table_name: str,
-    database: str = "default",
-) -> None:
+    spark,
+    records,
+    table_name,
+    namespace,
+    use_metastore: bool = False,
+    mode: str = "overwrite",
+):
     if not records:
-        print(f"[DEBUG] {table_name}: no records to write.")
+        logger.info(f"[SKIP] {table_name}: empty")
         return
 
-    # Determine schema
-    # schema = CONTIG_COLLECTION_MIN_SCHEMA if table_name == "ContigCollection" else CDM_SCHEMA.get(table_name)
     schema = CDM_SCHEMA.get(table_name)
-
     if schema is None:
-        raise ValueError(f"[ERROR] Unknown schema: {table_name}")
+        raise ValueError(f"Unknown CDM table: {table_name}")
 
     df = spark.createDataFrame(records, schema)
-    df.printSchema()
-    df.show(truncate=False)
 
-    # Write to Delta table
-    df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"{database}.{table_name}")
+    if use_metastore:
+        full_table = f"{namespace}.{table_name}"
 
-    # Register as temp view for downstream use
-    df.createOrReplaceTempView(table_name)
+        # Explicitly drop to avoid Hive schema conflicts
+        spark.sql(f"DROP TABLE IF EXISTS {full_table}")
+
+        write_delta(
+            spark=spark,
+            sdf=df,
+            delta_ns=namespace,
+            table=table_name,
+            mode=mode,
+        )
+
+        logger.info(
+            "Recreated managed Delta table %s.%s via Hive metastore",
+            namespace,
+            table_name,
+        )
+
+    else:
+        # Path-based Delta (local)
+        table_path = DELTA_BASE_DIR / namespace / table_name
+        table_path.parent.mkdir(parents=True, exist_ok=True)
+
+        (df.write.format("delta").mode(mode).option("overwriteSchema", "true").save(str(table_path)))
+
+        logger.info(f"{table_name} -> {table_path}")
 
 
 # ---------------------------------------------------------------------
@@ -496,26 +508,34 @@ CDM_TABLES = [
 ]
 
 
-def run_sql_query(spark: SparkSession, database: str = "default", limit: int = 50) -> None:
-    """Preview the contents of each CDM table in the given database."""
-    spark.sql(f"USE {database}")
-    print(f"\n[INFO] Running SQL preview in database: {database}\n")
+def run_sql_query(spark, namespace, limit=20):
+    print(f"\n[INFO] Preview Delta tables under {namespace}\n")
 
     for table in CDM_TABLES:
-        full_table_name = f"{database}.{table}"
-        print(f"\n[SQL Preview] {full_table_name}")
-        try:
-            df = spark.sql(f"SELECT * FROM {full_table_name} LIMIT {limit}")
-            if df.isEmpty():
-                print(f"[INFO] Table {full_table_name} is empty.")
-            else:
-                df.show(truncate=False)
-        except Exception as e:
-            print(f"[WARNING] Could not query table {full_table_name}: {e}")
+        path = DELTA_BASE_DIR / namespace / table
+        print(f"\n[Preview] {table}")
+
+        if not path.exists():
+            print("(missing)")
+            continue
+
+        df = spark.read.format("delta").load(str(path))
+        if df.isEmpty():
+            print("(empty)")
+        else:
+            df.show(limit, truncate=False)
 
 
-def parse_annotation_data(spark: SparkSession, datasets: list[dict], namespace: str) -> None:
-    """Parse annotation data into CDM tables and write to Delta Lake."""
+def parse_annotation_data(
+    spark: SparkSession,
+    datasets: list[dict],
+    namespace: str,
+    use_metastore: bool = False,
+) -> None:
+    """
+    Parse annotation data into CDM tables and write to Delta Lake.
+    """
+
     # Mapping of table names to corresponding loader functions
     loader_map = {
         "Identifier": load_identifiers,
@@ -535,7 +555,13 @@ def parse_annotation_data(spark: SparkSession, datasets: list[dict], namespace: 
     for data in datasets:
         for table_name, loader_fn in loader_map.items():
             records = loader_fn(data)
-            write_to_table(spark, records, table_name, namespace)
+            write_to_table(
+                spark,
+                records,
+                table_name,
+                namespace,
+                use_metastore=use_metastore,
+            )
 
 
 # ---------------------------------------------------------------------
@@ -562,37 +588,45 @@ def main():
     parser = argparse.ArgumentParser(description="RefSeq Annotation Parser to CDM")
 
     # ------------------------- Input -------------------------
-    parser.add_argument("--accession", type=str, help="RefSeq genome accession (e.g. GCF_000869125.1)")
-    parser.add_argument("--input_file", type=str, help="Path to a RefSeq annotation JSON file.")
-    parser.add_argument("--input_dir", type=str, help="Directory containing RefSeq annotation JSON files.")
+    parser.add_argument("--accession", type=str)
+    parser.add_argument("--input_file", type=str)
+    parser.add_argument("--input_dir", type=str)
 
     # ------------------------- Output -------------------------
-    parser.add_argument("--namespace", default="refseq_api", help="Database to write Delta tables.")
-    parser.add_argument("--tenant", default=None, help="Tenant SQL warehouse to use.")
-    parser.add_argument("--query", action="store_true", help="Preview SQL output after writing.")
+    parser.add_argument("--namespace", default="refseq_api")
+    parser.add_argument("--tenant", default=None)
+    parser.add_argument("--query", action="store_true")
+
+    parser.add_argument(
+        "--use-metastore",
+        action="store_true",
+        help="Write Delta tables using Hive metastore (BERDL / prod mode)",
+    )
 
     args = parser.parse_args()
 
-    # ------------------------- Validation -------------------------
     if not args.accession and not args.input_file and not args.input_dir:
         raise ValueError("Provide --accession, --input_file, or --input_dir.")
 
-    # ------------------------- Load data -------------------------
     datasets = load_input_data(args)
     if not datasets:
         raise RuntimeError("No valid annotation datasets were loaded.")
 
-    # ------------------------- Spark  -------------------------
-    spark = init_spark_and_db("RefSeq Annotation Parser", args.namespace)
-    if args.tenant:
-        spark.sql(f"USE CATALOG {args.tenant}")
+    spark, delta_ns = init_spark(
+        "RefSeq Annotation Parser",
+        args.namespace,
+        args.tenant,
+    )
 
-    # ------------------------- Parse  -------------------------
-    parse_annotation_data(spark, datasets, args.namespace)
+    parse_annotation_data(
+        spark,
+        datasets,
+        delta_ns,
+        use_metastore=args.use_metastore,
+    )
 
-    # ------------------------- SQL Preview -------------------------
     if args.query:
-        run_sql_query(spark, args.namespace)
+        run_sql_query(spark, delta_ns)
 
     spark.stop()
 

@@ -12,7 +12,7 @@ from tests.helpers import assertDataFrameEqual
 from pyspark.testing import assertSchemaEqual
 
 from cdm_data_loader_utils.model.kbase_cdm_schema import CDM_SCHEMA
-from cdm_data_loader_utils.parsers.refseq.api.update_annotation import (
+from cdm_data_loader_utils.parsers.refseq.api.annotation_report import (
     apply_prefix,
     load_contig_collection_x_feature,
     load_contig_collection_x_protein,
