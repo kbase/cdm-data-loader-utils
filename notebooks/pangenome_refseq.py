@@ -1,13 +1,31 @@
+"""
+Utility script to identify missing RefSeq assemblies relative to GTDB.
+
+This script:
+1. Reads a GTDB metastore table.
+2. Removes GB_/RS_ prefixes from genome_id.
+3. Downloads the latest RefSeq assembly summary.
+4. Computes missing GCF assemblies.
+5. Outputs two text files using Spark distributed write:
+   - r214_assemblies
+   - missing_refseq_ids
+"""
+
+from __future__ import annotations
+
 import logging
+import tempfile
 import urllib.request
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import regexp_replace
 
 from berdl_notebook_utils.setup_spark_session import get_spark_session
 
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +33,22 @@ REFSEQ_URL = "https://ftp.ncbi.nlm.nih.gov/genomes/refseq/assembly_summary_refse
 
 
 def download_refseq_summary(output_path: Path) -> Path:
+    """
+    Download RefSeq assembly summary file.
+    """
     logger.info("Downloading RefSeq assembly summary from %s", REFSEQ_URL)
     urllib.request.urlretrieve(REFSEQ_URL, output_path)  # noqa: S310
     return output_path
 
 
 def parse_refseq_gcf_ids(file_path: Path) -> list[str]:
+    """
+    Parse all GCF_ assembly accessions from the RefSeq summary file.
+    """
     assembly_ids: list[str] = []
 
-    with open(file_path, encoding="utf-8") as f:
-        for line in f:
+    with file_path.open(encoding="utf-8") as file:
+        for line in file:
             if line.startswith("#"):
                 continue
 
@@ -44,14 +68,19 @@ def parse_refseq_gcf_ids(file_path: Path) -> list[str]:
 @click.option(
     "--output-dir",
     required=True,
-    help="Directory where output text files will be written",
+    help="Output directory (e.g. s3a://...) where text files will be written",
 )
 def main(gtdb_table: str, output_dir: str) -> None:
+    """
+    Run the missing RefSeq assembly detection pipeline.
+    """
     logging.basicConfig(level=logging.INFO)
 
     spark: SparkSession = get_spark_session()
 
-    # Read the GTDB genome table:
+    # ------------------------------------------------------------------
+    # 1. Read GTDB genome table
+    # ------------------------------------------------------------------
     r214_df = spark.table(gtdb_table).select("genome_id").distinct()
 
     rm_prefix_df = (
@@ -63,13 +92,19 @@ def main(gtdb_table: str, output_dir: str) -> None:
         .distinct()
     )
 
-    logger.info("Total GTDB assemblies: %d", rm_prefix_df.count())
+    logger.info("GTDB assemblies: %d", rm_prefix_df.count())
 
-    # Download RefSeq summary in BERDL temp directory
-    summary_path = Path("/tmp/assembly_summary_refseq.txt")
+    # ------------------------------------------------------------------
+    # 2. Download RefSeq summary securely
+    # ------------------------------------------------------------------
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        summary_path = Path(tmp.name)
+
     download_refseq_summary(summary_path)
 
-    # Parse RefSeq GCF IDs
+    # ------------------------------------------------------------------
+    # 3. Parse RefSeq GCF IDs
+    # ------------------------------------------------------------------
     refseq_ids = parse_refseq_gcf_ids(summary_path)
 
     refseq_df = spark.createDataFrame(
@@ -77,7 +112,11 @@ def main(gtdb_table: str, output_dir: str) -> None:
         ["assembly_id"],
     )
 
-    # Compute missing values in GTDB
+    logger.info("RefSeq assemblies: %d", refseq_df.count())
+
+    # ------------------------------------------------------------------
+    # 4. Compute missing assemblies
+    # ------------------------------------------------------------------
     missing_df = refseq_df.join(
         rm_prefix_df,
         on="assembly_id",
@@ -86,25 +125,21 @@ def main(gtdb_table: str, output_dir: str) -> None:
 
     logger.info("Missing RefSeq assemblies: %d", missing_df.count())
 
-    # Prepare output directory
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    # ------------------------------------------------------------------
+    # 5. Distributed Spark text output
+    # ------------------------------------------------------------------
 
-    # Output 1: Write GTDB existing assemblies
-    gtdb_ids = rm_prefix_df.select("assembly_id").rdd.map(lambda x: x[0]).collect()
+    # Output 1: All GTDB assemblies
+    rm_prefix_df.select("assembly_id").orderBy("assembly_id").coalesce(1).write.mode("overwrite").text(
+        f"{output_dir}/r214_assemblies"
+    )
 
-    with open(output_path / "r214_assemblies.txt", "w") as f:
-        for assembly_id in gtdb_ids:
-            f.write(f"{assembly_id}\n")
+    # Output 2: Missing RefSeq assemblies
+    missing_df.select("assembly_id").orderBy("assembly_id").coalesce(1).write.mode("overwrite").text(
+        f"{output_dir}/missing_refseq_ids"
+    )
 
-    # Output 2: Write missing RefSeq assemblies
-    missing_ids = missing_df.select("assembly_id").rdd.map(lambda x: x[0]).collect()
-
-    with open(output_path / "missing_refseq_ids.txt", "w") as f:
-        for assembly_id in missing_ids:
-            f.write(f"{assembly_id}\n")
-
-    logger.info("Output files written to %s", output_dir)
+    logger.info("Output files successfully written to %s", output_dir)
 
 
 if __name__ == "__main__":
