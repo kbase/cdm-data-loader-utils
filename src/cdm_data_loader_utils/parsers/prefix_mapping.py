@@ -1,5 +1,7 @@
 """
 Prefix Mapping Validation Script
+
+python3 src/cdm_data_loader_utils/parsers/prefix_mapping.py
 """
 
 import json
@@ -45,7 +47,7 @@ def analyze_mapping_structure(mapping: list) -> None:
 def analyze_status_distribution(mapping: list) -> None:
     status_counts = Counter(row.get("_status") for row in mapping)
 
-    for status, count in sorted(status_counts.items()):
+    for status, count in sorted(status_counts.items(), key=lambda x: str(x[0])):
         print(f"{status}: {count}")
 
 
