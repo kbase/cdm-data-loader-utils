@@ -90,12 +90,21 @@ def analyze_comments(mapping: list) -> None:
 
     for row in mapping:
         comments = row.get("comment")
-        if comments:
+
+        if not comments:
+            continue
+
+        # If comment is a string
+        if isinstance(comments, str):
+            unique_comments.add(comments.strip())
+
+        # If comment is a list
+        elif isinstance(comments, list):
             for c in comments:
                 unique_comments.add(c.strip())
 
     for comment in sorted(unique_comments):
-        print(f"{comment}")
+        print(comment)
 
 
 def inspect_none_status(mapping: list) -> None:
