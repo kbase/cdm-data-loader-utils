@@ -98,7 +98,7 @@ The standard python `coverage` package is used and coverage can be generated as 
 
 ## Loading genomes, contigs, and features
 
-The [genome loader](src/parsers/genome_loader.py) can be used to load and integrate data from related GFF and FASTA files. Currently, the loader requires a GFF file and two FASTA files (one for amino acid seqs, one for nucleic acid seqs) for each genome. The list of files to be processed should be specified in the genome paths file, which has the following format:
+The [genome loader](src/cdm_data_loader_utils/parsers/genome_loader.py) can be used to load and integrate data from related GFF and FASTA files. Currently, the loader requires a GFF file and two FASTA files (one for amino acid seqs, one for nucleic acid seqs) for each genome. The list of files to be processed should be specified in the genome paths file, which has the following format:
 
 ```json
 {
