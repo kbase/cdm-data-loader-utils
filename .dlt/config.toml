@@ -1,0 +1,19 @@
+[normalize.data_writer]
+disable_compression = "false"
+
+[runtime]
+http_show_error_body = "true"
+log_level = "INFO"
+log_format = "JSON"
+
+[extract]
+workers = 10
+
+# 'local_fs' destination: save to the `output` directory
+[destination.local_fs]
+destination_type = "filesystem"
+bucket_url = "/output_dir"
+
+[destination.minio]
+destination_type = "filesystem"
+bucket_url = "s3://cdm-lake/tenant-general-warehouse/kbase/datasets/uniprot/"
