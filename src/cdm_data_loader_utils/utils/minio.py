@@ -164,8 +164,8 @@ def upload_dir(dir_path: Path | str, destination_dir: str, file_glob: str | None
 def copy_file(current_path: str, new_path: str) -> bool:
     """Copy a file from one place to another, adding in a CRC64NVME checksum."""
     s3 = get_s3_client()
-    for p in [current_path, new_path]:
-        p = p.removeprefix(S3_BUCKET)
+    current_path = current_path.removeprefix(S3_BUCKET)
+    new_path = new_path.removeprefix(S3_BUCKET)
 
     # S3.Client.copy(CopySource, Bucket, Key, ExtraArgs=None, Callback=None, SourceClient=None, Config=None)
     return s3.copy_object(
