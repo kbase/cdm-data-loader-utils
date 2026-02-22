@@ -1,0 +1,239 @@
+{
+  "contig": [
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "hash": null,
+      "gc_content": null,
+      "length": null
+    }
+  ],
+  "contig_x_contigcollection": [
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1"
+    }
+  ],
+  "contig_x_feature": [
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "feature_id": "ncbigene:4156250"
+    },
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "feature_id": "ncbigene:4156251"
+    },
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "feature_id": "ncbigene:4156252"
+    }
+  ],
+  "contig_x_protein": [
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "protein_id": "refseq:YP_654573.1"
+    },
+    {
+      "contig_id": "refseq:NC_008187.1",
+      "protein_id": "refseq:YP_654574.1"
+    }
+  ],
+  "contigcollection": [
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "hash": null
+    }
+  ],
+  "contigcollection_x_feature": [
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "feature_id": "ncbigene:4156250"
+    },
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "feature_id": "ncbigene:4156251"
+    },
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "feature_id": "ncbigene:4156252"
+    }
+  ],
+  "contigcollection_x_protein": [
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "protein_id": "refseq:YP_654573.1"
+    },
+    {
+      "contig_collection_id": "insdc.gcf:GCF_000869125.1",
+      "protein_id": "refseq:YP_654574.1"
+    }
+  ],
+  "feature_x_protein": [
+    {
+      "feature_id": "ncbigene:4156250",
+      "protein_id": "refseq:YP_654573.1"
+    },
+    {
+      "feature_id": "ncbigene:4156251",
+      "protein_id": "refseq:YP_654574.1"
+    }
+  ],
+  "feature": [
+    {
+      "feature_id": "ncbigene:4156250",
+      "hash": null,
+      "cds_phase": null,
+      "e_value": null,
+      "end": 3066,
+      "p_value": null,
+      "start": 2620,
+      "strand": "positive",
+      "source_database": "ncbigene",
+      "protocol_id": null,
+      "type": "protein-coding"
+    },
+    {
+      "feature_id": "ncbigene:4156251",
+      "hash": null,
+      "cds_phase": null,
+      "e_value": null,
+      "end": 4979,
+      "p_value": null,
+      "start": 3603,
+      "strand": "positive",
+      "source_database": "ncbigene",
+      "protocol_id": null,
+      "type": "protein-coding"
+    },
+    {
+      "feature_id": "ncbigene:4156251",
+      "hash": null,
+      "cds_phase": null,
+      "e_value": null,
+      "end": 5638,
+      "p_value": null,
+      "start": 5168,
+      "strand": "negative",
+      "source_database": "ncbigene",
+      "protocol_id": null,
+      "type": "protein-coding"
+    }
+  ],
+  "identifier": [
+    {
+      "entity_id": "insdc.gcf:GCF_000869125",
+      "identifier": "insdc.gcf:GCF_000869125",
+      "description": "RefSeq genome ID",
+      "source": "RefSeq",
+      "relationship": null
+    },
+    {
+      "entity_id": "refseq:NC_008187.1",
+      "identifier": "refseq:NC_008187.1",
+      "description": "RefSeq assembly ID",
+      "source": "RefSeq",
+      "relationship": null
+    },
+    {
+      "entity_id": "ncbigene:4156250",
+      "identifier": "ncbigene:4156250",
+      "description": "NCBI gene ID",
+      "source": "RefSeq",
+      "relationship": null
+    },
+    {
+      "entity_id": "ncbigene:4156251",
+      "identifier": "ncbigene:4156251",
+      "description": "NCBI gene ID",
+      "source": "RefSeq",
+      "relationship": null
+    },
+    {
+      "entity_id": "ncbigene:4156252",
+      "identifier": "ncbigene:4156252",
+      "description": "NCBI gene ID",
+      "source": "RefSeq",
+      "relationship": null
+    },
+    {
+      "entity_id": "refseq:YP_654573.1",
+      "identifier": "refseq:YP_654573.1",
+      "description": "RefSeq protein ID",
+      "source": "RefSeq",
+      "relationship": null
+    }
+  ],
+  "name": [
+    {
+      "entity_id": "ncbigene:4156250",
+      "name": "hypothetical protein",
+      "description": "RefSeq gene name",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156251",
+      "name": "hypodermical protein",
+      "description": "RefSeq gene name",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156252",
+      "name": "very hypothetical protein",
+      "description": "RefSeq gene name",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156250",
+      "name": "MIV001R",
+      "description": "RefSeq locus tag",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156251",
+      "name": "MIV002R",
+      "description": "RefSeq locus tag",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156252",
+      "name": "MIV003R",
+      "description": "RefSeq locus tag",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "ncbigene:4156252",
+      "name": "kappa-delta-phi",
+      "description": "RefSeq symbol",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "refseq:YP_654573.1",
+      "name": "hypothetical protein",
+      "description": "RefSeq protein name",
+      "source": "RefSeq"
+    },
+    {
+      "entity_id": "refseq:YP_654574.1",
+      "name": "hypothetical protein",
+      "description": "RefSeq protein name",
+      "source": "RefSeq"
+    }
+  ],
+  "protein": [
+    {
+      "protein_id": "refseq:YP_654573.1",
+      "hash": null,
+      "description": null,
+      "evidence_for_existence": null,
+      "length": null,
+      "sequence": null
+    },
+    {
+      "protein_id": "refseq:YP_654574.1",
+      "hash": null,
+      "description": null,
+      "evidence_for_existence": null,
+      "length": null,
+      "sequence": null
+    }
+  ]
+}

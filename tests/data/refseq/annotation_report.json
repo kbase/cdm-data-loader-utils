@@ -1,0 +1,105 @@
+{
+    "reports": [
+        {
+            "annotation": {
+                "gene_id": "4156250",
+                "name": "hypothetical protein",
+                "gene_type": "protein-coding",
+                "locus_tag": "MIV001R",
+                "genomic_regions": [
+                    {
+                        "gene_range": {
+                            "accession_version": "NC_008187.1",
+                            "range": [
+                                {
+                                    "begin": "2620",
+                                    "end": "3066",
+                                    "orientation": "plus"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "proteins": [
+                    {
+                        "accession_version": "YP_654573.1",
+                        "name": "hypothetical protein",
+                        "length": 148
+                    }
+                ],
+                "annotations": [
+                    {
+                        "assembly_accession": "GCF_000869125.1"
+                    }
+                ]
+            },
+            "row_id": "1"
+        },
+        {
+            "annotation": {
+                "gene_id": "4156251",
+                "name": "hypodermical protein",
+                "gene_type": "protein-coding",
+                "locus_tag": "MIV002R",
+                "genomic_regions": [
+                    {
+                        "gene_range": {
+                            "accession_version": "NC_008187.1",
+                            "range": [
+                                {
+                                    "begin": "3603",
+                                    "end": "4979",
+                                    "orientation": "plus"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "proteins": [
+                    {
+                        "accession_version": "YP_654574.1",
+                        "name": "hypothetical protein",
+                        "length": 458
+                    }
+                ],
+                "annotations": [
+                    {
+                        "assembly_accession": "GCF_000869125.1"
+                    }
+                ]
+            },
+            "row_id": "2"
+        },
+        {
+            "annotation": {
+                "gene_id": "4156252",
+                "name": "very hypothetical protein",
+                "gene_type": "protein-coding",
+                "locus_tag": "MIV003R",
+                "symbol": "kappa-delta-phi",
+                "genomic_regions": [
+                    {
+                        "gene_range": {
+                            "accession_version": "NC_008187.1",
+                            "range": [
+                                {
+                                    "begin": "5168",
+                                    "end": "5638",
+                                    "orientation": "minus"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "proteins": [],
+                "annotations": [
+                    {
+                        "assembly_accession": "GCF_000869125.1"
+                    }
+                ]
+            },
+            "row_id": "3"
+        }
+    ],
+    "total_count": 3
+}
