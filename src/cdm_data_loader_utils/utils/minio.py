@@ -208,6 +208,3 @@ def download_from_s3(bucket: str, key: str, filename: str, version_id: str | Non
             Filename=filename,
             Callback=pbar.update,
         )
-
-
-get_s3_client()
