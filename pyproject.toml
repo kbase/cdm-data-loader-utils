@@ -9,18 +9,45 @@ authors = [
 ]
 
 dependencies = [
-    "berdl-notebook-utils",
     "biopython>=1.86",
-    "cdm-schema",
-    "click>=8.1.8",
-    "ruff>=0.14.8",
+    "click>=8.3.1",
+    "dlt[deltalake,filesystem,parquet]>=1.21.0",
+    "lxml>=6.0.2",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "ruff>=0.14.14",
 ]
+
+[project.scripts]
+idmapping = "cdm_data_loader_utils.parsers.uniprot.idmapping:cli"
+uniprot_pipeline = "cdm_data_loader_utils.pipelines.uniprot_kb_pipeline:cli"
+uniref_pipeline = "cdm_data_loader_utils.pipelines.uniref_pipeline:cli"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "pytest-env>=1.2.0",
+]
+experimental = [
+    "mutmut>=3.4.0",
+]
+local = [
+    "berdl-notebook-utils>=0.0.1",
+]
+minio = [
+    "boto3[crt]>=1.42.0",
+    "tqdm>=4.67.3",
+]
+models = [
+    "genson>=1.3.0",
+    "json2python-models>=0.3.1",
+]
+pipeline = []
+xml = [
+    "xmlschema>=4.3.1",
+    "xsdata[cli,lxml]>=26.1",
 ]
 
 [tool.ruff]
@@ -141,7 +168,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["T201"] # ignore printing in notebooks
-"tests/**/*.py" = ["S101", "T201"] # use of assert
+"tests/**/*.py" = ["S101", "T201", "FBT001", "FBT002"]  # use of assert
+"**/__init__.py" = ["D104"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 15.
@@ -157,9 +185,10 @@ build-backend = "uv_build"
 [tool.pytest]
 pythonpath = ["src"]
 log_cli = true
-log_cli_level = "DEBUG"
+log_cli_level = "INFO"
+log_level = "INFO"
 addopts = ["-v"]
-markers = ["requires_spark: must be run in an environment where spark is available"]
+markers = ["requires_spark: must be run in an environment where spark is available", "slow_test: does what it says on the tin"]
 
 # environment settings for running tests
 [tool.pytest_env]
