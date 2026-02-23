@@ -9,10 +9,11 @@ import pytest
 from pyspark.errors import AnalysisException
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
-from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
+from pyspark.testing import assertSchemaEqual
 
 from cdm_data_loader_utils.readers.dsv import read, read_csv, read_tsv
 from tests.conftest import ALL_LINES, MISSING_REQUIRED, TOO_FEW_COLS, TOO_MANY_COLS, TYPE_MISMATCH, VALID
+from tests.helpers import assertDataFrameEqual
 
 PERMISSIVE = "PERMISSIVE"
 DROP = "DROPMALFORMED"
@@ -83,9 +84,9 @@ def test_read_tsv_csv(spark: SparkSession, csv_schema: list[StructField], all_li
     for df in [test_df_tsv, csv_df, tsv_df]:
         assertSchemaEqual(test_df_csv.schema, df.schema)
 
-    assertDataFrameEqual(test_df_tsv, tsv_df)
-    assertDataFrameEqual(test_df_csv, csv_df)
     # TODO: compare the TSV and CSV versions?
+    assertDataFrameEqual(test_df_tsv.collect(), tsv_df.collect())
+    assertDataFrameEqual(test_df_csv.collect(), csv_df.collect())
 
 
 @pytest.mark.requires_spark
