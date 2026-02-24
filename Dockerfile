@@ -12,9 +12,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # add tini
 RUN apt-get update -y && apt-get install -y --no-install-recommends tini git
 
-# Install the project into `/app`
-WORKDIR /app
-
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
@@ -26,6 +23,9 @@ ENV UV_NO_DEV=1
 
 # Ensure installed tools can be executed out of the box
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
+
+# Install the project into `/app`
+WORKDIR /app
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -46,8 +46,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
+COPY --chmod=+x ./scripts/entrypoint.sh /app/
 # Use the non-root user to run our application
 USER nonroot
-
-# run the command using tini
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["./entrypoint.sh"]
