@@ -24,6 +24,7 @@ uniref_pipeline = "cdm_data_loader_utils.pipelines.uniref_pipeline:cli"
 [dependency-groups]
 dev = [
     "berdl-notebook-utils>=0.0.1",
+    "biopython>=1.86",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",

@@ -488,6 +488,7 @@ minio = [
 [package.dev-dependencies]
 dev = [
     { name = "berdl-notebook-utils" },
+    { name = "biopython" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -522,6 +523,7 @@ provides-extras = ["minio", "biopython"]
 [package.metadata.requires-dev]
 dev = [
     { name = "berdl-notebook-utils", git = "https://github.com/BERDataLakehouse/spark_notebook.git?subdirectory=notebook_utils" },
+    { name = "biopython", specifier = ">=1.86" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
