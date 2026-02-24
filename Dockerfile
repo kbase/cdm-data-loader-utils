@@ -1,5 +1,16 @@
+# Dockerfile for running dlt pipelines
+
+# Dockerfile is based heavily on the example uv dockerfile:
+# https://github.com/astral-sh/uv-docker-example
+
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim
+
+# Set environment variable to noninteractive to prevent prompts during apt operations
+ENV DEBIAN_FRONTEND=noninteractive
+
+# add tini
+RUN apt-get update -y && apt-get install -y --no-install-recommends tini git
 
 # Install the project into `/app`
 WORKDIR /app
@@ -38,7 +49,5 @@ RUN groupadd --system --gid 999 nonroot \
 # Use the non-root user to run our application
 USER nonroot
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-# CMD ["uv", "run", "python", "--version"]
+# run the command using tini
+ENTRYPOINT ["/usr/bin/tini", "--"]
