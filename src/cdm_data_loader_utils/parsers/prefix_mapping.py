@@ -118,6 +118,76 @@ def inspect_none_status(mapping: list) -> None:
         print(f"{row.get('__prefix')}")
 
 
+def classify_prefixes(prefix_list: set, mapping: list):
+    mapping_dict = {row["__prefix"].lower(): row for row in mapping if isinstance(row.get("__prefix"), str)}
+
+    for p in sorted(prefix_list):
+        row = mapping_dict.get(p.lower())
+
+        if not row:
+            print(f"{p} -> not found in remapping file")
+            continue
+
+        status = row.get("_status")
+        match = row.get("match")
+        matches = row.get("matches")
+
+        if match:
+            target = match
+        elif matches:
+            target = ", ".join(matches)
+        else:
+            target = None
+
+        print(f"{p:<20} | status: {status:<15} | canonical: {target}")
+
+
+NOT_FOUND_PREFIXES = {
+    "agr",
+    "alphafolddb",
+    "antibodypedia",
+    "bgee",
+    "biogrid-orcs",
+    "collectf",
+    "ctd",
+    "dnasu",
+    "ensemblbacteria",
+    "ensemblmetazoa",
+    "ensemblplants",
+    "esther",
+    "expressionatlas",
+    "funcoup",
+    "funfam",
+    "gene3d",
+    "geneid",
+    "glycosmos",
+    "glygen",
+    "gramene",
+    "inparanoid",
+    "iptmnet",
+    "merops",
+    "metosite",
+    "ncbifam",
+    "oma",
+    "panther",
+    "patric",
+    "paxdb",
+    "peptideatlas",
+    "phosphositeplus",
+    "pir",
+    "pro",
+    "proteomes",
+    "proteomicsdb",
+    "sfld",
+    "smr",
+    "swisspalm",
+    "topdownproteomics",
+    "unipathway",
+    "veupathdb",
+    "wbparasite",
+}
+
+
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
@@ -127,6 +197,9 @@ def main():
 
     print("\nUniProt prefix remapping file:")
     mapping = load_mapping(MAPPING_PATH)
+
+    print("\n=== Classification of 42 non-matching prefixes ===\n")
+    classify_prefixes(NOT_FOUND_PREFIXES, mapping)
 
     analyze_mapping_structure(mapping)
     analyze_status_distribution(mapping)
