@@ -1,8 +1,16 @@
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+# Dockerfile for running dlt pipelines
 
-# Install the project into `/app`
-WORKDIR /app
+# Dockerfile is based heavily on the example uv dockerfile:
+# https://github.com/astral-sh/uv-docker-example
+
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim
+
+# Set environment variable to noninteractive to prevent prompts during apt operations
+ENV DEBIAN_FRONTEND=noninteractive
+
+# add tini
+RUN apt-get update -y && apt-get install -y --no-install-recommends tini git
 
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
@@ -15,6 +23,9 @@ ENV UV_NO_DEV=1
 
 # Ensure installed tools can be executed out of the box
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
+
+# Install the project into `/app`
+WORKDIR /app
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -35,10 +46,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
+COPY --chmod=+x ./scripts/entrypoint.sh /app/
 # Use the non-root user to run our application
 USER nonroot
-
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-# CMD ["uv", "run", "python", "--version"]
+ENTRYPOINT ["./entrypoint.sh"]
