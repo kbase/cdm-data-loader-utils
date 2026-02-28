@@ -5,10 +5,37 @@ from typing import Optional, Dict
 SYNONYM_MAP = {
     "geneid": "ncbigene",
     "unipathway": "upa",
+    "ctd": "ctd.gene",
+    "gramene": "gramene.gene",
 }
 
 MAP_NAMESPACE = {
     "merops": "merops.entry",
+    "ensemblbacteria": "ensembl",
+    "ensemblmetazoa": "ensembl",
+    "ensemblplants": "ensembl",
+    "panther": "panther.family",
+    "pro": "pr",
+    "oma": "oma.protein",
+    "paxdb": "paxdb.protein",
+    "pir": "pirsf",
+    "peptideatlas": "peptideatlas.peptide",
+    "proteomicsdb": "proteomicsdb.protein",
+    "proteomes": "uniprot.proteome",
+}
+
+ANNOTATION_SOURCE = {
+    "expressionatlas",
+    "funcoup",
+    "glycosmos",
+    "glygen",
+    "inparanoid",
+    "iptmnet",
+    "metosite",
+    "phosphositeplus",
+    "smr",
+    "swisspalm",
+    "topdownproteomics",
 }
 
 INTERNAL_METADATA = {
@@ -29,6 +56,16 @@ REGISTRY_GAP = {
     "agr",
     "antibodypedia",
     "bgee",
+    "biogrid-orcs",
+    "dnasu",
+    "esther",
+    "funfam",
+    "gene3d",
+    "ncbifam",
+    "patric",
+    "sfld",
+    "veupathdb",
+    "wbparasite",
 }
 
 
@@ -46,6 +83,9 @@ def normalize_prefix(
 
     if db in INTERNAL_METADATA:
         return {"normalized": None, "category": "internal"}
+
+    if db in ANNOTATION_SOURCE:
+        return {"normalized": db, "category": "annotation"}
 
     if db in SYNONYM_MAP:
         return {"normalized": SYNONYM_MAP[db], "category": "synonym"}

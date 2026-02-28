@@ -1,9 +1,9 @@
 """
 
-python3 -m cdm_data_loader_utils.parsers.prefix_audit \
+PYTHONPATH=src python3 -m cdm_data_loader_utils.parsers.prefix_audit \
   --parquet "dataset/part-00000-0a0d0261-1fee-477d-90d8-1df048058fbf-c000.snappy.parquet" \
   --idmapping "dataset/ECOLI_83333_idmapping.dat" \
-  --registry dataset/registry.json
+  --registry "dataset/registry.json"
 
 """
 
