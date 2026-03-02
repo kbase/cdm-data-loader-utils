@@ -9,11 +9,13 @@ authors = [
 ]
 
 dependencies = [
+    "bioregistry>=0.13.20",
     "click>=8.3.1",
-    "dlt[deltalake,filesystem,parquet]>=1.21.0",
+    "dlt[deltalake,filesystem,parquet]>=1.22.2",
     "lxml>=6.0.2",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
+    "thefuzz>=0.22.1",
 ]
 
 [project.scripts]
@@ -28,11 +30,8 @@ dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
-    "pytest-env>=1.2.0",
-    "ruff>=0.14.14",
-]
-experimental = [
-    "mutmut>=3.4.0",
+    "pytest-env>=1.5.0",
+    "ruff>=0.15.0",
 ]
 models = [
     "genson>=1.3.0",
