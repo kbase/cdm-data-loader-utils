@@ -1,0 +1,661 @@
+[
+  {
+    "__prefix": "Allergome",
+    "_status": "exact",
+    "match": "allergome"
+  },
+  {
+    "__prefix": "ArachnoServer",
+    "_status": "exact",
+    "match": "arachnoserver"
+  },
+  {
+    "__prefix": "Araport",
+    "_status": "exact",
+    "match": "araport"
+  },
+  {
+    "__prefix": "BioCyc",
+    "_status": "exact",
+    "match": "biocyc"
+  },
+  {
+    "__prefix": "BioGRID",
+    "_status": "exact",
+    "match": "biogrid"
+  },
+  {
+    "__prefix": "CCDS",
+    "_status": "exact",
+    "match": "ccds"
+  },
+  {
+    "__prefix": "CGD",
+    "_status": "exact",
+    "match": "cgd"
+  },
+  {
+    "__prefix": "ChEMBL",
+    "_status": "exact",
+    "match": "chembl"
+  },
+  {
+    "__prefix": "ComplexPortal",
+    "_status": "exact",
+    "match": "complexportal"
+  },
+  {
+    "__prefix": "ConoServer",
+    "_status": "exact",
+    "match": "conoserver"
+  },
+  {
+    "__prefix": "CRC64",
+    "_status": "UniProt_entry",
+    "comment": "Information from UniProt entry",
+    "match": "CRC64"
+  },
+  {
+    "__prefix": "dictyBase",
+    "_status": "exact",
+    "match": "dictybase"
+  },
+  {
+    "__prefix": "DIP",
+    "_status": "exact",
+    "match": "dip"
+  },
+  {
+    "__prefix": "DisProt",
+    "_status": "exact",
+    "match": "disprot"
+  },
+  {
+    "__prefix": "DrugBank",
+    "_status": "exact",
+    "match": "drugbank"
+  },
+  {
+    "__prefix": "EchoBASE",
+    "_status": "exact",
+    "match": "echobase"
+  },
+  {
+    "__prefix": "eggNOG",
+    "_status": "exact",
+    "match": "eggnog"
+  },
+  {
+    "__prefix": "EMDB",
+    "_status": "exact",
+    "match": "emdb"
+  },
+  {
+    "__prefix": "Ensembl",
+    "_status": "exact",
+    "match": "ensembl"
+  },
+  {
+    "__prefix": "FlyBase",
+    "_status": "exact",
+    "match": "FlyBase"
+  },
+  {
+    "__prefix": "Gene_Name",
+    "_status": "UniProt_entry",
+    "comment": "Information from UniProt entry",
+    "match": "Gene_Name"
+  },
+  {
+    "__prefix": "Gene_OrderedLocusName",
+    "_status": "UniProt_entry",
+    "comment": "Information from UniProt entry",
+    "match": "Gene_OrderedLocusName"
+  },
+  {
+    "__prefix": "Gene_ORFName",
+    "_status": "UniProt_entry",
+    "comment": "Information from UniProt entry",
+    "match": "Gene_ORFName"
+  },
+  {
+    "__prefix": "Gene_Synonym",
+    "_status": "UniProt_entry",
+    "comment": "Information from UniProt entry",
+    "match": "Gene_Synonym"
+  },
+  {
+    "__prefix": "GeneCards",
+    "_status": "synonym",
+    "matches": [
+      "genecards.gene"
+    ]
+  },
+  {
+    "__prefix": "GeneID",
+    "_status": "synonym",
+    "matches": [
+      "NCBIGene"
+    ]
+  },
+  {
+    "__prefix": "GeneTree",
+    "_status": "exact",
+    "match": "genetree"
+  },
+  {
+    "__prefix": "GeneWiki",
+    "_status": "exact",
+    "match": "genewiki"
+  },
+  {
+    "__prefix": "GI",
+    "_status": "map",
+    "matches": [
+      "ncbigi"
+    ]
+  },
+  {
+    "__prefix": "HGNC",
+    "_status": "exact",
+    "match": "hgnc"
+  },
+  {
+    "__prefix": "HOGENOM",
+    "_status": "exact",
+    "match": "hogenom"
+  },
+  {
+    "__prefix": "IDEAL",
+    "_status": "exact",
+    "match": "ideal"
+  },
+  {
+    "__prefix": "KEGG",
+    "_status": "exact",
+    "match": "kegg"
+  },
+  {
+    "__prefix": "MaizeGDB",
+    "_status": "synonym",
+    "matches": [
+      "maizegdb.locus"
+    ]
+  },
+  {
+    "__prefix": "MEROPS",
+    "_status": "map",
+    "matches": [
+      "merops.entry"
+    ]
+  },
+  {
+    "__prefix": "MGI",
+    "_status": "exact",
+    "match": "MGI"
+  },
+  {
+    "__prefix": "MIM",
+    "_status": "synonym",
+    "matches": [
+      "omim"
+    ]
+  },
+  {
+    "__prefix": "MINT",
+    "_status": "exact",
+    "match": "mint"
+  },
+  {
+    "__prefix": "NCBI_TaxID",
+    "_status": "synonym",
+    "matches": [
+      "NCBITaxon"
+    ]
+  },
+  {
+    "__prefix": "neXtProt",
+    "_status": "exact",
+    "match": "nextprot"
+  },
+  {
+    "__prefix": "Orphanet",
+    "_status": "synonym",
+    "matches": [
+      "ORPHA"
+    ]
+  },
+  {
+    "__prefix": "OrthoDB",
+    "_status": "exact",
+    "match": "orthodb"
+  },
+  {
+    "__prefix": "PDB",
+    "_status": "exact",
+    "match": "pdb"
+  },
+  {
+    "__prefix": "PeroxiBase",
+    "_status": "exact",
+    "match": "peroxibase"
+  },
+  {
+    "__prefix": "PharmGKB",
+    "_status": "map",
+    "matches": [
+      "pharmgkb.gene"
+    ]
+  },
+  {
+    "__prefix": "PomBase",
+    "_status": "exact",
+    "match": "pombase"
+  },
+  {
+    "__prefix": "Reactome",
+    "_status": "exact",
+    "match": "reactome"
+  },
+  {
+    "__prefix": "REBASE",
+    "_status": "exact",
+    "match": "rebase"
+  },
+  {
+    "__prefix": "RefSeq",
+    "_status": "exact",
+    "match": "refseq"
+  },
+  {
+    "__prefix": "RefSeq_NT",
+    "_status": "exact",
+    "match": "nucleotide"
+  },
+  {
+    "__prefix": "RGD",
+    "_status": "exact",
+    "match": "rgd"
+  },
+  {
+    "__prefix": "SGD",
+    "_status": "exact",
+    "match": "sgd"
+  },
+  {
+    "__prefix": "STRING",
+    "_status": "exact",
+    "match": "string"
+  },
+  {
+    "__prefix": "SwissLipids",
+    "_status": "synonym",
+    "matches": [
+      "SLM"
+    ]
+  },
+  {
+    "__prefix": "TAIR",
+    "_status": "map",
+    "matches": [
+      "tair.locus"
+    ]
+  },
+  {
+    "__prefix": "TCDB",
+    "_status": "exact",
+    "match": "tcdb"
+  },
+  {
+    "__prefix": "TreeFam",
+    "_status": "exact",
+    "match": "treefam"
+  },
+  {
+    "__prefix": "TubercuList",
+    "_status": "synonym",
+    "matches": [
+      "myco.tuber"
+    ]
+  },
+  {
+    "__prefix": "UCSC",
+    "_status": "exact",
+    "match": "ucsc"
+  },
+  {
+    "__prefix": "UniParc",
+    "_status": "exact",
+    "match": "uniparc"
+  },
+  {
+    "__prefix": "UniPathway",
+    "_status": "synonym",
+    "matches": [
+      "UPA"
+    ]
+  },
+  {
+    "__prefix": "UniProtKB-ID",
+    "_status": "exact",
+    "match": "uniprot"
+  },
+  {
+    "__prefix": "UniRef100",
+    "_status": "exact",
+    "match": "uniref"
+  },
+  {
+    "__prefix": "UniRef50",
+    "_status": "exact",
+    "match": "uniref"
+  },
+  {
+    "__prefix": "UniRef90",
+    "_status": "exact",
+    "match": "uniref"
+  },
+  {
+    "__prefix": "VGNC",
+    "_status": "exact",
+    "match": "vgnc"
+  },
+  {
+    "__prefix": "WormBase",
+    "_status": "exact",
+    "match": "WormBase"
+  },
+  {
+    "__prefix": "Xenbase",
+    "_status": "exact",
+    "match": "xenbase"
+  },
+  {
+    "__prefix": "ZFIN",
+    "_status": "exact",
+    "match": "zfin"
+  },
+  {
+    "__prefix": "BioMuta",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "ChiTaRS",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "CollecTF",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "CPTAC",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "DMDM",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "DNASU",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "EMBL",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "ESTHER",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "euHCVdb",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "GeneReviews",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "GenomeRNAi",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "GlyConnect",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "GuidetoPHARMACOLOGY",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "JaponicusDB",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "LegioList",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "Leproma",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "OMA",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "OpenTargets",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "PATRIC",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "PHI-base",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "PlantReactome",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "ProteomicsDB",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "PseudoCAP",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "VEuPathDB",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry",
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "WBParaSite",
+    "_status": "UniProt_dblist",
+    "comment": [
+      "See UniProt dblist entry"
+    ]
+  },
+  {
+    "__prefix": "CRC64",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "EMBL-CDS",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "Ensembl_PRO",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "Ensembl_TRS",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "EnsemblGenome",
+    "_status": null,
+    "comment": [
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "EnsemblGenome_PRO",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "EnsemblGenome_TRS",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "Gene_Name",
+    "_status": null,
+    "comment": [
+      "Prefix found in Bioregistry file contents"
+    ]
+  },
+  {
+    "__prefix": "Gene_OrderedLocusName",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "Gene_ORFName",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "Gene_Synonym",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "WBParaSite_TRS_PRO",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "WormBase_PRO",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  },
+  {
+    "__prefix": "WormBase_TRS",
+    "_status": null,
+    "comment": [
+      "No information"
+    ]
+  }
+]
