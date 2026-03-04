@@ -69,13 +69,6 @@ jobs:
               run: |
                   docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TEST_TAG }} test
 
-            - name: Run non-spark tests on the built image, fallback version
-              id: another-test-run
-              run: |
-                  docker image ls
-                  docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TEST_TAG }}
-                  docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TEST_TAG }} test
-
             - name: Build and push
               uses: docker/build-push-action@v6
               id: build-push-image
