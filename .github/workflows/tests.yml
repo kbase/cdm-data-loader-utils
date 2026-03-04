@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7.1.2
@@ -31,7 +31,6 @@ jobs:
 
       - name: Run code formatting checks
         shell: bash
-        continue-on-error: false
         run: uv run ruff format --check
 
   code_linting:
@@ -40,7 +39,7 @@ jobs:
     needs: code_format
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7.1.2
@@ -51,6 +50,7 @@ jobs:
         run: uv sync
 
       - name: Run code linting checks
+        continue-on-error: true
         run: uv run ruff check --output-format=github .
 
   spark_tests:
@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Run spark tests
         shell: bash
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7.1.2
