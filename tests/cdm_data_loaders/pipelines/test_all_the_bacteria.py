@@ -25,11 +25,11 @@ from cdm_data_loaders.pipelines.all_the_bacteria import (
     run_atb_pipeline,
 )
 from cdm_data_loaders.utils.file_transfer.core import NonRetryableDownloadError
-from tests.conftest import CASSETTES_DIR
 from tests.cdm_data_loaders.core.conftest import (
     TEST_CTS_SETTINGS,
     TEST_CTS_SETTINGS_RECONCILED,
 )
+from tests.conftest import CASSETTES_DIR
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes
 
 TEST_SETTINGS = frozendict(**TEST_CTS_SETTINGS, version="1.2.3")
@@ -47,7 +47,7 @@ TEST_SETTINGS_RECONCILED_V1 = frozendict(
 def vcr_config() -> dict[str, Any]:
     """VCR config for tests that make HTTP requests."""
     return {
-        "cassette_library_dir": CASSETTES_DIR,
+        "cassette_library_dir": str(CASSETTES_DIR),
         "record_mode": "once",  # record on first run, replay thereafter
         "serializer": "yaml",
         "match_on": ["method", "scheme", "host", "path", "query"],
