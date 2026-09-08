@@ -17,8 +17,9 @@ from cdm_data_loaders.pipelines.ncbi_ftp_download import (
     DEFAULT_STAGING_KEY_PREFIX,
     download_and_stage,
 )
+from tests.conftest import BASE_DIR
 
-NOTEBOOKS_DIR = Path(__file__).resolve().parents[2] / "notebooks"
+NOTEBOOKS_DIR = BASE_DIR / "notebooks"
 
 NCBI_NOTEBOOKS = [
     "ncbi_ftp_manifest.ipynb",

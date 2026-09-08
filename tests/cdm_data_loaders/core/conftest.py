@@ -24,8 +24,6 @@ from cdm_data_loaders.core.settings import (
 )
 from tests.conftest import TEST_DLT_CONFIG
 
-CASSETTES_DIR = "tests/cassettes"
-
 START_AT_VALUE: Final[int] = 50
 START_AT_STRING: Final[str] = "50"
 TEST_LOG_CONFIG_FILE: Final[str] = "log_conf.json"
