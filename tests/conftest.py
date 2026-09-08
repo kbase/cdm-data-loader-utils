@@ -47,11 +47,12 @@ TEST_NS: Final[str] = "test_ns"
 PIPELINE_RUN = frozendict({RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"})
 ALT_PIPELINE_RUN = frozendict({RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"})
 
-CASSETTES_DIR: Final[str] = "tests/cassettes"
+TEST_DATA_DIR: Final[Path] = Path("tests") / "data"
+CASSETTES_DIR: Final[Path] = Path("tests") / "cassettes"
 
 DEFAULT_VCR_CONFIG = frozendict(
     {
-        "cassette_library_dir": CASSETTES_DIR,
+        "cassette_library_dir": str(CASSETTES_DIR),
         "record_mode": "once",  # record on first run, replay thereafter
         "serializer": "yaml",
         "match_on": ["method", "scheme", "host", "path", "query"],
@@ -171,7 +172,7 @@ def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
 @pytest.fixture(scope="session")
 def test_data_dir() -> Path:
     """Test data directory."""
-    return Path("tests") / "data"
+    return TEST_DATA_DIR
 
 
 @pytest.fixture(scope="session")
