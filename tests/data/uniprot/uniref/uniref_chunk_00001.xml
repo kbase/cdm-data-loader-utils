@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<UniRef50 xmlns="http://uniprot.org/uniref"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://uniprot.org/uniref http://www.uniprot.org/support/docs/uniref.xsd"
+ releaseDate="2025-02-05" version="2025_01">
+    <entry id="UniRef50_A0AB34IYJ6" updated="2025-02-05">
+        <name>Cluster: PKZILLA-1 giant polyketide synthase</name>
+        <property type="member count" value="1"/>
+        <property type="common taxon" value="Prymnesium parvum"/>
+        <property type="common taxon ID" value="97485"/>
+        <property type="GO Molecular Function" value="GO:0004315"/>
+        <representativeMember>
+            <dbReference type="UniProtKB ID" id="A0AB34IYJ6_PRYPA">
+                <property type="UniProtKB accession" value="A0AB34IYJ6"/>
+                <property type="UniParc ID" value="UPI003596FD28"/>
+                <property type="UniRef100 ID" value="UniRef100_A0AB34IYJ6"/>
+                <property type="UniRef90 ID" value="UniRef90_A0AB34IYJ6"/>
+                <property type="protein name" value="PKZILLA-1 giant polyketide synthase"/>
+                <property type="source organism" value="Prymnesium parvum (Golden alga)"/>
+                <property type="NCBI taxonomy" value="97485"/>
+                <property type="length" value="45212"/>
+                <property type="isSeed" value="true"/>
+            </dbReference>
+            <sequence length="45212" checksum="385E596EB33D030E">SNIP</sequence>
+        </representativeMember>
+    </entry>
+    <entry id="UniRef50_A0A410P257" updated="2024-07-24">
+        <name>Cluster: Glycogen synthase</name>
+        <property type="member count" value="2"/>
+        <property type="common taxon" value="Velamenicoccus archaeovorus"/>
+        <property type="common taxon ID" value="1930593"/>
+        <representativeMember>
+            <dbReference type="UniProtKB ID" id="A0A410P257_VELA1">
+                <property type="UniProtKB accession" value="A0A410P257"/>
+                <property type="UniParc ID" value="UPI000FFCD83E"/>
+                <property type="UniRef100 ID" value="UniRef100_A0A410P257"/>
+                <property type="UniRef90 ID" value="UniRef90_A0A410P257"/>
+                <property type="protein name" value="Glycogen synthase"/>
+                <property type="source organism" value="Velamenicoccus archaeovorus"/>
+                <property type="NCBI taxonomy" value="1930593"/>
+                <property type="length" value="39677"/>
+            </dbReference>
+            <sequence length="39677" checksum="976AC558673E4C32">SNIP</sequence>
+        </representativeMember>
+        <member>
+            <dbReference type="UniParc ID" id="UPI000FFEDAD7">
+                <property type="UniRef100 ID" value="UniRef100_UPI000FFEDAD7"/>
+                <property type="UniRef90 ID" value="UniRef90_A0A410P257"/>
+                <property type="protein name" value="UPF0489 family protein"/>
+                <property type="source organism" value="Candidatus Velamenicoccus archaeovorus"/>
+                <property type="NCBI taxonomy" value="1930593"/>
+                <property type="length" value="39686"/>
+                <property type="isSeed" value="true"/>
+            </dbReference>
+        </member>
+    </entry>
+    <entry id="UniRef50_UPI00358F51CD" updated="2024-11-27">
+        <name>Cluster: LOW QUALITY PROTEIN: titin</name>
+        <property type="member count" value="1"/>
+        <property type="common taxon" value="Myxine glutinosa"/>
+        <property type="common taxon ID" value="7769"/>
+        <representativeMember>
+            <dbReference type="UniParc ID" id="UPI00358F51CD">
+                <property type="UniRef100 ID" value="UniRef100_UPI00358F51CD"/>
+                <property type="UniRef90 ID" value="UniRef90_UPI00358F51CD"/>
+                <property type="protein name" value="LOW QUALITY PROTEIN: titin"/>
+                <property type="source organism" value="Myxine glutinosa"/>
+                <property type="NCBI taxonomy" value="7769"/>
+                <property type="length" value="47063"/>
+                <property type="isSeed" value="true"/>
+            </dbReference>
+            <sequence length="47063" checksum="48729625616C010E">SNIP</sequence>
+        </representativeMember>
+    </entry>
+</UniRef50>

@@ -1,0 +1,1083 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uniprot xmlns="https://uniprot.org/uniprot"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://uniprot.org/uniprot http://www.uniprot.org/docs/uniprot.xsd">
+    <entry id="13" dataset="Swiss-Prot" created="2009-03-24" modified="2026-01-28" version="99" xmlns="https://uniprot.org/uniprot">
+        <accession>A9A2R0</accession>
+        <name>AATA_NITMS</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">A-type ATP synthase subunit A</fullName>
+                <ecNumber evidence="1">7.1.2.2</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name evidence="1" type="primary">atpA</name>
+            <name type="ordered locus">Nmar_1691</name>
+        </gene>
+        <organism>
+            <name type="scientific">Nitrosopumilus maritimus (strain SCM1)</name>
+            <dbReference type="NCBI Taxonomy" id="436308"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Nitrososphaerota</taxon>
+                <taxon>Nitrososphaeria</taxon>
+                <taxon>Nitrosopumilales</taxon>
+                <taxon>Nitrosopumilaceae</taxon>
+                <taxon>Nitrosopumilus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2010" name="Proc. Natl. Acad. Sci. U.S.A." volume="107" first="8818" last="8823">
+                <title>Nitrosopumilus maritimus genome reveals unique mechanisms for nitrification and autotrophy in globally distributed marine crenarchaea.</title>
+                <authorList>
+                    <person name="Walker C.B."/>
+                    <person name="de la Torre J.R."/>
+                    <person name="Klotz M.G."/>
+                    <person name="Urakawa H."/>
+                    <person name="Pinel N."/>
+                    <person name="Arp D.J."/>
+                    <person name="Brochier-Armanet C."/>
+                    <person name="Chain P.S."/>
+                    <person name="Chan P.P."/>
+                    <person name="Gollabgir A."/>
+                    <person name="Hemp J."/>
+                    <person name="Hugler M."/>
+                    <person name="Karr E.A."/>
+                    <person name="Konneke M."/>
+                    <person name="Shin M."/>
+                    <person name="Lawton T.J."/>
+                    <person name="Lowe T."/>
+                    <person name="Martens-Habbena W."/>
+                    <person name="Sayavedra-Soto L.A."/>
+                    <person name="Lang D."/>
+                    <person name="Sievert S.M."/>
+                    <person name="Rosenzweig A.C."/>
+                    <person name="Manning G."/>
+                    <person name="Stahl D.A."/>
+                </authorList>
+                <dbReference type="PubMed" id="20421470"/>
+                <dbReference type="DOI" id="10.1073/pnas.0913533107"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>SCM1</strain>
+            </source>
+        </reference>
+        <comment type="function">
+            <text evidence="1">Component of the A-type ATP synthase that produces ATP from ADP in the presence of a proton gradient across the membrane. The A chain is the catalytic subunit.</text>
+        </comment>
+        <comment type="catalytic activity">
+            <reaction evidence="1">
+                <text>ATP + H2O + 4 H(+)(in) = ADP + phosphate + 5 H(+)(out)</text>
+                <dbReference type="Rhea" id="RHEA:57720"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:15378"/>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+                <dbReference type="ChEBI" id="CHEBI:43474"/>
+                <dbReference type="ChEBI" id="CHEBI:456216"/>
+                <dbReference type="EC" id="7.1.2.2"/>
+            </reaction>
+        </comment>
+        <comment type="subunit">
+            <text evidence="1">Has multiple subunits with at least A(3), B(3), C, D, E, F, H, I and proteolipid K(x).</text>
+        </comment>
+        <comment type="subcellular location">
+            <subcellularLocation>
+                <location evidence="1">Cell membrane</location>
+                <topology evidence="1">Peripheral membrane protein</topology>
+            </subcellularLocation>
+        </comment>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the ATPase alpha/beta chains family.</text>
+        </comment>
+        <dbReference type="EC" id="7.1.2.2" evidence="1"/>
+        <dbReference type="EMBL" id="CP000866">
+            <property type="protein sequence ID" value="ABX13587.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_012216073.1">
+            <property type="nucleotide sequence ID" value="NC_010085.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="A9A2R0"/>
+        <dbReference type="SMR" id="A9A2R0"/>
+        <dbReference type="FunCoup" id="A9A2R0">
+            <property type="interactions" value="145"/>
+        </dbReference>
+        <dbReference type="STRING" id="436308.Nmar_1691"/>
+        <dbReference type="EnsemblBacteria" id="ABX13587">
+            <property type="protein sequence ID" value="ABX13587"/>
+            <property type="gene ID" value="Nmar_1691"/>
+        </dbReference>
+        <dbReference type="GeneID" id="5774519"/>
+        <dbReference type="KEGG" id="nmr:Nmar_1691"/>
+        <dbReference type="eggNOG" id="arCOG00868">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_008162_3_1_2"/>
+        <dbReference type="InParanoid" id="A9A2R0"/>
+        <dbReference type="OrthoDB" id="115235at2157"/>
+        <dbReference type="PhylomeDB" id="A9A2R0"/>
+        <dbReference type="Proteomes" id="UP000000792">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005886">
+            <property type="term" value="C:plasma membrane"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-SubCell"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005524">
+            <property type="term" value="F:ATP binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046933">
+            <property type="term" value="F:proton-transporting ATP synthase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046961">
+            <property type="term" value="F:proton-transporting ATPase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0000318"/>
+            <property type="project" value="GO_Central"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0042777">
+            <property type="term" value="P:proton motive force-driven plasma membrane ATP synthesis"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:1902600">
+            <property type="term" value="P:proton transmembrane transport"/>
+            <property type="evidence" value="ECO:0000318"/>
+            <property type="project" value="GO_Central"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18111">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18119">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd01134">
+            <property type="entry name" value="V_A-ATPase_A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="1.10.1140.10:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="2.40.30.20:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.30.20">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.50.100">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="1.10.1140.10">
+            <property type="entry name" value="Bovine Mitochondrial F1-atpase, Atp Synthase Beta Chain, Chain D, domain 3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.300">
+            <property type="entry name" value="P-loop containing nucleotide triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00309">
+            <property type="entry name" value="ATP_synth_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR003593">
+            <property type="entry name" value="AAA+_ATPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR055190">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR031686">
+            <property type="entry name" value="ATP-synth_a_Xtn"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR023366">
+            <property type="entry name" value="ATP_synth_asu-like_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR020003">
+            <property type="entry name" value="ATPase_a/bsu_AS"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR004100">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036121">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR000194">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_nucl-bd"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR024034">
+            <property type="entry name" value="ATPase_F1/V1_b/a_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027417">
+            <property type="entry name" value="P-loop_NTPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR022878">
+            <property type="entry name" value="V-ATPase_asu"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF003220">
+            <property type="entry name" value="PRK04192.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607:SF1">
+            <property type="entry name" value="H(+)-TRANSPORTING TWO-SECTOR ATPASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607">
+            <property type="entry name" value="V-TYPE PROTON ATPASE CATALYTIC SUBUNIT A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00006">
+            <property type="entry name" value="ATP-synt_ab"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02874">
+            <property type="entry name" value="ATP-synt_ab_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF16886">
+            <property type="entry name" value="ATP-synt_ab_Xtn"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF22919">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SMART" id="SM00382">
+            <property type="entry name" value="AAA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF47917">
+            <property type="entry name" value="C-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50615">
+            <property type="entry name" value="N-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF52540">
+            <property type="entry name" value="P-loop containing nucleoside triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PROSITE" id="PS00152">
+            <property type="entry name" value="ATPASE_ALPHA_BETA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0066">ATP synthesis</keyword>
+        <keyword id="KW-0067">ATP-binding</keyword>
+        <keyword id="KW-1003">Cell membrane</keyword>
+        <keyword id="KW-0375">Hydrogen ion transport</keyword>
+        <keyword id="KW-0406">Ion transport</keyword>
+        <keyword id="KW-0472">Membrane</keyword>
+        <keyword id="KW-0547">Nucleotide-binding</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <keyword id="KW-1278">Translocase</keyword>
+        <keyword id="KW-0813">Transport</keyword>
+        <feature type="chain" id="PRO_1000115642" description="A-type ATP synthase subunit A">
+            <location>
+                <begin position="1"/>
+                <end position="592"/>
+            </location>
+        </feature>
+        <feature type="binding site" evidence="1">
+            <location>
+                <begin position="234"/>
+                <end position="241"/>
+            </location>
+            <ligand>
+                <name>ATP</name>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+            </ligand>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00309"/>
+            </source>
+        </evidence>
+        <sequence length="592" mass="65181" checksum="EF69FB748296FECC" modified="2008-01-15" version="1">MAAQGRIVWVSGPAVRADGMSEAKMYETVTVGDSKLVGEVIRLTGDVAFIQVYESTSGLKPGEPVIGTGNPLSVLLGPGIIGQLYDGIQRPLRALSEASGSFIGRGITTTPVDMAKKYHFVPSVSNGDEVAAGNVIGVVQETDLIEHSIMVPPDHKGGKISNLVSEGDYDLETVLATTEGEGETVELKMYHRWPVRKPRPYKNRYDPTVPLLTGQRVIDTFFPIAKGGTGSIPGAFGTGKTVTLHQIAKWADSQVVVYIGCGERGNEMTEVLVEFPHLKDPRSGKPLMDRTVLVANTSNMPVAAREASIYTGVTIAEYYRDMGKDVVLVADSTSRWAEALREMSGRLEEMPAEEGYPSYLASRLAEFYERAGRVRAAGSPDRDGSVTLIGAVSPSGGDFTEPVTTHTMRFIKTFWALDAKLAYSRHYPSINWMNSYSGYLADIAKWWGENINEDWLSLRSEVYGVLQREDTLKEIVRLLGPEALPDEEKLILEVARMVKIGLLQQNSFDDVDTYCSPEKQYKLMKLLVDFYKKGQQAIKEGTPLADIRAMKSITTLLKARMDVKDDEMPKLDQLDADMQEEFKSITGVKVSN</sequence>
+    </entry>
+    <entry id="14" dataset="Swiss-Prot" created="2008-02-26" modified="2026-01-28" version="113" xmlns="https://uniprot.org/uniprot">
+        <accession>Q2FP52</accession>
+        <name>AATA1_METHJ</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">A-type ATP synthase subunit A 1</fullName>
+                <ecNumber evidence="1">7.1.2.2</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name evidence="1" type="primary">atpA1</name>
+            <name type="ordered locus">Mhun_1183</name>
+        </gene>
+        <organism>
+            <name type="scientific">Methanospirillum hungatei JF-1 (strain ATCC 27890 / DSM 864 / NBRC 100397 / JF-1)</name>
+            <dbReference type="NCBI Taxonomy" id="323259"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Stenosarchaea group</taxon>
+                <taxon>Methanomicrobia</taxon>
+                <taxon>Methanomicrobiales</taxon>
+                <taxon>Methanospirillaceae</taxon>
+                <taxon>Methanospirillum</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2016" name="Stand. Genomic Sci." volume="11" first="2" last="2">
+                <title>Complete genome sequence of Methanospirillum hungatei type strain JF1.</title>
+                <authorList>
+                    <person name="Gunsalus R.P."/>
+                    <person name="Cook L.E."/>
+                    <person name="Crable B."/>
+                    <person name="Rohlin L."/>
+                    <person name="McDonald E."/>
+                    <person name="Mouttaki H."/>
+                    <person name="Sieber J.R."/>
+                    <person name="Poweleit N."/>
+                    <person name="Zhou H."/>
+                    <person name="Lapidus A.L."/>
+                    <person name="Daligault H.E."/>
+                    <person name="Land M."/>
+                    <person name="Gilna P."/>
+                    <person name="Ivanova N."/>
+                    <person name="Kyrpides N."/>
+                    <person name="Culley D.E."/>
+                    <person name="McInerney M.J."/>
+                </authorList>
+                <dbReference type="PubMed" id="26744606"/>
+                <dbReference type="DOI" id="10.1186/s40793-015-0124-8"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 27890 / DSM 864 / NBRC 100397 / JF-1</strain>
+            </source>
+        </reference>
+        <comment type="function">
+            <text evidence="1">Component of the A-type ATP synthase that produces ATP from ADP in the presence of a proton gradient across the membrane. The A chain is the catalytic subunit.</text>
+        </comment>
+        <comment type="catalytic activity">
+            <reaction evidence="1">
+                <text>ATP + H2O + 4 H(+)(in) = ADP + phosphate + 5 H(+)(out)</text>
+                <dbReference type="Rhea" id="RHEA:57720"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:15378"/>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+                <dbReference type="ChEBI" id="CHEBI:43474"/>
+                <dbReference type="ChEBI" id="CHEBI:456216"/>
+                <dbReference type="EC" id="7.1.2.2"/>
+            </reaction>
+        </comment>
+        <comment type="subunit">
+            <text evidence="1">Has multiple subunits with at least A(3), B(3), C, D, E, F, H, I and proteolipid K(x).</text>
+        </comment>
+        <comment type="subcellular location">
+            <subcellularLocation>
+                <location evidence="1">Cell membrane</location>
+                <topology evidence="1">Peripheral membrane protein</topology>
+            </subcellularLocation>
+        </comment>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the ATPase alpha/beta chains family.</text>
+        </comment>
+        <dbReference type="EC" id="7.1.2.2" evidence="1"/>
+        <dbReference type="EMBL" id="CP000254">
+            <property type="protein sequence ID" value="ABD40931.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_011448208.1">
+            <property type="nucleotide sequence ID" value="NC_007796.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q2FP52"/>
+        <dbReference type="SMR" id="Q2FP52"/>
+        <dbReference type="FunCoup" id="Q2FP52">
+            <property type="interactions" value="91"/>
+        </dbReference>
+        <dbReference type="STRING" id="323259.Mhun_1183"/>
+        <dbReference type="EnsemblBacteria" id="ABD40931">
+            <property type="protein sequence ID" value="ABD40931"/>
+            <property type="gene ID" value="Mhun_1183"/>
+        </dbReference>
+        <dbReference type="GeneID" id="3923385"/>
+        <dbReference type="KEGG" id="mhu:Mhun_1183"/>
+        <dbReference type="eggNOG" id="arCOG00868">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_008162_3_1_2"/>
+        <dbReference type="InParanoid" id="Q2FP52"/>
+        <dbReference type="OrthoDB" id="115235at2157"/>
+        <dbReference type="Proteomes" id="UP000001941">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005886">
+            <property type="term" value="C:plasma membrane"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-SubCell"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0033178">
+            <property type="term" value="C:proton-transporting two-sector ATPase complex, catalytic domain"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005524">
+            <property type="term" value="F:ATP binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046933">
+            <property type="term" value="F:proton-transporting ATP synthase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046961">
+            <property type="term" value="F:proton-transporting ATPase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0042777">
+            <property type="term" value="P:proton motive force-driven plasma membrane ATP synthesis"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18111">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd01134">
+            <property type="entry name" value="V_A-ATPase_A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="3.40.50.300:FF:000675">
+            <property type="entry name" value="V-type ATP synthase alpha chain"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="1.10.1140.10:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.30.20">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.50.100">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="1.10.1140.10">
+            <property type="entry name" value="Bovine Mitochondrial F1-atpase, Atp Synthase Beta Chain, Chain D, domain 3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.300">
+            <property type="entry name" value="P-loop containing nucleotide triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00309">
+            <property type="entry name" value="ATP_synth_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR003593">
+            <property type="entry name" value="AAA+_ATPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR055190">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR031686">
+            <property type="entry name" value="ATP-synth_a_Xtn"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR023366">
+            <property type="entry name" value="ATP_synth_asu-like_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005726">
+            <property type="entry name" value="ATP_synth_asu_arc"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR020003">
+            <property type="entry name" value="ATPase_a/bsu_AS"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR004100">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036121">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR000194">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_nucl-bd"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR024034">
+            <property type="entry name" value="ATPase_F1/V1_b/a_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027417">
+            <property type="entry name" value="P-loop_NTPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR001763">
+            <property type="entry name" value="Rhodanese-like_dom"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR022878">
+            <property type="entry name" value="V-ATPase_asu"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01043">
+            <property type="entry name" value="ATP_syn_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF003220">
+            <property type="entry name" value="PRK04192.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607:SF1">
+            <property type="entry name" value="H(+)-TRANSPORTING TWO-SECTOR ATPASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607">
+            <property type="entry name" value="V-TYPE PROTON ATPASE CATALYTIC SUBUNIT A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00006">
+            <property type="entry name" value="ATP-synt_ab"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02874">
+            <property type="entry name" value="ATP-synt_ab_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF16886">
+            <property type="entry name" value="ATP-synt_ab_Xtn"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF22919">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SMART" id="SM00382">
+            <property type="entry name" value="AAA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF47917">
+            <property type="entry name" value="C-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50615">
+            <property type="entry name" value="N-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF52540">
+            <property type="entry name" value="P-loop containing nucleoside triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PROSITE" id="PS00152">
+            <property type="entry name" value="ATPASE_ALPHA_BETA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0066">ATP synthesis</keyword>
+        <keyword id="KW-0067">ATP-binding</keyword>
+        <keyword id="KW-1003">Cell membrane</keyword>
+        <keyword id="KW-0375">Hydrogen ion transport</keyword>
+        <keyword id="KW-0406">Ion transport</keyword>
+        <keyword id="KW-0472">Membrane</keyword>
+        <keyword id="KW-0547">Nucleotide-binding</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <keyword id="KW-1278">Translocase</keyword>
+        <keyword id="KW-0813">Transport</keyword>
+        <feature type="chain" id="PRO_0000322482" description="A-type ATP synthase subunit A 1">
+            <location>
+                <begin position="1"/>
+                <end position="582"/>
+            </location>
+        </feature>
+        <feature type="binding site" evidence="1">
+            <location>
+                <begin position="231"/>
+                <end position="238"/>
+            </location>
+            <ligand>
+                <name>ATP</name>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+            </ligand>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00309"/>
+            </source>
+        </evidence>
+        <sequence length="582" mass="64780" checksum="EF04DF51526F5605" modified="2006-03-21" version="1">MEVKRTKGVLKRIAGPVVTAVNLDAHMYDVVKVGDEQLMGEVIKIKGEDIIIQVYEDTSGIKPGEPVENTGLSLSVELGPGLLTSIYDGIQRPLEVLVEKMGNFIERGVTAPGLSHDKKWEFKPIKKAGDMVTPGTIIGEVQETNIVHKIMVPPYCDAGKIKDIKSGSFTIDEIICTLDNGAEIAMMHKWPVRMPRPVTEKLNPDIPLITGQRILDGLFPVAKGGTAAIPGPFGSGKTVTQQALAKWSDAEIVVYIGCGERGNEMTEVLTEFPELEDPKTGRPLMERTVLIANTSNMPVAAREASVYTGITIAEYFRDMGYDVSLMADSTSRWAEAMREISSRLEEMPGEEGYPAYLAARLSEFYERAGRVNTLNKDFGSVTVIGAVSPPGGDFSEPVTQNTLRIVKCFWALDAKLSQRRHFPAINWLNSYSLYLDTLSQYYDENVSPEWNPLRTWAMEVLQKEAELQEIVQLVGSDALPDEEQVTIEVARMLREIFLQQNAFDPVDTYCDMTKQFDILKAIRFYSDQAYAALKAGVITSQITGLKAKNDLPQIKYVKEYKPEIERIVKTMESEFTKLREAA</sequence>
+    </entry>
+    <entry id="15" dataset="Swiss-Prot" created="1997-11-01" modified="2025-06-18" version="145" xmlns="https://uniprot.org/uniprot">
+        <accession>Q57670</accession>
+        <name>AATA_METJA</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">A-type ATP synthase subunit A</fullName>
+                <ecNumber evidence="1 7">7.1.2.2</ecNumber>
+            </recommendedName>
+            <alternativeName>
+                <fullName evidence="5">A1A0-type ATP synthase subunit A</fullName>
+            </alternativeName>
+        </protein>
+        <gene>
+            <name evidence="1 6" type="primary">atpA</name>
+            <name type="ordered locus">MJ0217</name>
+        </gene>
+        <organism>
+            <name type="scientific">Methanocaldococcus jannaschii (strain ATCC 43067 / DSM 2661 / JAL-1 / JCM 10045 / NBRC 100440)</name>
+            <name type="common">Methanococcus jannaschii</name>
+            <dbReference type="NCBI Taxonomy" id="243232"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Methanomada group</taxon>
+                <taxon>Methanococci</taxon>
+                <taxon>Methanococcales</taxon>
+                <taxon>Methanocaldococcaceae</taxon>
+                <taxon>Methanocaldococcus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="1996" name="Science" volume="273" first="1058" last="1073">
+                <title>Complete genome sequence of the methanogenic archaeon, Methanococcus jannaschii.</title>
+                <authorList>
+                    <person name="Bult C.J."/>
+                    <person name="White O."/>
+                    <person name="Olsen G.J."/>
+                    <person name="Zhou L."/>
+                    <person name="Fleischmann R.D."/>
+                    <person name="Sutton G.G."/>
+                    <person name="Blake J.A."/>
+                    <person name="FitzGerald L.M."/>
+                    <person name="Clayton R.A."/>
+                    <person name="Gocayne J.D."/>
+                    <person name="Kerlavage A.R."/>
+                    <person name="Dougherty B.A."/>
+                    <person name="Tomb J.-F."/>
+                    <person name="Adams M.D."/>
+                    <person name="Reich C.I."/>
+                    <person name="Overbeek R."/>
+                    <person name="Kirkness E.F."/>
+                    <person name="Weinstock K.G."/>
+                    <person name="Merrick J.M."/>
+                    <person name="Glodek A."/>
+                    <person name="Scott J.L."/>
+                    <person name="Geoghagen N.S.M."/>
+                    <person name="Weidman J.F."/>
+                    <person name="Fuhrmann J.L."/>
+                    <person name="Nguyen D."/>
+                    <person name="Utterback T.R."/>
+                    <person name="Kelley J.M."/>
+                    <person name="Peterson J.D."/>
+                    <person name="Sadow P.W."/>
+                    <person name="Hanna M.C."/>
+                    <person name="Cotton M.D."/>
+                    <person name="Roberts K.M."/>
+                    <person name="Hurst M.A."/>
+                    <person name="Kaine B.P."/>
+                    <person name="Borodovsky M."/>
+                    <person name="Klenk H.-P."/>
+                    <person name="Fraser C.M."/>
+                    <person name="Smith H.O."/>
+                    <person name="Woese C.R."/>
+                    <person name="Venter J.C."/>
+                </authorList>
+                <dbReference type="PubMed" id="8688087"/>
+                <dbReference type="DOI" id="10.1126/science.273.5278.1058"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 43067 / DSM 2661 / JAL-1 / JCM 10045 / NBRC 100440</strain>
+            </source>
+        </reference>
+        <reference key="2">
+            <citation type="journal article" date="2003" name="Extremophiles" volume="7" first="249" last="257">
+                <title>Isolation of a complete A1AO ATP synthase comprising nine subunits from the hyperthermophile Methanococcus jannaschii.</title>
+                <authorList>
+                    <person name="Lingl A."/>
+                    <person name="Huber H."/>
+                    <person name="Stetter K.O."/>
+                    <person name="Mayer F."/>
+                    <person name="Kellermann J."/>
+                    <person name="Mueller V."/>
+                </authorList>
+                <dbReference type="PubMed" id="12768457"/>
+                <dbReference type="DOI" id="10.1007/s00792-003-0318-7"/>
+            </citation>
+            <scope>PROTEIN SEQUENCE OF 2-7</scope>
+            <scope>FUNCTION</scope>
+            <scope>CATALYTIC ACTIVITY</scope>
+            <scope>ACTIVITY REGULATION</scope>
+            <scope>BIOPHYSICOCHEMICAL PROPERTIES</scope>
+            <scope>SUBUNIT</scope>
+            <scope>SUBCELLULAR LOCATION</scope>
+            <scope>DOMAIN</scope>
+            <source>
+                <strain>ATCC 43067 / DSM 2661 / JAL-1 / JCM 10045 / NBRC 100440</strain>
+            </source>
+        </reference>
+        <reference key="3">
+            <citation type="journal article" date="2004" name="J. Biol. Chem." volume="279" first="38644" last="38648">
+                <title>Structure and subunit arrangement of the A-type ATP synthase complex from the archaeon Methanococcus jannaschii visualized by electron microscopy.</title>
+                <authorList>
+                    <person name="Coskun U."/>
+                    <person name="Chaban Y.L."/>
+                    <person name="Lingl A."/>
+                    <person name="Mueller V."/>
+                    <person name="Keegstra W."/>
+                    <person name="Boekema E.J."/>
+                    <person name="Grueber G."/>
+                </authorList>
+                <dbReference type="PubMed" id="15220347"/>
+                <dbReference type="DOI" id="10.1074/jbc.m406196200"/>
+            </citation>
+            <scope>STRUCTURE BY ELECTRON MICROSCOPY (18 ANGSTROMS) OF A-TYPE ATP SYNTHASE</scope>
+            <scope>SUBUNIT</scope>
+            <scope>SUBCELLULAR LOCATION</scope>
+            <scope>DOMAIN</scope>
+            <source>
+                <strain>ATCC 43067 / DSM 2661 / JAL-1 / JCM 10045 / NBRC 100440</strain>
+            </source>
+        </reference>
+        <reference key="4">
+            <citation type="journal article" date="2007" name="Biochemistry" volume="46" first="2070" last="2078">
+                <title>Small-angle X-ray scattering reveals the solution structure of the peripheral stalk subunit H of the A1AO ATP synthase from Methanocaldococcus jannaschii and its binding to the catalytic A subunit.</title>
+                <authorList>
+                    <person name="Biukovic G."/>
+                    <person name="Roessle M."/>
+                    <person name="Gayen S."/>
+                    <person name="Mu Y."/>
+                    <person name="Grueber G."/>
+                </authorList>
+                <dbReference type="PubMed" id="17263559"/>
+                <dbReference type="DOI" id="10.1021/bi062123n"/>
+            </citation>
+            <scope>SUBUNIT</scope>
+            <scope>INTERACTION WITH SUBUNIT H</scope>
+            <source>
+                <strain>ATCC 43067 / DSM 2661 / JAL-1 / JCM 10045 / NBRC 100440</strain>
+            </source>
+        </reference>
+        <comment type="function">
+            <text evidence="1 2">Component of the A-type ATP synthase that produces ATP from ADP in the presence of a proton gradient across the membrane. The A chain is the catalytic subunit (By similarity). Hydrolyzes ATP, GTP (86% of ATPase rate) and UTP (54% of ATPase rate), has very poor activity on CTP (PubMed:12768457).</text>
+        </comment>
+        <comment type="catalytic activity">
+            <reaction evidence="1 7">
+                <text>ATP + H2O + 4 H(+)(in) = ADP + phosphate + 5 H(+)(out)</text>
+                <dbReference type="Rhea" id="RHEA:57720"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:15378"/>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+                <dbReference type="ChEBI" id="CHEBI:43474"/>
+                <dbReference type="ChEBI" id="CHEBI:456216"/>
+                <dbReference type="EC" id="7.1.2.2"/>
+            </reaction>
+            <physiologicalReaction direction="left-to-right" evidence="7">
+                <dbReference type="Rhea" id="RHEA:57721"/>
+            </physiologicalReaction>
+        </comment>
+        <comment type="activity regulation">
+            <text evidence="2">ATP hydrolysis is inhibited by N',N'-dicyclohexylcarbodiimide.</text>
+        </comment>
+        <comment type="biophysicochemical properties">
+            <kinetics>
+                <KM evidence="2">1.2 mM for Mg-ATP</KM>
+            </kinetics>
+            <phDependence>
+                <text evidence="2">Optimum pH is 6.0 for ATP hydrolysis.</text>
+            </phDependence>
+            <temperatureDependence>
+                <text evidence="2">Optimum temperature is 80 degrees Celsius.</text>
+            </temperatureDependence>
+        </comment>
+        <comment type="subunit">
+            <text evidence="2 3 4">The N-terminus (approximately residues 106-122) interacts with subunit H (PubMed:17263559). Has multiple subunits with at least A(3), B(3), C, D, E(1 or 2), F, H(2), I and proteolipid K(x) (PubMed:12768457, PubMed:15220347).</text>
+        </comment>
+        <comment type="subcellular location">
+            <subcellularLocation>
+                <location evidence="1 2 3">Cell membrane</location>
+                <topology evidence="1 2 3">Peripheral membrane protein</topology>
+                <orientation evidence="7 8">Cytoplasmic side</orientation>
+            </subcellularLocation>
+        </comment>
+        <comment type="domain">
+            <text evidence="2 3">Purified ATP synthase is 25.9 nm long. The hydrophilic A1 domain is 9.4 X 11.5 nm, the central stalk is 8.0 X 3.9 nm and the membrane-bound A0 domain is 6.4 X 10.6 nm; the domains are connected by two stalks. ATP is synthesized or hydrolyzed by the A1 domain while ion translocation occurs via the A0 domain.</text>
+        </comment>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the ATPase alpha/beta chains family.</text>
+        </comment>
+        <comment type="sequence caution" evidence="2">
+            <conflict type="erroneous initiation">
+                <sequence resource="EMBL-CDS" id="AAB98200" version="1"/>
+            </conflict>
+            <text>Extended N-terminus.</text>
+        </comment>
+        <dbReference type="EC" id="7.1.2.2" evidence="1 7"/>
+        <dbReference type="EMBL" id="L77117">
+            <property type="protein sequence ID" value="AAB98200.1"/>
+            <property type="status" value="ALT_INIT"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="PIR" id="B64327">
+            <property type="entry name" value="B64327"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_064496424.1">
+            <property type="nucleotide sequence ID" value="NC_000909.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q57670"/>
+        <dbReference type="SMR" id="Q57670"/>
+        <dbReference type="FunCoup" id="Q57670">
+            <property type="interactions" value="107"/>
+        </dbReference>
+        <dbReference type="STRING" id="243232.MJ_0217"/>
+        <dbReference type="PaxDb" id="243232-MJ_0217"/>
+        <dbReference type="EnsemblBacteria" id="AAB98200">
+            <property type="protein sequence ID" value="AAB98200"/>
+            <property type="gene ID" value="MJ_0217"/>
+        </dbReference>
+        <dbReference type="GeneID" id="1451067"/>
+        <dbReference type="KEGG" id="mja:MJ_0217"/>
+        <dbReference type="eggNOG" id="arCOG00868">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_008162_3_1_2"/>
+        <dbReference type="InParanoid" id="Q57670"/>
+        <dbReference type="OrthoDB" id="115235at2157"/>
+        <dbReference type="PhylomeDB" id="Q57670"/>
+        <dbReference type="Proteomes" id="UP000000805">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005886">
+            <property type="term" value="C:plasma membrane"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-SubCell"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0033178">
+            <property type="term" value="C:proton-transporting two-sector ATPase complex, catalytic domain"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005524">
+            <property type="term" value="F:ATP binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046933">
+            <property type="term" value="F:proton-transporting ATP synthase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046961">
+            <property type="term" value="F:proton-transporting ATPase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0000318"/>
+            <property type="project" value="GO_Central"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0042777">
+            <property type="term" value="P:proton motive force-driven plasma membrane ATP synthesis"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:1902600">
+            <property type="term" value="P:proton transmembrane transport"/>
+            <property type="evidence" value="ECO:0000318"/>
+            <property type="project" value="GO_Central"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18111">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18119">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd01134">
+            <property type="entry name" value="V_A-ATPase_A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="1.10.1140.10:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="2.40.30.20:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="2.40.50.100:FF:000008">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.30.20">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.50.100">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="1.10.1140.10">
+            <property type="entry name" value="Bovine Mitochondrial F1-atpase, Atp Synthase Beta Chain, Chain D, domain 3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.300">
+            <property type="entry name" value="P-loop containing nucleotide triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00309">
+            <property type="entry name" value="ATP_synth_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR055190">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR031686">
+            <property type="entry name" value="ATP-synth_a_Xtn"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR023366">
+            <property type="entry name" value="ATP_synth_asu-like_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005726">
+            <property type="entry name" value="ATP_synth_asu_arc"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR020003">
+            <property type="entry name" value="ATPase_a/bsu_AS"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR004100">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036121">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR000194">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_nucl-bd"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR024034">
+            <property type="entry name" value="ATPase_F1/V1_b/a_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027417">
+            <property type="entry name" value="P-loop_NTPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR022878">
+            <property type="entry name" value="V-ATPase_asu"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01043">
+            <property type="entry name" value="ATP_syn_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF003220">
+            <property type="entry name" value="PRK04192.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607:SF1">
+            <property type="entry name" value="H(+)-TRANSPORTING TWO-SECTOR ATPASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607">
+            <property type="entry name" value="V-TYPE PROTON ATPASE CATALYTIC SUBUNIT A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00006">
+            <property type="entry name" value="ATP-synt_ab"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02874">
+            <property type="entry name" value="ATP-synt_ab_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF16886">
+            <property type="entry name" value="ATP-synt_ab_Xtn"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF22919">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF47917">
+            <property type="entry name" value="C-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50615">
+            <property type="entry name" value="N-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF52540">
+            <property type="entry name" value="P-loop containing nucleoside triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PROSITE" id="PS00152">
+            <property type="entry name" value="ATPASE_ALPHA_BETA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="evidence at protein level"/>
+        <keyword id="KW-0066">ATP synthesis</keyword>
+        <keyword id="KW-0067">ATP-binding</keyword>
+        <keyword id="KW-1003">Cell membrane</keyword>
+        <keyword id="KW-0903">Direct protein sequencing</keyword>
+        <keyword id="KW-0375">Hydrogen ion transport</keyword>
+        <keyword id="KW-0406">Ion transport</keyword>
+        <keyword id="KW-0472">Membrane</keyword>
+        <keyword id="KW-0547">Nucleotide-binding</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <keyword id="KW-1278">Translocase</keyword>
+        <keyword id="KW-0813">Transport</keyword>
+        <feature type="initiator methionine" description="Removed" evidence="2">
+            <location>
+                <position position="1"/>
+            </location>
+        </feature>
+        <feature type="chain" id="PRO_0000144599" description="A-type ATP synthase subunit A">
+            <location>
+                <begin position="2"/>
+                <end position="587"/>
+            </location>
+        </feature>
+        <feature type="binding site" evidence="1">
+            <location>
+                <begin position="234"/>
+                <end position="241"/>
+            </location>
+            <ligand>
+                <name>ATP</name>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+            </ligand>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00309"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000269" key="2">
+            <source>
+                <dbReference type="PubMed" id="12768457"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000269" key="3">
+            <source>
+                <dbReference type="PubMed" id="15220347"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000269" key="4">
+            <source>
+                <dbReference type="PubMed" id="17263559"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000303" key="5">
+            <source>
+                <dbReference type="PubMed" id="12768457"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000303" key="6">
+            <source>
+                <dbReference type="PubMed" id="8688087"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000305" key="7">
+            <source>
+                <dbReference type="PubMed" id="12768457"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000305" key="8">
+            <source>
+                <dbReference type="PubMed" id="15220347"/>
+            </source>
+        </evidence>
+        <sequence length="587" mass="65557" checksum="26BDD64E6D7FEEC5" modified="2001-01-24" version="2">MPVVGKIIKIAGPVVVAEGMKGAQMYEVVKVGEEKLTGEIIQLHDDKAVIQVYEETSGIKPGEPVVGTGAPLSVELGPGMLRAMYDGIQRPLTAIEEKTGSIFIPRGVDVPALPRDIKWEFKPVVNEGDYVEEGDIIGTVDETPSIVHKILVPIGVKGKIVEIKEGKFTVEETVAVVETENGERKEITMMQKWPVRKPRPYKEKLPPEIPLITGQRVEDTFFTLAKGGTAAIPGPFGSGKTVTQHQLAKWSDADVVVYIGCGERGNEMTEVIEEFPHLEDIRTGNKLMDRTVLIANTSNMPVAAREASVYTGITIAEYFRDMGYGVLLTADSTSRWAEAMREISGRLEEMPGEEGYPAYLASRLAQFYERAGRVITLGKDNRQGFVCIVGAVSPPGGDFSEPVTSNTLRIVKVFWALDANLARRRHFPAINWLQSYSLYIDDVTEWWNTNTGPDWRQLRDEAMSLLQKEAELQEIVQLVGPDALPDRERVILEVARMLREDFLQQDAFDEVDTYCPPMKQYLMLKIIMTFYQEALKAVERGVEPAKILGVSVKQDIARMKYIPHDEFINVKSKEIMEKIKNELGSLN</sequence>
+    </entry>
+</uniprot>
