@@ -26,6 +26,7 @@ from tests.cdm_data_loaders.core.conftest import (
     check_settings,
     make_settings_autofill_config,
 )
+from tests.conftest import TEST_DATA_DIR
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes, make_cli_arg
 
 START_AT_VALUE = 25
@@ -33,9 +34,7 @@ START_AT_STRING = "25"
 
 TEST_DEFAULT_UNIREF_VARIANT = "50"
 
-# Directory of real UniRef XML fixtures (uniref_chunk_00001.xml ...), named so
-# they match the NumericFileSequenceBatcher file-sequence regex.
-UNIREF_FIXTURE_DIR = Path(__file__).parents[1] / "fixtures" / "uniref"
+UNIREF_FIXTURE_DIR = TEST_DATA_DIR / "uniprot" / "uniref"
 
 
 TEST_SETTINGS = frozendict(

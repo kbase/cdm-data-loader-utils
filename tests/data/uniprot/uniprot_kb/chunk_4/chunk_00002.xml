@@ -1,0 +1,1010 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uniprot xmlns="https://uniprot.org/uniprot"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://uniprot.org/uniprot http://www.uniprot.org/docs/uniprot.xsd">
+    <entry id="5" dataset="Swiss-Prot" created="2008-01-15" modified="2025-06-18" version="83" xmlns="https://uniprot.org/uniprot">
+        <accession>Q0W5C8</accession>
+        <name>3MGH_METAR</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">Putative 3-methyladenine DNA glycosylase</fullName>
+                <ecNumber evidence="1">3.2.2.-</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">UNCMA_17850</name>
+            <name type="ORF">RCIX1098</name>
+        </gene>
+        <organism>
+            <name type="scientific">Methanocella arvoryzae (strain DSM 22066 / NBRC 105507 / MRE50)</name>
+            <dbReference type="NCBI Taxonomy" id="351160"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Stenosarchaea group</taxon>
+                <taxon>Methanomicrobia</taxon>
+                <taxon>Methanocellales</taxon>
+                <taxon>Methanocellaceae</taxon>
+                <taxon>Methanocella</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2006" name="Science" volume="313" first="370" last="372">
+                <title>Genome of rice cluster I archaea -- the key methane producers in the rice rhizosphere.</title>
+                <authorList>
+                    <person name="Erkel C."/>
+                    <person name="Kube M."/>
+                    <person name="Reinhardt R."/>
+                    <person name="Liesack W."/>
+                </authorList>
+                <dbReference type="PubMed" id="16857943"/>
+                <dbReference type="DOI" id="10.1126/science.1127062"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>DSM 22066 / NBRC 105507 / MRE50</strain>
+            </source>
+        </reference>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the DNA glycosylase MPG family.</text>
+        </comment>
+        <dbReference type="EC" id="3.2.2.-" evidence="1"/>
+        <dbReference type="EMBL" id="AM114193">
+            <property type="protein sequence ID" value="CAJ36415.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_012036110.1">
+            <property type="nucleotide sequence ID" value="NC_009464.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q0W5C8"/>
+        <dbReference type="SMR" id="Q0W5C8"/>
+        <dbReference type="STRING" id="351160.RCIX1098"/>
+        <dbReference type="GeneID" id="5144724"/>
+        <dbReference type="KEGG" id="rci:RCIX1098"/>
+        <dbReference type="eggNOG" id="arCOG04295">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="OrthoDB" id="31217at2157"/>
+        <dbReference type="Proteomes" id="UP000000663">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003905">
+            <property type="term" value="F:alkylbase DNA N-glycosylase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003677">
+            <property type="term" value="F:DNA binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0006284">
+            <property type="term" value="P:base-excision repair"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd00540">
+            <property type="entry name" value="AAG"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="3.10.300.10:FF:000001">
+            <property type="entry name" value="Putative 3-methyladenine DNA glycosylase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.10.300.10">
+            <property type="entry name" value="Methylpurine-DNA glycosylase (MPG)"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00527">
+            <property type="entry name" value="3MGH"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR011034">
+            <property type="entry name" value="Formyl_transferase-like_C_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR003180">
+            <property type="entry name" value="MPG"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036995">
+            <property type="entry name" value="MPG_sf"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR00567">
+            <property type="entry name" value="3mg"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF002003">
+            <property type="entry name" value="PRK00802.1-3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429:SF0">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02245">
+            <property type="entry name" value="Pur_DNA_glyco"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50486">
+            <property type="entry name" value="FMT C-terminal domain-like"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0227">DNA damage</keyword>
+        <keyword id="KW-0234">DNA repair</keyword>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_1000051001" description="Putative 3-methyladenine DNA glycosylase">
+            <location>
+                <begin position="1"/>
+                <end position="200"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00527"/>
+            </source>
+        </evidence>
+        <sequence length="200" mass="21879" checksum="8DA31EA44EEB8636" modified="2006-09-05" version="1">MPVLPRDFYDRPTLEVARDLLGKTLVRQLPAGRVALRIVETEAYIGENDKACHASKGMTARNRVMFGQPGHAYVYLIYGMYNCLNLVTEKDGYPAAVLIRAGEPIEGEEIMSSLRPKARKHHEIASGPGKLCGAMSITRALNGADVCASGELYVEDGPAVKKIVACPRIGVDYAGEDALRPWRFYDKNSPCVSKRAPGDI</sequence>
+    </entry>
+    <entry id="6" dataset="Swiss-Prot" created="2008-01-15" modified="2026-01-28" version="85" xmlns="https://uniprot.org/uniprot">
+        <accession>A3CTY6</accession>
+        <name>3MGH_METMJ</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">Putative 3-methyladenine DNA glycosylase</fullName>
+                <ecNumber evidence="1">3.2.2.-</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">Memar_0903</name>
+        </gene>
+        <organism>
+            <name type="scientific">Methanoculleus marisnigri (strain ATCC 35101 / DSM 1498 / JR1)</name>
+            <dbReference type="NCBI Taxonomy" id="368407"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Stenosarchaea group</taxon>
+                <taxon>Methanomicrobia</taxon>
+                <taxon>Methanomicrobiales</taxon>
+                <taxon>Methanomicrobiaceae</taxon>
+                <taxon>Methanoculleus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2009" name="Stand. Genomic Sci." volume="1" first="189" last="196">
+                <title>Complete genome sequence of Methanoculleus marisnigri Romesser et al. 1981 type strain JR1.</title>
+                <authorList>
+                    <person name="Anderson I.J."/>
+                    <person name="Sieprawska-Lupa M."/>
+                    <person name="Lapidus A."/>
+                    <person name="Nolan M."/>
+                    <person name="Copeland A."/>
+                    <person name="Glavina Del Rio T."/>
+                    <person name="Tice H."/>
+                    <person name="Dalin E."/>
+                    <person name="Barry K."/>
+                    <person name="Saunders E."/>
+                    <person name="Han C."/>
+                    <person name="Brettin T."/>
+                    <person name="Detter J.C."/>
+                    <person name="Bruce D."/>
+                    <person name="Mikhailova N."/>
+                    <person name="Pitluck S."/>
+                    <person name="Hauser L."/>
+                    <person name="Land M."/>
+                    <person name="Lucas S."/>
+                    <person name="Richardson P."/>
+                    <person name="Whitman W.B."/>
+                    <person name="Kyrpides N.C."/>
+                </authorList>
+                <dbReference type="PubMed" id="21304656"/>
+                <dbReference type="DOI" id="10.4056/sigs.32535"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 35101 / DSM 1498 / JR1</strain>
+            </source>
+        </reference>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the DNA glycosylase MPG family.</text>
+        </comment>
+        <dbReference type="EC" id="3.2.2.-" evidence="1"/>
+        <dbReference type="EMBL" id="CP000562">
+            <property type="protein sequence ID" value="ABN56836.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_011843747.1">
+            <property type="nucleotide sequence ID" value="NC_009051.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="A3CTY6"/>
+        <dbReference type="SMR" id="A3CTY6"/>
+        <dbReference type="STRING" id="368407.Memar_0903"/>
+        <dbReference type="GeneID" id="4847716"/>
+        <dbReference type="KEGG" id="mem:Memar_0903"/>
+        <dbReference type="eggNOG" id="arCOG04295">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_060471_4_1_2"/>
+        <dbReference type="OrthoDB" id="31217at2157"/>
+        <dbReference type="Proteomes" id="UP000002146">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003905">
+            <property type="term" value="F:alkylbase DNA N-glycosylase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003677">
+            <property type="term" value="F:DNA binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0006284">
+            <property type="term" value="P:base-excision repair"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd00540">
+            <property type="entry name" value="AAG"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="3.10.300.10:FF:000001">
+            <property type="entry name" value="Putative 3-methyladenine DNA glycosylase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.10.300.10">
+            <property type="entry name" value="Methylpurine-DNA glycosylase (MPG)"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00527">
+            <property type="entry name" value="3MGH"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR011034">
+            <property type="entry name" value="Formyl_transferase-like_C_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR003180">
+            <property type="entry name" value="MPG"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036995">
+            <property type="entry name" value="MPG_sf"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR00567">
+            <property type="entry name" value="3mg"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF002003">
+            <property type="entry name" value="PRK00802.1-3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429:SF0">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02245">
+            <property type="entry name" value="Pur_DNA_glyco"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50486">
+            <property type="entry name" value="FMT C-terminal domain-like"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0227">DNA damage</keyword>
+        <keyword id="KW-0234">DNA repair</keyword>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_1000050993" description="Putative 3-methyladenine DNA glycosylase">
+            <location>
+                <begin position="1"/>
+                <end position="192"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00527"/>
+            </source>
+        </evidence>
+        <sequence length="192" mass="20831" checksum="082971F2F3CCA8C3" modified="2007-03-20" version="1">MTLPAAFYERDTVTVAKDLLGCLLVHREEVTTAGRIVEVEAYLRGDPAAHSYRGTTKRNRVMFGPAGHAYVYRIYGLHTCVNVVTGTEGAGEAVLVRALEPVVGLDLMQARRGTDDPLSLASGPGKLTQALGITMDLNGTSLRDGPLQVRSPANPPELQPENIVQTTRVGITKAADLPLRFYLKGSRYVSRR</sequence>
+    </entry>
+    <entry id="7" dataset="Swiss-Prot" created="2015-10-14" modified="2026-01-28" version="86" xmlns="https://uniprot.org/uniprot">
+        <accession>D4GST8</accession>
+        <name>6PGD_HALVD</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="5">6-phosphogluconate dehydrogenase, NAD(+)-dependent, decarboxylating</fullName>
+                <shortName evidence="4">6PGDH</shortName>
+                <ecNumber evidence="3">1.1.1.343</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name evidence="4" type="primary">gndA</name>
+            <name evidence="6" type="ordered locus">HVO_1830</name>
+            <name evidence="7" type="ORF">C498_04458</name>
+        </gene>
+        <organism>
+            <name type="scientific">Haloferax volcanii (strain ATCC 29605 / DSM 3757 / JCM 8879 / NBRC 14742 / NCIMB 2012 / VKM B-1768 / DS2)</name>
+            <name type="common">Halobacterium volcanii</name>
+            <dbReference type="NCBI Taxonomy" id="309800"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Stenosarchaea group</taxon>
+                <taxon>Halobacteria</taxon>
+                <taxon>Halobacteriales</taxon>
+                <taxon>Haloferacaceae</taxon>
+                <taxon>Haloferax</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2010" name="PLoS ONE" volume="5" first="E9605" last="E9605">
+                <title>The complete genome sequence of Haloferax volcanii DS2, a model archaeon.</title>
+                <authorList>
+                    <person name="Hartman A.L."/>
+                    <person name="Norais C."/>
+                    <person name="Badger J.H."/>
+                    <person name="Delmas S."/>
+                    <person name="Haldenby S."/>
+                    <person name="Madupu R."/>
+                    <person name="Robinson J."/>
+                    <person name="Khouri H."/>
+                    <person name="Ren Q."/>
+                    <person name="Lowe T.M."/>
+                    <person name="Maupin-Furlow J."/>
+                    <person name="Pohlschroder M."/>
+                    <person name="Daniels C."/>
+                    <person name="Pfeiffer F."/>
+                    <person name="Allers T."/>
+                    <person name="Eisen J.A."/>
+                </authorList>
+                <dbReference type="PubMed" id="20333302"/>
+                <dbReference type="DOI" id="10.1371/journal.pone.0009605"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 29605 / DSM 3757 / JCM 8879 / NBRC 14742 / NCIMB 2012 / VKM B-1768 / DS2</strain>
+            </source>
+        </reference>
+        <reference key="2">
+            <citation type="journal article" date="2014" name="PLoS Genet." volume="10" first="E1004784" last="E1004784">
+                <title>Phylogenetically driven sequencing of extremely halophilic archaea reveals strategies for static and dynamic osmo-response.</title>
+                <authorList>
+                    <person name="Becker E.A."/>
+                    <person name="Seitzer P.M."/>
+                    <person name="Tritt A."/>
+                    <person name="Larsen D."/>
+                    <person name="Krusor M."/>
+                    <person name="Yao A.I."/>
+                    <person name="Wu D."/>
+                    <person name="Madern D."/>
+                    <person name="Eisen J.A."/>
+                    <person name="Darling A.E."/>
+                    <person name="Facciotti M.T."/>
+                </authorList>
+                <dbReference type="PubMed" id="25393412"/>
+                <dbReference type="DOI" id="10.1371/journal.pgen.1004784"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 29605 / DSM 3757 / JCM 8879 / NBRC 14742 / NCIMB 2012 / VKM B-1768 / DS2</strain>
+            </source>
+        </reference>
+        <reference key="3">
+            <citation type="journal article" date="2015" name="FEBS Lett." volume="589" first="1105" last="1111">
+                <title>The oxidative pentose phosphate pathway in the haloarchaeon Haloferax volcanii involves a novel type of glucose-6-phosphate dehydrogenase -- The archaeal Zwischenferment.</title>
+                <authorList>
+                    <person name="Pickl A."/>
+                    <person name="Schoenheit P."/>
+                </authorList>
+                <dbReference type="PubMed" id="25836736"/>
+                <dbReference type="DOI" id="10.1016/j.febslet.2015.03.026"/>
+            </citation>
+            <scope>FUNCTION</scope>
+            <scope>CATALYTIC ACTIVITY</scope>
+            <scope>BIOPHYSICOCHEMICAL PROPERTIES</scope>
+            <scope>PATHWAY</scope>
+            <scope>SUBUNIT</scope>
+            <scope>DISRUPTION PHENOTYPE</scope>
+            <source>
+                <strain>DS2 / DS70 / H26</strain>
+            </source>
+        </reference>
+        <comment type="function">
+            <text evidence="3">Catalyzes the oxidative decarboxylation of 6-phosphogluconate to ribulose 5-phosphate and CO(2), with concomitant reduction of NAD to NADH.</text>
+        </comment>
+        <comment type="catalytic activity">
+            <reaction evidence="3">
+                <text>6-phospho-D-gluconate + NAD(+) = D-ribulose 5-phosphate + CO2 + NADH</text>
+                <dbReference type="Rhea" id="RHEA:33023"/>
+                <dbReference type="ChEBI" id="CHEBI:16526"/>
+                <dbReference type="ChEBI" id="CHEBI:57540"/>
+                <dbReference type="ChEBI" id="CHEBI:57945"/>
+                <dbReference type="ChEBI" id="CHEBI:58121"/>
+                <dbReference type="ChEBI" id="CHEBI:58759"/>
+                <dbReference type="EC" id="1.1.1.343"/>
+            </reaction>
+        </comment>
+        <comment type="biophysicochemical properties">
+            <kinetics>
+                <KM evidence="3">0.021 mM for 6-phosphogluconate</KM>
+                <KM evidence="3">0.033 mM for NAD(+)</KM>
+                <KM evidence="3">2.94 mM for NADP(+)</KM>
+                <Vmax evidence="3">10.0 umol/min/mg enzyme (with NAD(+) as electron acceptor)</Vmax>
+                <Vmax evidence="3">0.42 umol/min/mg enzyme (with NADP(+) as electron acceptor)</Vmax>
+                <text evidence="3">The catalytic efficiency with NAD(+) is about 2000-fold higher than with NADP(+), indicating that NAD(+) is the physiological electron acceptor.</text>
+            </kinetics>
+            <phDependence>
+                <text evidence="3">Optimum pH is 10.5.</text>
+            </phDependence>
+        </comment>
+        <comment type="pathway">
+            <text evidence="3">Carbohydrate degradation; pentose phosphate pathway.</text>
+        </comment>
+        <comment type="subunit">
+            <text evidence="3">Homotetramer.</text>
+        </comment>
+        <comment type="disruption phenotype">
+            <text evidence="3">Deletion mutants do not grow on glucose.</text>
+        </comment>
+        <comment type="similarity">
+            <text evidence="5">Belongs to the 6-phosphogluconate dehydrogenase family.</text>
+        </comment>
+        <dbReference type="EC" id="1.1.1.343" evidence="3"/>
+        <dbReference type="EMBL" id="CP001956">
+            <property type="protein sequence ID" value="ADE04956.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="EMBL" id="AOHU01000034">
+            <property type="protein sequence ID" value="ELY35096.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_004041720.1">
+            <property type="nucleotide sequence ID" value="NC_013967.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="D4GST8"/>
+        <dbReference type="SMR" id="D4GST8"/>
+        <dbReference type="STRING" id="309800.HVO_1830"/>
+        <dbReference type="PaxDb" id="309800-C498_04458"/>
+        <dbReference type="EnsemblBacteria" id="ADE04956">
+            <property type="protein sequence ID" value="ADE04956"/>
+            <property type="gene ID" value="HVO_1830"/>
+        </dbReference>
+        <dbReference type="GeneID" id="300252959"/>
+        <dbReference type="GeneID" id="8925721"/>
+        <dbReference type="KEGG" id="hvo:HVO_1830"/>
+        <dbReference type="PATRIC" id="fig|309800.29.peg.868"/>
+        <dbReference type="eggNOG" id="arCOG00248">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_024540_0_0_2"/>
+        <dbReference type="OrthoDB" id="23890at2157"/>
+        <dbReference type="BRENDA" id="1.1.1.343">
+            <property type="organism ID" value="2561"/>
+        </dbReference>
+        <dbReference type="UniPathway" id="UPA00115"/>
+        <dbReference type="Proteomes" id="UP000008243">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="Proteomes" id="UP000011532">
+            <property type="component" value="Unassembled WGS sequence"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0070403">
+            <property type="term" value="F:NAD+ binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0050661">
+            <property type="term" value="F:NADP binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0004616">
+            <property type="term" value="F:phosphogluconate dehydrogenase (decarboxylating) activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0019521">
+            <property type="term" value="P:D-gluconate metabolic process"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-KW"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0009051">
+            <property type="term" value="P:pentose-phosphate shunt, oxidative branch"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="1.10.1040.10">
+            <property type="entry name" value="N-(1-d-carboxylethyl)-l-norvaline Dehydrogenase, domain 2"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.720">
+            <property type="entry name" value="NAD(P)-binding Rossmann-like Domain"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_02047">
+            <property type="entry name" value="6PGDH_archaea"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR008927">
+            <property type="entry name" value="6-PGluconate_DH-like_C_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR004849">
+            <property type="entry name" value="6DGDH_YqeC"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR013328">
+            <property type="entry name" value="6PGD_dom2"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR032883">
+            <property type="entry name" value="6PGDH_archaea"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR006114">
+            <property type="entry name" value="6PGDH_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR006115">
+            <property type="entry name" value="6PGDH_NADP-bd"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036291">
+            <property type="entry name" value="NAD(P)-bd_dom_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR006183">
+            <property type="entry name" value="Pgluconate_DH"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR00872">
+            <property type="entry name" value="gnd_rel"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF007161">
+            <property type="entry name" value="PRK09599.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR11811">
+            <property type="entry name" value="6-PHOSPHOGLUCONATE DEHYDROGENASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00393">
+            <property type="entry name" value="6PGD"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF03446">
+            <property type="entry name" value="NAD_binding_2"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PRINTS" id="PR00076">
+            <property type="entry name" value="6PGDHDRGNASE"/>
+        </dbReference>
+        <dbReference type="SMART" id="SM01350">
+            <property type="entry name" value="6PGD"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF48179">
+            <property type="entry name" value="6-phosphogluconate dehydrogenase C-terminal domain-like"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF51735">
+            <property type="entry name" value="NAD(P)-binding Rossmann-fold domains"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="evidence at protein level"/>
+        <keyword id="KW-0311">Gluconate utilization</keyword>
+        <keyword id="KW-0520">NAD</keyword>
+        <keyword id="KW-0560">Oxidoreductase</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_0000434434" description="6-phosphogluconate dehydrogenase, NAD(+)-dependent, decarboxylating">
+            <location>
+                <begin position="1"/>
+                <end position="299"/>
+            </location>
+        </feature>
+        <feature type="active site" description="Proton acceptor" evidence="1 2">
+            <location>
+                <position position="169"/>
+            </location>
+        </feature>
+        <feature type="active site" description="Proton donor" evidence="1 2">
+            <location>
+                <position position="176"/>
+            </location>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <begin position="7"/>
+                <end position="12"/>
+            </location>
+            <ligand>
+                <name>NAD(+)</name>
+                <dbReference type="ChEBI" id="CHEBI:57540"/>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <begin position="67"/>
+                <end position="69"/>
+            </location>
+            <ligand>
+                <name>NAD(+)</name>
+                <dbReference type="ChEBI" id="CHEBI:57540"/>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="95"/>
+            </location>
+            <ligand>
+                <name>NAD(+)</name>
+                <dbReference type="ChEBI" id="CHEBI:57540"/>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="95"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="118"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="120"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <begin position="172"/>
+                <end position="173"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="177"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <feature type="binding site" evidence="1 2">
+            <location>
+                <position position="268"/>
+            </location>
+            <ligand>
+                <name>substrate</name>
+            </ligand>
+        </feature>
+        <evidence type="ECO:0000250" key="1">
+            <source>
+                <dbReference type="UniProtKB" id="P00349"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000255" key="2">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_02047"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000269" key="3">
+            <source>
+                <dbReference type="PubMed" id="25836736"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000303" key="4">
+            <source>
+                <dbReference type="PubMed" id="25836736"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000305" key="5"/>
+        <evidence type="ECO:0000312" key="6">
+            <source>
+                <dbReference type="EMBL" id="ADE04956.1"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0000312" key="7">
+            <source>
+                <dbReference type="EMBL" id="ELY35096.1"/>
+            </source>
+        </evidence>
+        <sequence length="299" mass="31983" checksum="A44AAA01404C926F" modified="2010-05-18" version="1">MQLGVIGLGRMGRIVVDRVLDAGHEVVAFDLSAEAVAAAADAGAEPADSVADLVDRLGDDKRIWLMVPAGDAVDATLDDLDPHLDGDDVVVDGGNSHFEESVRRAEACSAAYLDCGTSGGPAGAELGFSLMVGGPQWAYDELTPVFDAVATGPDGHGHMGDSGSGHYVKMVHNGVEYALMQAYGEGFELLAEGRYDLDLESVAKTWNNGAVIRSWLLELCEEAFREEGSDLGDVDDHVAGGSTGTWTVQEALEQEVPVPLIYQSLAERFGSRADDRFSRRLANRLRYGFGRHEVARKDD</sequence>
+    </entry>
+    <entry id="8" dataset="Swiss-Prot" created="2008-02-26" modified="2025-06-18" version="102" xmlns="https://uniprot.org/uniprot">
+        <accession>A7IAU8</accession>
+        <name>AATA_METB6</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">A-type ATP synthase subunit A</fullName>
+                <ecNumber evidence="1">7.1.2.2</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name evidence="1" type="primary">atpA</name>
+            <name type="ordered locus">Mboo_2345</name>
+        </gene>
+        <organism>
+            <name type="scientific">Methanoregula boonei (strain DSM 21154 / JCM 14090 / 6A8)</name>
+            <dbReference type="NCBI Taxonomy" id="456442"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Stenosarchaea group</taxon>
+                <taxon>Methanomicrobia</taxon>
+                <taxon>Methanomicrobiales</taxon>
+                <taxon>Methanoregulaceae</taxon>
+                <taxon>Methanoregula</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2015" name="Microbiology" volume="161" first="1572" last="1581">
+                <title>Genome of Methanoregula boonei 6A8 reveals adaptations to oligotrophic peatland environments.</title>
+                <authorList>
+                    <person name="Braeuer S."/>
+                    <person name="Cadillo-Quiroz H."/>
+                    <person name="Kyrpides N."/>
+                    <person name="Woyke T."/>
+                    <person name="Goodwin L."/>
+                    <person name="Detter C."/>
+                    <person name="Podell S."/>
+                    <person name="Yavitt J.B."/>
+                    <person name="Zinder S.H."/>
+                </authorList>
+                <dbReference type="PubMed" id="25998264"/>
+                <dbReference type="DOI" id="10.1099/mic.0.000117"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>DSM 21154 / JCM 14090 / 6A8</strain>
+            </source>
+        </reference>
+        <comment type="function">
+            <text evidence="1">Component of the A-type ATP synthase that produces ATP from ADP in the presence of a proton gradient across the membrane. The A chain is the catalytic subunit.</text>
+        </comment>
+        <comment type="catalytic activity">
+            <reaction evidence="1">
+                <text>ATP + H2O + 4 H(+)(in) = ADP + phosphate + 5 H(+)(out)</text>
+                <dbReference type="Rhea" id="RHEA:57720"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:15378"/>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+                <dbReference type="ChEBI" id="CHEBI:43474"/>
+                <dbReference type="ChEBI" id="CHEBI:456216"/>
+                <dbReference type="EC" id="7.1.2.2"/>
+            </reaction>
+        </comment>
+        <comment type="subunit">
+            <text evidence="1">Has multiple subunits with at least A(3), B(3), C, D, E, F, H, I and proteolipid K(x).</text>
+        </comment>
+        <comment type="subcellular location">
+            <subcellularLocation>
+                <location evidence="1">Cell membrane</location>
+                <topology evidence="1">Peripheral membrane protein</topology>
+            </subcellularLocation>
+        </comment>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the ATPase alpha/beta chains family.</text>
+        </comment>
+        <dbReference type="EC" id="7.1.2.2" evidence="1"/>
+        <dbReference type="EMBL" id="CP000780">
+            <property type="protein sequence ID" value="ABS56859.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_012107920.1">
+            <property type="nucleotide sequence ID" value="NC_009712.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="A7IAU8"/>
+        <dbReference type="SMR" id="A7IAU8"/>
+        <dbReference type="STRING" id="456442.Mboo_2345"/>
+        <dbReference type="GeneID" id="5411874"/>
+        <dbReference type="KEGG" id="mbn:Mboo_2345"/>
+        <dbReference type="eggNOG" id="arCOG00868">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_008162_3_1_2"/>
+        <dbReference type="OrthoDB" id="115235at2157"/>
+        <dbReference type="Proteomes" id="UP000002408">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005886">
+            <property type="term" value="C:plasma membrane"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-SubCell"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0033178">
+            <property type="term" value="C:proton-transporting two-sector ATPase complex, catalytic domain"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0005524">
+            <property type="term" value="F:ATP binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046933">
+            <property type="term" value="F:proton-transporting ATP synthase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0046961">
+            <property type="term" value="F:proton-transporting ATPase activity, rotational mechanism"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0042777">
+            <property type="term" value="P:proton motive force-driven plasma membrane ATP synthesis"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-UniRule"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd18111">
+            <property type="entry name" value="ATP-synt_V_A-type_alpha_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd01134">
+            <property type="entry name" value="V_A-ATPase_A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="3.40.50.300:FF:000675">
+            <property type="entry name" value="V-type ATP synthase alpha chain"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="FunFam" id="1.10.1140.10:FF:000002">
+            <property type="entry name" value="V-type proton ATPase catalytic subunit A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.30.20">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="2.40.50.100">
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="1.10.1140.10">
+            <property type="entry name" value="Bovine Mitochondrial F1-atpase, Atp Synthase Beta Chain, Chain D, domain 3"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.300">
+            <property type="entry name" value="P-loop containing nucleotide triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00309">
+            <property type="entry name" value="ATP_synth_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR055190">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR031686">
+            <property type="entry name" value="ATP-synth_a_Xtn"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR023366">
+            <property type="entry name" value="ATP_synth_asu-like_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005726">
+            <property type="entry name" value="ATP_synth_asu_arc"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR020003">
+            <property type="entry name" value="ATPase_a/bsu_AS"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR004100">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036121">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_N_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR000194">
+            <property type="entry name" value="ATPase_F1/V1/A1_a/bsu_nucl-bd"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR024034">
+            <property type="entry name" value="ATPase_F1/V1_b/a_C"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027417">
+            <property type="entry name" value="P-loop_NTPase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR001763">
+            <property type="entry name" value="Rhodanese-like_dom"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR022878">
+            <property type="entry name" value="V-ATPase_asu"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01043">
+            <property type="entry name" value="ATP_syn_A_arch"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF003220">
+            <property type="entry name" value="PRK04192.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607:SF1">
+            <property type="entry name" value="H(+)-TRANSPORTING TWO-SECTOR ATPASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43607">
+            <property type="entry name" value="V-TYPE PROTON ATPASE CATALYTIC SUBUNIT A"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00006">
+            <property type="entry name" value="ATP-synt_ab"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02874">
+            <property type="entry name" value="ATP-synt_ab_N"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF16886">
+            <property type="entry name" value="ATP-synt_ab_Xtn"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF22919">
+            <property type="entry name" value="ATP-synt_VA_C"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF47917">
+            <property type="entry name" value="C-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50615">
+            <property type="entry name" value="N-terminal domain of alpha and beta subunits of F1 ATP synthase"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF52540">
+            <property type="entry name" value="P-loop containing nucleoside triphosphate hydrolases"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PROSITE" id="PS00152">
+            <property type="entry name" value="ATPASE_ALPHA_BETA"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0066">ATP synthesis</keyword>
+        <keyword id="KW-0067">ATP-binding</keyword>
+        <keyword id="KW-1003">Cell membrane</keyword>
+        <keyword id="KW-0375">Hydrogen ion transport</keyword>
+        <keyword id="KW-0406">Ion transport</keyword>
+        <keyword id="KW-0472">Membrane</keyword>
+        <keyword id="KW-0547">Nucleotide-binding</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <keyword id="KW-1278">Translocase</keyword>
+        <keyword id="KW-0813">Transport</keyword>
+        <feature type="chain" id="PRO_0000322479" description="A-type ATP synthase subunit A">
+            <location>
+                <begin position="1"/>
+                <end position="588"/>
+            </location>
+        </feature>
+        <feature type="binding site" evidence="1">
+            <location>
+                <begin position="237"/>
+                <end position="244"/>
+            </location>
+            <ligand>
+                <name>ATP</name>
+                <dbReference type="ChEBI" id="CHEBI:30616"/>
+            </ligand>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00309"/>
+            </source>
+        </evidence>
+        <sequence length="588" mass="64933" checksum="1D7C00D68F7250D5" modified="2007-09-11" version="1">MEVKANQAKETKKGVLKRIAGPVVTAVNLDAHMYDVVRVGNEALMGEVIKIQGDNVIIQVYEDTTGIKPGEPVSNTGLSLAVELGPGLLTSIYDGIQRPLEVLVNKMGNFIERGVSAPGLSHEKKWTFKPVVKAGDKVEPGAILGEVQETNIVHKVMLPPNVKAGVVKTIKAGDFTVDEIIVILEDGREYPMIQRWPVRVPRPVKEKKNPTIPLLTGQRILDGLFPIAKGGTAAIPGPFGSGKTVTQQQLAKWSDAKIVVYIGCGERGNEMTEVLTEFPHLEDPTSGKPLMERTVLIANTSNMPVAAREASVYTGITIAEYFRDMGYDVSLMADSTSRWAEAMREISSRLEEMPGEEGYPAYLAARLSEFYERAGLVETLNHQSGSVSVIGAVSPPGGDFSEPVTQNTLRIVKVFWALDAKLSQRRHFPAINWLNSYSLYLDALHDWYDKNVSPDWNKLRSWAMGVLQKEAELQEIVQLVGSDALPETEQITIEVARMIREIFLQQNAYDAVDTFCDMQKQYDMMKAIRLYSDLANTAQAAGVSPAQITTIKAKNELPQIKFVKDYKQPLAKIEKDMDAEFNALRSAA</sequence>
+    </entry>
+</uniprot>

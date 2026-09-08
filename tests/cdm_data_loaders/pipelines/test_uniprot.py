@@ -24,11 +24,8 @@ from tests.cdm_data_loaders.core.conftest import (
     check_settings,
     make_settings_autofill_config,
 )
+from tests.conftest import TEST_DATA_DIR
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes
-
-# Directory of real UniProt XML fixtures (chunk_00001.xml ... chunk_00004.xml),
-# named so they match the NumericFileSequenceBatcher file-sequence regex.
-UNIPROT_FIXTURE_DIR = Path(__file__).parents[1] / "fixtures" / "chunk_4"
 
 
 @pytest.fixture
@@ -145,6 +142,9 @@ def test_parse_uniprot_resource(test_settings: UniProtSettings) -> None:
     assert kwargs["xml_tag"] == ENTRY_XML_TAG
     assert kwargs["settings"] == test_settings
     assert isinstance(kwargs["parse_fn"], Callable)
+
+
+UNIPROT_FIXTURE_DIR = TEST_DATA_DIR / "uniprot" / "uniprot_kb" / "chunk_4"
 
 
 # Integration tests for the UniProt pipeline
