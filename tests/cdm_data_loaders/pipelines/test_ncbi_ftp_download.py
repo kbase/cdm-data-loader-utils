@@ -20,7 +20,6 @@ from cdm_data_loaders.pipelines.ncbi_ftp_download import (
 )
 from cdm_data_loaders.utils.file_transfer.s3 import client
 from cdm_data_loaders.utils.file_transfer.s3.client import reset_s3_client
-from tests.conftest import _generate_dlt_config
 
 _MOCK_STATS = {
     "accession": "GCF_000001215.4",

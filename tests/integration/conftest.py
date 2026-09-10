@@ -1,23 +1,22 @@
-"""Shared fixtures and helpers for CEPH-backed integration tests.
+"""Shared fixtures and helpers for S3-backed integration tests.
 
-Each test method gets its own bucket (derived from the test node name) that is
-emptied on re-run but **never deleted** after the test — this lets developers
-inspect the final state of the object store. The CEPH dashboard does not currently
-allow inspection of the store, but the `s3_local` command-line tool can be used.
+Most tests use moto to mock S3. A subset of tests (marked `requires_ceph`)
+still use a real CEPH instance for end-to-end validation.
 """
 
 import hashlib
 import re
 from collections.abc import Generator
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any
 from unittest.mock import patch
 
 import boto3
-import botocore.client
 import botocore.config
 import pytest
 from botocore.exceptions import ClientError
+from types_boto3_s3 import S3Client
 
 from cdm_data_loaders.ncbi_ftp.assembly import build_accession_path
 from cdm_data_loaders.utils.file_transfer.s3 import client
@@ -27,12 +26,8 @@ from cdm_data_loaders.utils.file_transfer.s3.client import _client_config, reset
 _MAX_BUCKET_LEN = 63
 
 
-# CEPH reachability check
-
-_ceph_available: bool | None = None
-
-
-def _ceph_reachable() -> bool:
+@lru_cache(maxsize=1)
+def ceph_reachable() -> bool:
     """Return True if the CEPH endpoint accepts connections."""
     try:
         client = boto3.client(
@@ -49,34 +44,20 @@ def _ceph_reachable() -> bool:
     return True
 
 
-def pytest_runtest_setup(item: pytest.Item) -> None:
-    """Fail CEPH-required tests early when CEPH is unavailable."""
-    if "requires_ceph" not in item.keywords:
-        return
-
-    global _ceph_available  # noqa: PLW0603
-    if _ceph_available is None:
-        _ceph_available = _ceph_reachable()
-
-    if not _ceph_available:
-        pytest.fail(
-            "CEPH not reachable. Start a CEPH test store or deselect with -m 'not requires_ceph'.",
-            pytrace=False,
-        )
-
-
 # Fixtures
 
 
 @pytest.fixture
-def ceph_s3_client() -> Generator[botocore.client.BaseClient]:
+def ceph_s3_client() -> Generator[S3Client]:
     """Session-scoped real boto3 S3 client pointed at the local CEPH instance.
 
     Patches ``get_s3_client`` on every module that uses it so internal calls
     are transparently routed to CEPH.
     """
-    s3_client = boto3.client("s3", config=_client_config())
+    if not ceph_reachable():
+        pytest.skip("CEPH server not available")
 
+    s3_client = boto3.client("s3", config=_client_config())
     reset_s3_client()
     with (
         patch.object(client, "get_s3_client", return_value=s3_client),
@@ -86,18 +67,29 @@ def ceph_s3_client() -> Generator[botocore.client.BaseClient]:
     reset_s3_client()
 
 
-def _bucket_name_from_node(node_id: str) -> str:
+@pytest.fixture
+def s3_client(request: pytest.FixtureRequest) -> Generator[S3Client]:
+    """Get the appropriate s3 client for the request -- either a moto mock or a ceph client."""
+    backend = request.param
+    if backend not in ("ceph", "mock"):
+        err_msg = f"Invalid s3 client: {backend}"
+        raise ValueError(err_msg)
+    return request.getfixturevalue(f"{backend}_s3_client")
+
+
+def _bucket_name_from_node(node_id: str, prefix: str | None = None) -> str:
     """Derive a DNS-compliant S3 bucket name from a pytest node ID.
 
     :param node_id: e.g. ``tests/integration/test_promote_e2e.py::test_dry_run``
+    :param prefix: Optional prefix for the bucket name
     :return: e.g. ``integ-test-dry-run``
     """
     # Extract test function name from the node ID
     parts = node_id.split("::")
     name = parts[-1] if parts else node_id
+    name = f"integ-{prefix}-{name}" if prefix else f"integ-{name}"
     # Lowercase, replace non-alphanumeric with hyphens, collapse multiples
     name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    name = f"integ-{name}"
     if len(name) > _MAX_BUCKET_LEN:
         # Truncate but keep it unique via a short hash suffix
         suffix = hashlib.md5(name.encode()).hexdigest()[:6]  # noqa: S324
@@ -105,16 +97,12 @@ def _bucket_name_from_node(node_id: str) -> str:
     return name
 
 
-@pytest.fixture
-def test_bucket(ceph_s3_client: botocore.client.BaseClient, request: pytest.FixtureRequest) -> PurePosixPath:
-    """Create a per-test-method bucket in CEPH and return its name.
+def check_existing_bucket(s3: S3Client, bucket: str) -> None:
+    """Check whether a bucket exists, and create it if not. If it does exist, empty it.
 
-    On re-run, any existing objects are deleted first so the test starts clean.
-    The bucket is **not** deleted after the test.
+    :param s3_client: boto3 S3 client
+    :param bucket_name: name of the bucket to check
     """
-    bucket = _bucket_name_from_node(request.node.nodeid)
-    s3 = ceph_s3_client
-
     try:
         s3.head_bucket(Bucket=bucket)
         # Bucket exists — empty it for a clean run
@@ -130,49 +118,33 @@ def test_bucket(ceph_s3_client: botocore.client.BaseClient, request: pytest.Fixt
         else:
             raise
 
+
+@pytest.fixture
+def test_bucket(s3_client: S3Client, request: pytest.FixtureRequest) -> PurePosixPath:
+    """Create a per-test-method bucket and return its name."""
+    bucket = _bucket_name_from_node(request.node.nodeid)
+    check_existing_bucket(s3_client, bucket)
     return PurePosixPath(bucket)
 
 
 @pytest.fixture
-def staging_test_bucket(ceph_s3_client: botocore.client.BaseClient, request: pytest.FixtureRequest) -> PurePosixPath:
-    """Create a per-test staging bucket in CEPH and return its name.
-
-    Mirrors ``test_bucket`` but uses a ``staging-`` prefix so staging and
-    Lakehouse buckets are distinct within the same test.
-    """
-    bucket = "staging-" + _bucket_name_from_node(request.node.nodeid)
-    if len(bucket) > _MAX_BUCKET_LEN:
-        suffix = hashlib.md5(bucket.encode()).hexdigest()[:6]  # noqa: S324
-        bucket = f"{bucket[: _MAX_BUCKET_LEN - 7]}-{suffix}"
-    s3 = ceph_s3_client
-
-    try:
-        s3.head_bucket(Bucket=bucket)
-        paginator = s3.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket):
-            for obj in page.get("Contents", []):
-                s3.delete_object(Bucket=bucket, Key=obj["Key"])
-    except s3.exceptions.NoSuchBucket:
-        s3.create_bucket(Bucket=bucket)
-    except ClientError as e:
-        if e.response["Error"]["Code"] in ("404", "NoSuchBucket"):
-            s3.create_bucket(Bucket=bucket)
-        else:
-            raise
-
+def staging_test_bucket(s3_client: S3Client, request: pytest.FixtureRequest) -> PurePosixPath:
+    """Create a per-test staging bucket and return its name."""
+    bucket = _bucket_name_from_node(request.node.nodeid, prefix="staging")
+    check_existing_bucket(s3_client, bucket)
     return PurePosixPath(bucket)
 
 
 # Helpers
 
 
-def stage_files_to_ceph(
-    s3: botocore.client.BaseClient,
+def stage_files_to_s3(
+    s3: S3Client,
     bucket: PurePosixPath,
     local_dir: Path,
     staging_prefix: PurePosixPath,
 ) -> list[PurePosixPath]:
-    """Upload a local directory tree to a CEPH staging prefix.
+    """Upload a local directory tree to an S3 staging prefix.
 
     :param s3: boto3 S3 client
     :param bucket: target bucket
@@ -193,14 +165,14 @@ def stage_files_to_ceph(
 
 
 def seed_lakehouse(
-    s3: botocore.client.BaseClient,
+    s3: S3Client,
     bucket: PurePosixPath,
     accession: str,
     files: dict[PurePosixPath, str | bytes],
     path_prefix: PurePosixPath,
     assembly_dir: PurePosixPath | None = None,
 ) -> list[PurePosixPath]:
-    """Seed assembly files at the final Lakehouse path in CEPH.
+    """Seed assembly files at the final Lakehouse path.
 
     :param s3: boto3 S3 client
     :param bucket: target bucket
@@ -223,9 +195,7 @@ def seed_lakehouse(
     return keys
 
 
-def list_all_keys(
-    s3: botocore.client.BaseClient, bucket: PurePosixPath, prefix: PurePosixPath | None = None
-) -> list[PurePosixPath]:
+def list_all_keys(s3: S3Client, bucket: PurePosixPath, prefix: PurePosixPath | None = None) -> list[PurePosixPath]:
     """List all object keys in a bucket under a prefix.
 
     :param s3: boto3 S3 client
@@ -243,7 +213,7 @@ def list_all_keys(
     return sorted(keys)
 
 
-def get_object_metadata(s3: botocore.client.BaseClient, bucket: PurePosixPath, key: PurePosixPath) -> dict[str, Any]:
+def get_object_metadata(s3: S3Client, bucket: PurePosixPath, key: PurePosixPath) -> dict[str, Any]:
     """Return the S3 user metadata dict for an S3 object (from HeadObject).
 
     :param s3: boto3 S3 client

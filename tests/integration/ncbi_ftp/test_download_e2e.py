@@ -6,10 +6,11 @@ Marked ``requires_ceph`` (if a running CEPH test store is required) and
 """
 
 import json
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
 import pytest
-from botocore.client import BaseClient
+from types_boto3_s3 import S3Client
 
 from cdm_data_loaders.ncbi_ftp.manifest import (
     compute_diff,
@@ -24,6 +25,7 @@ from cdm_data_loaders.pipelines.ncbi_ftp_download import download_and_stage, dow
 STABLE_PREFIX = "900"
 
 
+@lru_cache
 def _manifest_for_one_assembly(tmp_path: Path) -> tuple[Path, str]:
     """Create a transfer manifest containing exactly one FTP path.
 
@@ -45,92 +47,90 @@ def _manifest_for_one_assembly(tmp_path: Path) -> tuple[Path, str]:
 
 @pytest.mark.slow_test
 @pytest.mark.external_request
-class TestDownloadSmallBatch:
-    """Download a single assembly from NCBI FTP and verify local output."""
+def test_download_small_batch(tmp_path: Path) -> None:
+    """Download one assembly and verify directory structure and report."""
+    manifest_path, _acc = _manifest_for_one_assembly(tmp_path)
 
-    def test_download_small_batch(self, tmp_path: Path) -> None:
-        """Download one assembly and verify directory structure and report."""
-        manifest_path, _acc = _manifest_for_one_assembly(tmp_path)
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
 
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
+    report = download_batch(
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        threads=1,
+        limit=1,
+    )
 
-        report = download_batch(
-            manifest_path=manifest_path,
-            output_dir=output_dir,
-            threads=1,
-            limit=1,
-        )
+    assert report["succeeded"] >= 1
+    assert report["failed"] == 0
 
-        assert report["succeeded"] >= 1
-        assert report["failed"] == 0
+    # Verify directory structure exists
+    raw_data = output_dir / "raw_data"
+    assert raw_data.exists(), "Expected raw_data/ directory in output"
 
-        # Verify directory structure exists
-        raw_data = output_dir / "raw_data"
-        assert raw_data.exists(), "Expected raw_data/ directory in output"
+    # Should have at least one assembly directory with files
+    assembly_dirs = list(raw_data.rglob("GCF_*"))
+    assert len(assembly_dirs) > 0, "Expected at least one assembly directory"
 
-        # Should have at least one assembly directory with files
-        assembly_dirs = list(raw_data.rglob("GCF_*"))
-        assert len(assembly_dirs) > 0, "Expected at least one assembly directory"
+    # Check for .md5 sidecar files
+    md5_files = list(raw_data.rglob("*.md5"))
+    assert len(md5_files) > 0, "Expected .md5 sidecar files"
 
-        # Check for .md5 sidecar files
-        md5_files = list(raw_data.rglob("*.md5"))
-        assert len(md5_files) > 0, "Expected .md5 sidecar files"
-
-        # Check download report
-        report_file = output_dir / "download_report.json"
-        assert report_file.exists()
-        with report_file.open() as f:
-            saved_report = json.load(f)
-        assert saved_report["succeeded"] >= 1
+    # Check download report
+    report_file = output_dir / "download_report.json"
+    assert report_file.exists()
+    with report_file.open() as f:
+        saved_report = json.load(f)
+    assert saved_report["succeeded"] >= 1
 
 
 @pytest.mark.slow_test
 @pytest.mark.external_request
-class TestDownloadResumeIncomplete:
-    """Verify download handles re-runs when some files are already present."""
+def test_download_resume(tmp_path: Path) -> None:
+    """Re-running download on the same manifest succeeds without errors.
 
-    def test_download_resume(self, tmp_path: Path) -> None:
-        """Re-running download on the same manifest succeeds without errors."""
-        manifest_path, _acc = _manifest_for_one_assembly(tmp_path)
+    Verify download handles re-runs when some files are already present.
+    """
+    manifest_path, _acc = _manifest_for_one_assembly(tmp_path)
 
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
 
-        # First download
-        report1 = download_batch(
-            manifest_path=manifest_path,
-            output_dir=output_dir,
-            threads=1,
-            limit=1,
-        )
-        assert report1["succeeded"] >= 1
+    # First download
+    report1 = download_batch(
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        threads=1,
+        limit=1,
+    )
+    assert report1["succeeded"] >= 1
 
-        files_after_first = set(output_dir.rglob("*"))
+    files_after_first = set(output_dir.rglob("*"))
 
-        # Second download — same manifest
-        report2 = download_batch(
-            manifest_path=manifest_path,
-            output_dir=output_dir,
-            threads=1,
-            limit=1,
-        )
+    # Second download — same manifest
+    report2 = download_batch(
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        threads=1,
+        limit=1,
+    )
 
-        # Should succeed without errors (files overwritten or skipped)
-        assert report2["succeeded"] >= 1
-        assert report2["failed"] == 0
+    # Should succeed without errors (files overwritten or skipped)
+    assert report2["succeeded"] >= 1
+    assert report2["failed"] == 0
 
-        # All original files should still exist
-        files_after_second = set(output_dir.rglob("*"))
-        assert files_after_first.issubset(files_after_second)
+    # All original files should still exist
+    files_after_second = set(output_dir.rglob("*"))
+    assert files_after_first.issubset(files_after_second)
 
 
 @pytest.mark.requires_ceph
 @pytest.mark.slow_test
 @pytest.mark.external_request
+@pytest.mark.parametrize("s3_client", ["ceph", "mock"], indirect=True)
 def test_download_and_stage_e2e(
     tmp_path: Path,
-    ceph_s3_client: BaseClient,
+    s3_client: S3Client,
     test_bucket: PurePosixPath,
 ) -> None:
     """Download one assembly and verify it is staged under the expected S3 prefix."""
@@ -140,7 +140,7 @@ def test_download_and_stage_e2e(
 
     # Seed the manifest in CEPH so download_and_stage can read it from S3
     manifest_s3_key = staging_prefix / "input" / "transfer_manifest.txt"
-    ceph_s3_client.put_object(
+    s3_client.put_object(
         Bucket=str(test_bucket),
         Key=str(manifest_s3_key),
         Body=manifest_path.read_bytes(),
@@ -162,7 +162,7 @@ def test_download_and_stage_e2e(
     assert report["dry_run"] is False
 
     # Verify raw_data/ files and .md5 sidecars are staged
-    paginator = ceph_s3_client.get_paginator("list_objects_v2")
+    paginator = s3_client.get_paginator("list_objects_v2")
     staged_keys = [
         obj["Key"]
         for page in paginator.paginate(Bucket=str(test_bucket), Prefix=str(staging_prefix / "raw_data"))
@@ -177,6 +177,6 @@ def test_download_and_stage_e2e(
 
     # Verify download_report.json was also uploaded
     report_key = staging_prefix / "download_report.json"
-    resp = ceph_s3_client.get_object(Bucket=str(test_bucket), Key=str(report_key))
+    resp = s3_client.get_object(Bucket=str(test_bucket), Key=str(report_key))
     saved_report = json.loads(resp["Body"].read())
     assert saved_report["succeeded"] >= 1

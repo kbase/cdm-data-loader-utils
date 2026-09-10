@@ -616,8 +616,8 @@ BUCKETS = [TEST_BUCKET, ALT_BUCKET]
 
 
 @pytest.fixture
-def mock_s3_client(monkeypatch: pytest.MonkeyPatch) -> Generator[S3Client, Any]:
-    """Yield a mocked S3 client with both valid buckets created.
+def mock_s3_client(monkeypatch: pytest.MonkeyPatch) -> Generator[S3Client]:
+    """Yield a mocked S3 client with two valid buckets created (TEST_BUCKET, ALT_BUCKET).
 
     The function get_s3_client() is patched to ensure that all module functions use this client.
 

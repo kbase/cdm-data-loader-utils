@@ -31,6 +31,7 @@ from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.qsv import (
     run_qsv_null_replacement,
     run_qsv_validate,
 )
+from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import ValidatedSchema
 from tests.cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.conftest import (
     COLUMNS,
     DELIMITERS,
@@ -45,7 +46,6 @@ from tests.cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.conftest import
     parse_xsv,
     snapshot_dir,
 )
-from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import ValidatedSchema
 
 # One ragged row (missing the trailing `string` field) among otherwise-valid rows: recoverable.
 PARTIAL_RAGGED_ROWS: Final[list[list[str]]] = [
