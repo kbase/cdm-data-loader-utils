@@ -13,7 +13,7 @@ from dlt.extract.items import DataItemWithMeta, TableNameMeta
 from lxml.etree import Element, XMLSyntaxError, tostring
 
 import cdm_data_loaders.readers.xml as xml_module
-from cdm_data_loaders.core.fields import DEFAULTS, BUFFER_SIZE, LOG_INTERVAL
+from cdm_data_loaders.core.fields import BUFFER_SIZE, DEFAULTS, LOG_INTERVAL
 from cdm_data_loaders.core.settings import BatchedFileInputSettings
 from cdm_data_loaders.readers.xml import (
     process_xml_file,

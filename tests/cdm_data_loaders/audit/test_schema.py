@@ -16,8 +16,8 @@ def test_current_run_expr_no_args() -> None:
 @pytest.mark.parametrize("source", ["", "some_source"])
 def test_current_run_expr(target: str, source: str) -> None:
     """Test generation of the current run expression with some arguments."""
-    t_str = target if target else "t"
-    s_str = source if source else "s"
+    t_str = target or "t"
+    s_str = source or "s"
     assert (
         current_run_expr(target, source)
         == f"{t_str}.{RUN_ID} = {s_str}.{RUN_ID} AND {t_str}.{SOURCE} = {s_str}.{SOURCE} AND {t_str}.{PIPELINE} = {s_str}.{PIPELINE}"

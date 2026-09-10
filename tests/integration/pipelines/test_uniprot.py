@@ -63,12 +63,7 @@ def duckdb_uniprot_settings_args(tmp_path: Path) -> frozendict:
 # These use a local duckdb instance to exercise the full UniProt pipeline.
 @pytest.fixture
 def duckdb_uniprot_settings(duckdb_uniprot_settings_args: frozendict) -> UniProtSettings:
-    """Provide UniProtSettings pointing at the real UniProt XML fixtures.
-
-    ``input_dir`` points at the fixture directory containing ``chunk_0000N.xml``
-    files, and ``output_dir`` is a local directory inside ``tmp_path`` so the run is
-    fully isolated.
-    """
+    """Provide UniProtSettings pointing at the real UniProt XML fixtures."""
     return make_settings_autofill_config(UniProtSettings, duckdb_uniprot_settings_args)  # pyright: ignore[reportReturnType]
 
 
@@ -152,14 +147,7 @@ def test_integration_cli_uniprot_pipeline_output_validated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination.
-
-    ``cli()`` builds a ``UniProtSettings`` from the dlt config / CLI args and then
-    runs the pipeline via ``run_uniprot_pipeline`` -> ``core.run_pipeline``. We
-    stub out ``UniProtSettings`` construction to return our fixture-backed
-    settings, and redirect ``core.run_pipeline`` to a real DuckDB pipeline so the
-    full flow (settings -> resource -> pipeline.run -> loaded data) is validated.
-    """
+    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination."""
     monkeypatch.setattr(uniprot_module, "UniProtSettings", MagicMock(return_value=duckdb_uniprot_settings))
 
     captured: dict[str, Any] = {}
@@ -167,7 +155,7 @@ def test_integration_cli_uniprot_pipeline_output_validated(
     def fake_run_pipeline(
         *,
         settings: UniProtSettings,
-        resource: Any,  # noqa: ANN401
+        resource: Any,
         pipeline_kwargs: dict[str, Any],
     ) -> None:
         """Replacement for core.run_pipeline that runs the resource through DuckDB."""

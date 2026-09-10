@@ -1,30 +1,22 @@
 """Tests for the xsv validator helper (non-qsv-interacting) code."""
 
-import json
 import os
-import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Final
+from typing import Final
 from unittest.mock import MagicMock
 
-import jsonschema
-import jsonschema.exceptions
 import pytest
 from _pytest.mark.structures import ParameterSet
-from pydantic import ValidationError
 
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import (
-    HEADER_SUFFIX,
-    NORM_SUFFIX,
     SEP_TO_EXT,
     VALID_SUFFIX,
     VALIDATION_ERRORS,
     CleanerValidatorArgs,
     ErrorRecord,
-    FileNames,
     copy_safely,
     generate_qsv_validate_file_names,
     move_safely,

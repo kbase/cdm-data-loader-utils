@@ -49,24 +49,12 @@ def uniref_variant_value(request: pytest.FixtureRequest) -> str:
 
 # Integration test for the UniRef pipeline
 #
-# Rather than mocking dlt (which is brittle -- the internals of where
-# ``dlt.mark.with_table_name`` is called have moved between modules), we follow
-# the pattern used elsewhere in this repo (see
-# ``tests/readers/jsonschema_xsv/test_source.py``) and run the *real*
-# ``parse_uniref`` resource through a real, local DuckDB pipeline. This
-# exercises extraction, XML streaming/parsing, table-name marking and dlt
-# normalisation all together, and lets us query the loaded data back out.
+# Data output goes to a local DuckDB destination.
 
 
 @pytest.fixture
 def duckdb_uniref_settings(tmp_path: Path) -> UnirefSettings:
-    """Provide UnirefSettings pointing at the real UniRef XML fixtures.
-
-    ``input_dir`` points at the fixture directory containing
-    ``uniref_chunk_0000N.xml`` files, and ``output_dir`` is a local directory inside
-    ``tmp_path`` so the run is fully isolated. The ``variant`` is fixed to
-    a valid value ("50") for the integration run.
-    """
+    """Provide UnirefSettings pointing at the real UniRef XML fixtures."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
     return make_settings_autofill_config(  # type: ignore[reportReturnType]
@@ -170,14 +158,7 @@ def test_integration_cli_uniref_pipeline_output_validated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination.
-
-    ``cli()`` builds a ``UnirefSettings`` from the dlt config / CLI args and then
-    runs the pipeline via ``run_uniref_pipeline`` -> ``core.run_pipeline``. We
-    stub out ``UnirefSettings`` construction to return our fixture-backed
-    settings, and redirect ``core.run_pipeline`` to a real DuckDB pipeline so the
-    full flow (settings -> resource -> pipeline.run -> loaded data) is validated.
-    """
+    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination."""
     monkeypatch.setattr(uniref_module, "UnirefSettings", MagicMock(return_value=duckdb_uniref_settings))
 
     captured: dict[str, Any] = {}

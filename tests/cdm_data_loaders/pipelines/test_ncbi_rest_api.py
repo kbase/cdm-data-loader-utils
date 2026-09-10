@@ -31,13 +31,13 @@ from cdm_data_loaders.pipelines.ncbi_rest_api import (
     run_ncbi_pipeline,
     set_settings,
 )
-from tests.conftest import DEFAULT_VCR_CONFIG
 from tests.cdm_data_loaders.core.conftest import (
     TEST_CTS_SETTINGS,
     TEST_CTS_SETTINGS_RECONCILED,
     check_settings,
     make_settings_autofill_config,
 )
+from tests.conftest import DEFAULT_VCR_CONFIG
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes
 
 

@@ -11,8 +11,8 @@ from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import ClassVar, cast
 
-import botocore.client
 import pytest
+from types_boto3_s3 import S3Client
 
 import cdm_data_loaders.pipelines.pdb_manifest as pdb_manifest_mod
 from cdm_data_loaders.pdb.constants import (
@@ -26,20 +26,14 @@ from cdm_data_loaders.pipelines.pdb_manifest import (
     _save_holdings_snapshot,
     run_manifest_generation,
 )
+from tests.conftest import TEST_BUCKET
 
 # A prefix under which we seed fake PDB objects in CEPH
 _PDB_KEY_PREFIX = DEFAULT_DESTINATION_PREFIX / "raw_data"
 
-# A handful of fake extended PDB IDs used across tests
-_FAKE_IDS = [
-    "pdb_00001abc",
-    "pdb_00001def",
-    "pdb_aaaaaaaa",
-]
-
 
 def _seed_fake_pdb_objects(
-    s3: botocore.client.BaseClient,
+    s3: S3Client,
     bucket: PurePosixPath,
     pdb_ids: list[str],
     prefix: PurePosixPath = _PDB_KEY_PREFIX,
@@ -50,9 +44,7 @@ def _seed_fake_pdb_objects(
         s3.put_object(Bucket=str(bucket), Key=key, Body=b"placeholder")
 
 
-# ---------------------------------------------------------------------------
 # Full pipeline end-to-end tests
-# ---------------------------------------------------------------------------
 
 # Holdings data shared across E2E tests.
 # pdb_aaaaaaaa is intentionally absent from LAST_MODIFIED; should show up in missing_dates.
@@ -71,8 +63,13 @@ _SNAPSHOT_PREFIX = PurePosixPath("e2e-pdb-test")
 _SNAPSHOT_FILENAME = PurePosixPath("current_snapshot.json.gz")
 
 
-@pytest.mark.requires_ceph
-@pytest.mark.slow_test
+@pytest.fixture
+def pdb_test_bucket() -> PurePosixPath:
+    """Test bucket as a PPP."""
+    return PurePosixPath(TEST_BUCKET)
+
+
+@pytest.mark.s3
 class TestRunManifestGenerationE2E:
     """End-to-end tests for run_manifest_generation.
 
@@ -91,7 +88,7 @@ class TestRunManifestGenerationE2E:
 
     def _make_config(
         self,
-        test_bucket: PurePosixPath,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         **kwargs: object,
     ) -> PdbManfestSettings:
@@ -99,7 +96,7 @@ class TestRunManifestGenerationE2E:
             "bootstrap_date": None,
             "skip_diff": False,
             "regex_filter": None,
-            "destination_bucket": test_bucket,
+            "destination_bucket": pdb_test_bucket,
             "destination_prefix": _PDB_KEY_PREFIX,
             "holdings_snapshot_path": _SNAPSHOT_FILENAME,
             "output_path": tmp_path,
@@ -110,14 +107,14 @@ class TestRunManifestGenerationE2E:
     def _read_manifest(self, tmp_path: Path, filename: str) -> list[str]:
         return (tmp_path / filename).read_text().splitlines()
 
-    @pytest.mark.usefixtures("ceph_s3_client")
+    @pytest.mark.usefixtures("mock_s3_client")
     def test_skip_diff_all_current_records_are_new(
         self,
-        test_bucket: PurePosixPath,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
     ) -> None:
         """With skip_diff=True, every current ID appears as new in the transfer manifest."""
-        config = self._make_config(test_bucket, tmp_path, skip_diff=True)
+        config = self._make_config(pdb_test_bucket, tmp_path, skip_diff=True)
         run_manifest_generation(config)
 
         transfer = sorted(self._read_manifest(tmp_path, "transfer_manifest.txt"))
@@ -128,17 +125,17 @@ class TestRunManifestGenerationE2E:
 
     def test_bootstrap_date_uses_s3_state_as_previous(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
     ) -> None:
         """With bootstrap_date, the S3 store determines the previous snapshot."""
         # pdb_00001def: in S3, bootstrap date older than current: updated.
         # pdb_00009999: in S3 but not in current holdings: removed.
-        _seed_fake_pdb_objects(ceph_s3_client, test_bucket, ["pdb_00001def", "pdb_00009999"])
+        _seed_fake_pdb_objects(mock_s3_client, pdb_test_bucket, ["pdb_00001def", "pdb_00009999"])
         bootstrap_date = date(2020, 1, 1)
 
-        config = self._make_config(test_bucket, tmp_path, bootstrap_date=bootstrap_date)
+        config = self._make_config(pdb_test_bucket, tmp_path, bootstrap_date=bootstrap_date)
         run_manifest_generation(config)
 
         # pdb_00001abc and pdb_aaaaaaaa are not in the store: new
@@ -153,8 +150,8 @@ class TestRunManifestGenerationE2E:
 
     def test_with_existing_snapshot_incremental_diff(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
     ) -> None:
         """An S3 snapshot drives incremental diffing; only changed records appear."""
@@ -167,14 +164,14 @@ class TestRunManifestGenerationE2E:
         local_snapshot = tmp_path / "input_snapshot.json.gz"
         _save_holdings_snapshot(previous, local_snapshot)
         snapshot_key = _SNAPSHOT_PREFIX / _SNAPSHOT_FILENAME
-        ceph_s3_client.upload_file(
+        mock_s3_client.upload_file(
             Filename=str(local_snapshot),
-            Bucket=str(test_bucket),
+            Bucket=str(pdb_test_bucket),
             Key=str(snapshot_key),
         )
 
         config = self._make_config(
-            test_bucket,
+            pdb_test_bucket,
             tmp_path,
             destination_prefix=_SNAPSHOT_PREFIX,
         )
@@ -190,7 +187,7 @@ class TestRunManifestGenerationE2E:
         assert self._read_manifest(tmp_path, "removed_manifest.txt") == ["pdb_00009999"]
         assert self._read_manifest(tmp_path, "missing_dates.txt") == ["pdb_aaaaaaaa"]
 
-    @pytest.mark.usefixtures("ceph_s3_client")
+    @pytest.mark.usefixtures("mock_s3_client")
     @pytest.mark.parametrize(
         ("regex_filter", "expected_transfer", "expected_missing"),
         [
@@ -210,14 +207,14 @@ class TestRunManifestGenerationE2E:
     )
     def test_regex_filter(
         self,
-        test_bucket: PurePosixPath,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         regex_filter: str,
         expected_transfer: list[str],
         expected_missing: list[str],
     ) -> None:
         """Regex filter restricts which IDs appear across all output manifest files."""
-        config = self._make_config(test_bucket, tmp_path, skip_diff=True, regex_filter=regex_filter)
+        config = self._make_config(pdb_test_bucket, tmp_path, skip_diff=True, regex_filter=regex_filter)
         run_manifest_generation(config)
 
         transfer = sorted(self._read_manifest(tmp_path, "transfer_manifest.txt"))
@@ -238,15 +235,14 @@ _ROUNDTRIP_SNAPSHOT_FILENAME = PurePosixPath("roundtrip_snapshot.json.gz")
 _ROUNDTRIP_IDS: list[str] = ["pdb_00001abc", "pdb_00001def", "pdb_aaaaaaaa"]
 
 
-@pytest.mark.requires_ceph
-@pytest.mark.slow_test
+@pytest.mark.s3
 class TestSnapshotManifestRoundTripCeph:
     """Generate a snapshot from the live S3 store state, then drive manifest generation.
 
     These tests verify the full contract between ``_generate_snapshot_from_s3_state``,
     ``_save_holdings_snapshot``, ``_download_holdings_snapshot``, and
     ``run_manifest_generation``.  PDB HTTP calls are mocked; all S3 interactions
-    use the real CEPH test store via ``ceph_s3_client``.
+    use the real CEPH test store via ``mock_s3_client``.
     """
 
     # A date well in the past so we can easily manufacture "newer" dates in holdings.
@@ -259,7 +255,7 @@ class TestSnapshotManifestRoundTripCeph:
 
     def _make_config(
         self,
-        test_bucket: PurePosixPath,
+        pdb_test_bucket: PurePosixPath,
         output_path: Path,
         **kwargs: object,
     ) -> PdbManfestSettings:
@@ -267,7 +263,7 @@ class TestSnapshotManifestRoundTripCeph:
             "bootstrap_date": None,
             "skip_diff": False,
             "regex_filter": None,
-            "destination_bucket": test_bucket,
+            "destination_bucket": pdb_test_bucket,
             "destination_prefix": _PDB_KEY_PREFIX,
             "holdings_snapshot_path": _ROUNDTRIP_SNAPSHOT_FILENAME,
             "output_path": output_path,
@@ -277,7 +273,7 @@ class TestSnapshotManifestRoundTripCeph:
 
     def _build_and_upload_snapshot(
         self,
-        s3: botocore.client.BaseClient,
+        s3: S3Client,
         bucket: PurePosixPath,
         snap_date: date,
         local_path: Path,
@@ -321,20 +317,20 @@ class TestSnapshotManifestRoundTripCeph:
     def _read_manifest(self, output_path: Path, filename: str) -> list[str]:
         return (output_path / filename).read_text().splitlines()
 
-    # ---------------------------------------------------------------------------
     # Tests
-    # ---------------------------------------------------------------------------
 
     def test_no_changes_when_store_matches_holdings(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When the snapshot exactly matches the current holdings, all manifests are empty."""
-        _seed_fake_pdb_objects(ceph_s3_client, test_bucket, _ROUNDTRIP_IDS)
-        self._build_and_upload_snapshot(ceph_s3_client, test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz")
+        _seed_fake_pdb_objects(mock_s3_client, pdb_test_bucket, _ROUNDTRIP_IDS)
+        self._build_and_upload_snapshot(
+            mock_s3_client, pdb_test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz"
+        )
 
         # Holdings current = same IDs; last-modified dates match the bootstrap date.
         current = {id_: PDBRecord(id=id_) for id_ in _ROUNDTRIP_IDS}
@@ -343,7 +339,7 @@ class TestSnapshotManifestRoundTripCeph:
         }
         self._mock_holdings(monkeypatch, current, last_modified)
 
-        run_manifest_generation(self._make_config(test_bucket, tmp_path / "out"))
+        run_manifest_generation(self._make_config(pdb_test_bucket, tmp_path / "out"))
 
         assert self._read_manifest(tmp_path / "out", "transfer_manifest.txt") == []
         assert self._read_manifest(tmp_path / "out", "updated_manifest.txt") == []
@@ -352,8 +348,8 @@ class TestSnapshotManifestRoundTripCeph:
 
     def test_records_removed_from_store_reappear_in_transfer_manifest(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -373,19 +369,23 @@ class TestSnapshotManifestRoundTripCeph:
         self._mock_holdings(monkeypatch, current, last_modified)
 
         # First run: baseline:nothing should appear in any manifest
-        _seed_fake_pdb_objects(ceph_s3_client, test_bucket, _ROUNDTRIP_IDS)
-        self._build_and_upload_snapshot(ceph_s3_client, test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap1.json.gz")
-        run_manifest_generation(self._make_config(test_bucket, tmp_path / "run1"))
+        _seed_fake_pdb_objects(mock_s3_client, pdb_test_bucket, _ROUNDTRIP_IDS)
+        self._build_and_upload_snapshot(
+            mock_s3_client, pdb_test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap1.json.gz"
+        )
+        run_manifest_generation(self._make_config(pdb_test_bucket, tmp_path / "run1"))
         assert self._read_manifest(tmp_path / "run1", "transfer_manifest.txt") == []
 
         # Remove some records from the store
         for pdb_id in removed_ids:
             key = str(_PDB_KEY_PREFIX / pdb_id / f"{pdb_id}_model.cif.gz")
-            ceph_s3_client.delete_object(Bucket=str(test_bucket), Key=key)
+            mock_s3_client.delete_object(Bucket=str(pdb_test_bucket), Key=key)
 
         # Second run: removed IDs are absent from new snapshot: should appear in transfer_manifest.txt
-        self._build_and_upload_snapshot(ceph_s3_client, test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap2.json.gz")
-        run_manifest_generation(self._make_config(test_bucket, tmp_path / "run2"))
+        self._build_and_upload_snapshot(
+            mock_s3_client, pdb_test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap2.json.gz"
+        )
+        run_manifest_generation(self._make_config(pdb_test_bucket, tmp_path / "run2"))
 
         transfer = sorted(self._read_manifest(tmp_path / "run2", "transfer_manifest.txt"))
         assert transfer == sorted(removed_ids)
@@ -394,15 +394,17 @@ class TestSnapshotManifestRoundTripCeph:
 
     def test_holdings_newer_date_triggers_updated_manifest(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Records whose holdings last-modified date is newer than the snapshot appear in updated_manifest."""
         ids = ["pdb_00001abc", "pdb_00001def"]
-        _seed_fake_pdb_objects(ceph_s3_client, test_bucket, ids)
-        self._build_and_upload_snapshot(ceph_s3_client, test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz")
+        _seed_fake_pdb_objects(mock_s3_client, pdb_test_bucket, ids)
+        self._build_and_upload_snapshot(
+            mock_s3_client, pdb_test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz"
+        )
 
         # pdb_00001abc has a newer date in holdings: should appear in updated
         # pdb_00001def has the same date as the snapshot: should not appear in updated
@@ -413,7 +415,7 @@ class TestSnapshotManifestRoundTripCeph:
         }
         self._mock_holdings(monkeypatch, current, last_modified)
 
-        run_manifest_generation(self._make_config(test_bucket, tmp_path / "out"))
+        run_manifest_generation(self._make_config(pdb_test_bucket, tmp_path / "out"))
 
         assert self._read_manifest(tmp_path / "out", "updated_manifest.txt") == ["pdb_00001abc"]
         transfer = self._read_manifest(tmp_path / "out", "transfer_manifest.txt")
@@ -422,8 +424,8 @@ class TestSnapshotManifestRoundTripCeph:
 
     def test_id_absent_from_holdings_appears_in_removed_manifest(
         self,
-        ceph_s3_client: botocore.client.BaseClient,
-        test_bucket: PurePosixPath,
+        mock_s3_client: S3Client,
+        pdb_test_bucket: PurePosixPath,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -432,8 +434,10 @@ class TestSnapshotManifestRoundTripCeph:
         dropped_from_holdings = ["pdb_aaaaaaaa"]
 
         # Seed all IDs so the snapshot contains all three.
-        _seed_fake_pdb_objects(ceph_s3_client, test_bucket, _ROUNDTRIP_IDS)
-        self._build_and_upload_snapshot(ceph_s3_client, test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz")
+        _seed_fake_pdb_objects(mock_s3_client, pdb_test_bucket, _ROUNDTRIP_IDS)
+        self._build_and_upload_snapshot(
+            mock_s3_client, pdb_test_bucket, self._BOOTSTRAP_DATE, tmp_path / "snap.json.gz"
+        )
 
         # Holdings no longer lists pdb_aaaaaaaa as current.
         current = {id_: PDBRecord(id=id_) for id_ in kept_in_holdings}
@@ -442,7 +446,7 @@ class TestSnapshotManifestRoundTripCeph:
         }
         self._mock_holdings(monkeypatch, current, last_modified)
 
-        run_manifest_generation(self._make_config(test_bucket, tmp_path / "out"))
+        run_manifest_generation(self._make_config(pdb_test_bucket, tmp_path / "out"))
 
         assert self._read_manifest(tmp_path / "out", "removed_manifest.txt") == dropped_from_holdings
         assert self._read_manifest(tmp_path / "out", "transfer_manifest.txt") == []
