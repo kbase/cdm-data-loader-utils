@@ -51,7 +51,7 @@ class Config(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        cli_prog_name="filter_ncbi_updates.py",
+        cli_prog_name="filter_ncbi_updates",
         cli_kebab_case=True,
         cli_enforce_required=True,
         extra="forbid",
