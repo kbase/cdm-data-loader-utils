@@ -12,7 +12,7 @@ from cdm_data_loaders.core.settings import CdmDataLoadersBase
 
 def make_cli_arg(arg: str) -> str:
     """Generate the appropriate CLI form for an argument."""
-    return f"{'--' if len(arg) > 1 else '-'}{arg}"
+    return f"{'--' if len(arg) > 1 else '-'}{arg.replace('_', '-')}"
 
 
 @dataclass(frozen=True)
