@@ -64,7 +64,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   tests:
-    name: Run local tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Run local tests (${{ matrix.suite.name }}, ${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: code_format_and_lint
     strategy:
@@ -72,12 +72,13 @@ jobs:
       matrix:
         python-version: ["3.13", "3.14"]
         os: ["ubuntu-24.04"]
-        test_dirs:
-          [
-            "tests/integration",
-            "tests/cdm_data_loaders/pipelines",
-            "--ignore=tests/integration --ignore=tests/cdm_data_loaders/pipelines",
-          ]
+        suite:
+          - name: pipelines
+            args: tests/cdm_data_loaders/pipelines/
+          - name: integration
+            args: tests/integration/
+          - name: everything else
+            args: --ignore=tests/integration --ignore=tests/cdm_data_loaders/pipelines
 
     steps:
       - name: Checkout
@@ -97,4 +98,4 @@ jobs:
       - name: Run local tests
         shell: bash
         continue-on-error: false
-        run: uv run pytest -m "not requires_spark and not requires_ceph" ${{matrix.test_dirs}}
+        run: uv run pytest -m "not requires_spark and not requires_ceph" ${{matrix.suite.args}}

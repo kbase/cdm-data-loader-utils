@@ -1,8 +1,11 @@
 """Utilities for running tests."""
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic_settings import BaseSettings, CliApp, CliSettingsSource
 from pyspark.sql import Row, SparkSession
 from pyspark.sql.types import StructType
@@ -129,3 +132,22 @@ def assertDataFrameEqual(result_rows: list[Row], expected_rows: list[Row]) -> No
         assert row in expected_dict
     for row in expected_dict:
         assert row in results_dict
+
+
+def write_json_or_yaml(path: Path, data_structure: dict[str, Any]) -> Path:
+    """Write ``data_structure`` to ``path`` as JSON or YAML, depending on the file suffix."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(data_structure) if path.suffix.lower() == ".json" else yaml.safe_dump(data_structure)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def jsonlines_text_to_objects(text: str) -> list[dict[str, Any]]:
+    """Parse all non-empty lines of a text string containing JSONlines records.
+
+    :param text: text string with line break-delimited JSONl records
+    :type  text: str
+    :return: list of JSONL objects
+    :rtype : list[dict[str, Any]]
+    """
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
