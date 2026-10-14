@@ -1,6 +1,10 @@
 [normalize.data_writer]
 disable_compression = "false"
 
+[load]
+# do not raise an error if a job fails
+raise_on_failed_jobs = "false"
+
 [runtime]
 http_show_error_body = "true"
 log_level = "WARNING"
@@ -16,20 +20,8 @@ request_backoff_factor = 1.5
 # default: 300
 request_max_retry_delay = 600
 
-# do not raise an error if a job fails
-load.raise_on_failed_jobs = "false"
-
 [extract]
 workers = 10
-
-# 'local_fs' destination: save to the `output` directory
-[destination.local_fs]
-destination_type = "filesystem"
-bucket_url = "/output_dir"
-
-[destination.s3]
-destination_type = "filesystem"
-bucket_url = "s3://cts/io/ialarmedalien/datasets/cts_output/bloooooop"
 
 [data_writer]
 # set buffer size for extract and normalize stages

@@ -1,12 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VALID_COMMANDS=(all_the_bacteria ncbi_ftp_sync ncbi_rest_api uniprot uniref xml_split test ceph_integration_test bash)
+# Each pipeline name must match a uv script name, as it is run as `uv run <name>`.
+PIPELINES=(all_the_bacteria ncbi_ftp_sync ncbi_rest_api uniprot uniref)
+OTHER=(xml_split test ceph_integration_test bash)
+VALID_COMMANDS=("${PIPELINES[@]}" "${OTHER[@]}")
+
+DLT_CONF_SRC_DIR=/input_dir/dlt_conf
+DLT_CONF_DEST_DIR=.dlt
 
 usage() {
   local joined
   joined=$(IFS='|'; echo "${VALID_COMMANDS[*]}")
   echo "Usage: $0 {${joined}} [args...]" >&2
+}
+
+# Return 0 if the first argument matches any of the remaining arguments.
+contains() {
+  local needle="$1"
+  shift
+  local item
+  for item in "$@"; do
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Copy any dlt config files from the input dir into ./.dlt; exit on any failure.
+copy_dlt_config() {
+  local file
+  for file in config.toml secrets.toml; do
+    if [ -e "${DLT_CONF_SRC_DIR}/${file}" ]; then
+      mkdir -p "${DLT_CONF_DEST_DIR}" || {
+        echo "Error: could not create '${DLT_CONF_DEST_DIR}' in $(pwd)." >&2
+        exit 1
+      }
+      cp "${DLT_CONF_SRC_DIR}/${file}" "${DLT_CONF_DEST_DIR}/${file}" || {
+        echo "Error: could not copy '${DLT_CONF_SRC_DIR}/${file}' to '${DLT_CONF_DEST_DIR}/${file}'." >&2
+        exit 1
+      }
+    fi
+  done
 }
 
 if [ "$#" -eq 0 ]; then
@@ -17,23 +53,12 @@ fi
 cmd="$1"
 shift
 
+if contains "$cmd" "${PIPELINES[@]}"; then
+  copy_dlt_config
+  exec /usr/bin/tini -- uv run --no-sync "$cmd" "$@"
+fi
+
 case "$cmd" in
-  all_the_bacteria)
-    exec /usr/bin/tini -- uv run --no-sync all_the_bacteria "$@"
-    ;;
-  ncbi_ftp_sync)
-    # Run the NCBI FTP assembly download pipeline (Phase 2)
-    exec /usr/bin/tini -- uv run --no-sync ncbi_ftp_sync "$@"
-    ;;
-  ncbi_rest_api)
-    exec /usr/bin/tini -- uv run --no-sync ncbi_rest_api "$@"
-    ;;
-  uniprot)
-    exec /usr/bin/tini -- uv run --no-sync uniprot "$@"
-    ;;
-  uniref)
-    exec /usr/bin/tini -- uv run --no-sync uniref "$@"
-    ;;
   xml_split)
     exec /usr/bin/tini -- xml_file_splitter "$@"
     ;;
