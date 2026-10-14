@@ -16,7 +16,7 @@ dependencies = [
     "datamodel-code-generator>=0.82.0",
     "defusedxml>=0.7.1",
     "delta-spark>=4.2.0",
-    "dlt[deltalake,duckdb,filesystem,parquet,pyiceberg]>=1.30.0",
+    "dlt[duckdb,filesystem,parquet,pyiceberg]>=1.30.0",
     "frictionless[aws]>=5.19.0",
     "frozendict>=2.4.7",
     "httpx>=0.28.1",
@@ -50,7 +50,7 @@ uniprot = "cdm_data_loaders.pipelines.uniprot_kb:cli"
 uniref = "cdm_data_loaders.pipelines.uniref:cli"
 xmltodict = "cdm_data_loaders.pipelines.xmltodict.pipeline:cli"
 xml2db = "cdm_data_loaders.pipelines.xml2db.pipeline:cli"
-xsv_ingest = "cdm_data_loaders.pipelines.xsv.pipeline:cli"
+xsv = "cdm_data_loaders.pipelines.xsv.pipeline:cli"
 
 
 [dependency-groups]
@@ -258,3 +258,4 @@ DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
 cdm-schema = { git = "https://github.com/kbase/cdm-schema.git" }
 berdl-notebook-utils = { git = "https://github.com/KBaseDataLakehouse/spark_notebook.git", subdirectory = "notebook_utils" }
 cdm-task-service-client = { git = "https://github.com/kbase/cdm-task-service-client.git" }
+dlt = { git = "https://github.com/dlt-hub/dlt", branch = "devel" }

@@ -101,7 +101,7 @@ def make_settings(monkeypatch: pytest.MonkeyPatch) -> SettingsFactory:
 
     def _make(settings_cls: type[BaseSettings], source: str, values: Mapping[str, str]) -> BaseSettings:
         if source == INIT:
-            return settings_cls(**values)
+            return settings_cls(**values)  # pyright: ignore[reportArgumentType]
         if source == ENV:
             prefix = settings_cls.model_config.get("env_prefix", "")
             for name, value in values.items():

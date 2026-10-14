@@ -7,9 +7,10 @@ import shutil
 import sys
 from collections.abc import Callable, Generator
 from copy import deepcopy
+from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Self
 from unittest.mock import patch
 
 import boto3
@@ -22,6 +23,7 @@ from types_boto3_s3.client import S3Client
 
 import cdm_data_loaders.utils.file_transfer.s3.client as s3_client
 from cdm_data_loaders.core.fields import LOCAL_FS, S3
+from cdm_data_loaders.utils import cdm_logger
 from cdm_data_loaders.utils.file_transfer.s3.client import _client_config, reset_s3_client
 from tests.dlt_config_isolation import isolated_dlt_config
 
@@ -229,11 +231,13 @@ def _generate_dlt_config() -> dict[str, Any]:
     """Return a fresh DLT config dict (same shape as the conftest fixture)."""
     return {
         "destination": {
-            LOCAL_FS: {"bucket_url": CONFIG_BUCKET[LOCAL_FS]},
-            S3: {"bucket_url": CONFIG_BUCKET[S3]},
+            LOCAL_FS: {"bucket_url": CONFIG_BUCKET[LOCAL_FS], "destination_type": "filesystem"},
+            S3: {"bucket_url": CONFIG_BUCKET[S3], "destination_type": "filesystem"},
         },
         "destination.local_fs.bucket_url": CONFIG_BUCKET[LOCAL_FS],
+        "destination.local_fs.destination_type": "filesystem",
         "destination.s3.bucket_url": CONFIG_BUCKET[S3],
+        "destination.s3.destination_type": "filesystem",
         "normalize.data_writer.disable_compression": False,
     }
 
@@ -295,7 +299,7 @@ def mock_s3_client(monkeypatch: pytest.MonkeyPatch) -> Generator[S3Client]:
 
     with mock_aws():
         reset_s3_client()
-        client: S3Client = boto3.client(S3, config=_client_config())
+        client: S3Client = boto3.client(S3, config=_client_config())  # pyright: ignore[reportCallIssue]
 
         for bucket in BUCKETS:
             client.create_bucket(Bucket=bucket)
@@ -310,3 +314,61 @@ def mock_s3_client(monkeypatch: pytest.MonkeyPatch) -> Generator[S3Client]:
 
         reset_s3_client()
         assert s3_client._s3_client is None  # noqa: SLF001
+
+
+@dataclass(frozen=True, slots=True)
+class LoggerState:
+    """Settings of a single logger that tests may change."""
+
+    level: int = logging.NOTSET
+    propagate: bool = True
+    disabled: bool = False
+    filters: tuple[Any, ...] = ()
+    handlers: tuple[logging.Handler, ...] = ()
+    formatters: tuple[logging.Formatter | None, ...] = ()
+
+    @classmethod
+    def capture(cls, lg: logging.Logger, exclude: logging.Handler | None = None) -> Self:
+        """Record the current state of ``lg``, leaving out the ``exclude`` handler."""
+        handlers = tuple(h for h in lg.handlers if h is not exclude)
+        return cls(
+            level=lg.level,
+            propagate=lg.propagate,
+            disabled=lg.disabled,
+            filters=tuple(lg.filters),
+            handlers=handlers,
+            formatters=tuple(h.formatter for h in handlers),
+        )
+
+    def restore(self, lg: logging.Logger, *extra_handlers: logging.Handler) -> None:
+        """Put ``lg`` back into the recorded state and attach ``extra_handlers``."""
+        lg.setLevel(self.level)
+        lg.propagate = self.propagate
+        lg.disabled = self.disabled
+        lg.filters[:] = self.filters
+        lg.handlers[:] = [*self.handlers, *extra_handlers]
+        for handler, formatter in zip(self.handlers, self.formatters, strict=True):
+            handler.setFormatter(formatter)
+
+
+@pytest.fixture
+def isolated_logging(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> Generator[None]:
+    """Reset init_logger's record of the applied config and undo any logging changes made by the test."""
+    root = logging.getLogger()
+    manager = logging.Logger.manager
+    # pytest attaches a new caplog handler to the root logger for each test phase, so this one must not be restored
+    root_state = LoggerState.capture(root, exclude=caplog.handler)
+    saved = {name: LoggerState.capture(lg) for name, lg in manager.loggerDict.items() if isinstance(lg, logging.Logger)}
+    monkeypatch.setattr(cdm_logger, "applied_key", None)
+
+    yield
+
+    loggers = {name: lg for name, lg in manager.loggerDict.items() if isinstance(lg, logging.Logger)}
+    known = {*root_state.handlers, caplog.handler, *(h for state in saved.values() for h in state.handlers)}
+    for lg in [root, *loggers.values()]:
+        for handler in lg.handlers:
+            if handler not in known:
+                handler.close()
+    root_state.restore(root, caplog.handler)
+    for name, lg in loggers.items():
+        saved.get(name, LoggerState()).restore(lg)

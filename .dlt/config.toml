@@ -1,10 +1,6 @@
 [normalize.data_writer]
 disable_compression = "false"
 
-[load]
-# do not raise an error if a job fails
-raise_on_failed_jobs = "false"
-
 [runtime]
 http_show_error_body = "true"
 log_level = "WARNING"
@@ -19,6 +15,9 @@ request_max_attempts = 10
 request_backoff_factor = 1.5
 # default: 300
 request_max_retry_delay = 600
+
+# do not raise an error if a job fails
+load.raise_on_failed_jobs = "false"
 
 [extract]
 workers = 10

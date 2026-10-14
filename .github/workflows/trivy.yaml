@@ -35,7 +35,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v7
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
             - name: Build an image from Dockerfile
               run: |
@@ -52,6 +52,6 @@ jobs:
                   timeout: 25m
 
             - name: Upload Trivy scan results to GitHub Security tab
-              uses: github/codeql-action/upload-sarif@v4
+              uses: github/codeql-action/upload-sarif@f0489abddd4e5e9dff53ed28a45b1d6f88978a1b
               with:
                   sarif_file: "trivy-results.sarif"
