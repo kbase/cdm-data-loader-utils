@@ -65,9 +65,9 @@ def settings_factory(tmp_path: Path, test_data_dir: Path) -> Callable[..., Xml2D
 
 
 def test_xml2db_settings_pass_defaults(settings_factory: Callable[..., Xml2DbSettings]) -> None:
-    """chunk_element_tag, xml2db_config_file default to None; chunk/compaction defaults are set."""
+    """xml_tag, xml2db_config_file default to None; chunk/compaction defaults are set."""
     settings = settings_factory()
-    assert settings.chunk_element_tag is None
+    assert settings.xml_tag is None
     assert settings.xml2db_config_file is None
     assert settings.chunk_size == DEFAULT_XML2DB_CHUNK_SIZE
     assert settings.compact_reused_tables is True
@@ -84,27 +84,27 @@ def test_xml2db_settings_pass_common_cts_defaults(settings_factory: Callable[...
 
 
 def test_xml2db_settings_pass_custom_chunk_settings(settings_factory: Callable[..., Xml2DbSettings]) -> None:
-    """chunk_element_tag and chunk_size accept custom values."""
+    """xml_tag and chunk_size accept custom values."""
     custom_chunk_size = 5
-    settings = settings_factory(chunk_element_tag="entry", chunk_size=custom_chunk_size)
-    assert settings.chunk_element_tag == "entry"
+    settings = settings_factory(xml_tag="entry", chunk_size=custom_chunk_size)
+    assert settings.xml_tag == "entry"
     assert settings.chunk_size == custom_chunk_size
 
 
-def test_xml2db_settings_pass_namespaced_chunk_element_tag(
+def test_xml2db_settings_pass_namespaced_xml_tag(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
-    """chunk_element_tag accepts a namespaced (Clark notation) tag."""
-    settings = settings_factory(chunk_element_tag="{http://uniprot.org/uniref}entry")
-    assert settings.chunk_element_tag == "{http://uniprot.org/uniref}entry"
+    """xml_tag accepts a namespaced (Clark notation) tag."""
+    settings = settings_factory(xml_tag="{http://uniprot.org/uniref}entry")
+    assert settings.xml_tag == "{http://uniprot.org/uniref}entry"
 
 
-def test_xml2db_settings_pass_empty_chunk_element_tag_rejected(
+def test_xml2db_settings_pass_empty_xml_tag_rejected(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
-    """An empty chunk_element_tag raises ValidationError."""
+    """An empty xml_tag raises ValidationError."""
     with pytest.raises(ValidationError):
-        settings_factory(chunk_element_tag="")
+        settings_factory(xml_tag="")
 
 
 def test_xml2db_settings_fail_non_positive_chunk_size(

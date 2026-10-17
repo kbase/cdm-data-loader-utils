@@ -32,7 +32,7 @@ class Xml2DbSettings(CtsSettings):
     xml2db loads an entire XML document into memory before it can be converted into rows, which
     risks OOM for very large files. If the files being imported follow the shape of a single root
     element directly followed by many repeated elements of one type (e.g. `<UniRef50><entry/>
-    ...<entry/></UniRef50>`), set `chunk_element_tag` to that repeated element's tag: the file will
+    ...<entry/></UniRef50>`), set `xml_tag` to that repeated element's tag: the file will
     then be streamed and parsed in bounded-size pieces of `chunk_size` elements at a time instead
     of all at once. See `cdm_data_loaders.readers.xml2db_doc.iter_xml2db_chunk_fragments` for the
     details and constraints of this mode. Note that xml2db's content-hash deduplication of
@@ -52,7 +52,7 @@ class Xml2DbSettings(CtsSettings):
     )
 
     buffer_size: BufferSize
-    chunk_element_tag: Annotated[
+    xml_tag: Annotated[
         NonEmptyStr | None,
         Field(
             default=None,
@@ -70,8 +70,7 @@ class Xml2DbSettings(CtsSettings):
         Field(
             default=DEFAULT_XML2DB_CHUNK_SIZE,
             description=(
-                "Maximum number of chunk_element_tag elements parsed by xml2db at a time when "
-                "chunk_element_tag is set. Ignored otherwise."
+                "Maximum number of xml_tag elements parsed by xml2db at a time when xml_tag is set. Ignored otherwise."
             ),
         ),
     ]

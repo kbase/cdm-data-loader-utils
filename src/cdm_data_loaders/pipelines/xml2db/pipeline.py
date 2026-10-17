@@ -77,7 +77,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
     """Run post-load compaction of "reused" tables, if configured and the run succeeded.
 
     xml2db's content-hash deduplication of "reused" tables only ever happens within a single
-    xml2db `Document` -- one per source file, or, when `settings.chunk_element_tag` is set, one
+    xml2db `Document` -- one per source file, or, when `settings.xml_tag` is set, one
     per chunk. Any run that parses more than one `Document` (multiple files, multiple chunks, or
     both) can leave literal duplicate rows behind in "reused" tables, so compaction runs
     regardless of whether chunking is enabled. Compaction rewrites files directly on the local

@@ -1,7 +1,7 @@
 """Post-load compaction for xml2db "reused" tables written to a filesystem destination.
 
 `cdm_data_loaders.readers.xml2db_doc.process_xml_file_with_xml2db` parses each source file --
-and, when chunked parsing is enabled (`Xml2DbSettings.chunk_element_tag`), each chunk within a
+and, when chunked parsing is enabled (`Xml2DbSettings.xml_tag`), each chunk within a
 file -- into its own independent xml2db `Document`. xml2db's content-hash deduplication of
 "reused" tables only ever happens *within* a single `Document`, so identical content parsed by
 two different `Document` instances -- two separate source files, two chunks of one file, or any

@@ -244,7 +244,7 @@ def make_load_info(dataset_name: str, has_failed_jobs: bool = False) -> LoadInfo
 
 def test_maybe_compact_pass_runs_when_chunked_and_enabled(tmp_path: Path, library_model: DataModel) -> None:
     """Compaction runs for a chunked, local_fs run with compact_reused_tables set."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
@@ -262,7 +262,7 @@ def test_maybe_compact_pass_runs_when_not_chunked_and_enabled(tmp_path: Path, li
 
     A multi-file unchunked run can leave the same kind of literal duplicate rows behind as a
     chunked one (one xml2db Document per file, same as one per chunk), so compaction is not
-    gated on chunk_element_tag being set.
+    gated on xml_tag being set.
     """
     settings = fake_settings(tmp_path, tmp_path / "library.xsd")
     load_info = make_load_info(settings.dataset_name)
@@ -279,7 +279,7 @@ def test_maybe_compact_pass_runs_when_not_chunked_and_enabled(tmp_path: Path, li
 
 def test_maybe_compact_pass_skipped_when_compact_reused_tables_false(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when compact_reused_tables is off, even for a chunked run."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book", compact_reused_tables=False)
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book", compact_reused_tables=False)
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
@@ -290,7 +290,7 @@ def test_maybe_compact_pass_skipped_when_compact_reused_tables_false(tmp_path: P
 
 def test_maybe_compact_pass_skipped_when_load_info_is_none(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when the pipeline run failed to start (load_info is None)."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
         xml2db_pipeline_module._maybe_compact(settings, library_model, None)  # noqa: SLF001
@@ -300,7 +300,7 @@ def test_maybe_compact_pass_skipped_when_load_info_is_none(tmp_path: Path, libra
 
 def test_maybe_compact_pass_skipped_when_run_has_failed_jobs(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when the load had failed jobs."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name, has_failed_jobs=True)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
@@ -314,7 +314,7 @@ def test_maybe_compact_pass_skipped_for_non_local_fs_destination(tmp_path: Path,
     settings = fake_settings(
         tmp_path,
         tmp_path / "library.xsd",
-        chunk_element_tag="book",
+        xml_tag="book",
         output_dir="s3://some-bucket/out",
         use_destination="s3",
     )
@@ -330,7 +330,7 @@ def test_maybe_compact_pass_logs_when_duplicates_removed(
     tmp_path: Path, library_model: DataModel, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A non-empty compaction result is logged."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables", return_value={"book": 3}):
