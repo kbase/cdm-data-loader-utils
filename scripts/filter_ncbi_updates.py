@@ -90,7 +90,7 @@ class Config(BaseSettings):
 
     @field_validator("mod_date", mode="before")
     @classmethod
-    def _parse_mod_date(cls, value: str):
+    def _parse_mod_date(cls, value: str) -> date:
         """Modification date parser."""
         if isinstance(value, date):
             return value
@@ -246,7 +246,7 @@ def batch(items: list[str], size: int) -> Iterable[list[str]]:
 
 
 def batch_count(n_items: int, batch_size: int) -> int:
-    """Count 'em batches and weep!"""
+    """Count 'em batches and weep."""
     return math.ceil(n_items / batch_size) if n_items else 0
 
 
