@@ -39,7 +39,7 @@ def test_xmltodict_reference_xml_as_jsonl_pass_matches_source(
         assert key in reference_xml_entries[0].get("entry", {})
 
 
-def test_xml_ingest_pass_reference_dataset_has_nested_structures(
+def test_xml_pass_reference_dataset_has_nested_structures(
     reference_xml_dataset: duckdb.DuckDBPyConnection,
 ) -> None:
     """The DuckDB reference stores nested JSON as STRUCT/LIST types, not JSON text columns."""
@@ -56,11 +56,11 @@ def test_xml_ingest_pass_reference_dataset_has_nested_structures(
     assert count == EXPECTED_ENTRY_COUNT
 
 
-def test_xml_ingest_pass_diff_format_same_results(run_xmltodict_pipeline: Callable[..., Any]) -> None:
+def test_xml_pass_diff_format_same_results(run_xmltodict_pipeline_fxt: Callable[..., Any]) -> None:
     """Ensure that the save format does not affect the output."""
     load_info_and_dir = {
         str(output_format): run_and_read(
-            run_xmltodict_pipeline,
+            run_xmltodict_pipeline_fxt,
             "chunk_20_el",
             loader_file_format=output_format,
         )
@@ -71,15 +71,18 @@ def test_xml_ingest_pass_diff_format_same_results(run_xmltodict_pipeline: Callab
 
 @pytest.mark.xfail(reason="not yet implemented")
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_xml_ingest_pass_nesting_levels(
-    run_xmltodict_pipeline: Callable[..., Any],
+def test_xml_pass_nesting_levels(
+    run_xmltodict_pipeline_fxt: Callable[..., Any],
     sorted_reference_xml_entries: list[str],
     loader_file_format: str,
 ) -> None:
     """Pipeline output matches the reference after reconstruction."""
     load_info_and_dir = {
         f"nesting_{option}": run_and_read(
-            run_xmltodict_pipeline, "chunk_20_el", loader_file_format=loader_file_format, preserve_table_nesting=option
+            run_xmltodict_pipeline_fxt,
+            "chunk_20_el",
+            loader_file_format=loader_file_format,
+            preserve_table_nesting=option,
         )
         for option in [True, False]
     }
@@ -97,12 +100,14 @@ def test_xml_ingest_pass_nesting_levels(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_xml_ingest_pass_output_identical_across_chunk_dirs(
-    run_xmltodict_pipeline: Callable[..., Any], sorted_reference_xml_entries: list[str], loader_file_format: str
+def test_xml_pass_output_identical_across_chunk_dirs(
+    run_xmltodict_pipeline_fxt: Callable[..., Any], sorted_reference_xml_entries: list[str], loader_file_format: str
 ) -> None:
     """Pipeline output is identical across all three chunk dirs and matches the reference."""
     load_info_and_dir = {
-        f"{key}_{loader_file_format}": run_and_read(run_xmltodict_pipeline, key, loader_file_format=loader_file_format)
+        f"{key}_{loader_file_format}": run_and_read(
+            run_xmltodict_pipeline_fxt, key, loader_file_format=loader_file_format
+        )
         for key in CHUNK_DIRS
     }
 
@@ -111,14 +116,14 @@ def test_xml_ingest_pass_output_identical_across_chunk_dirs(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_xml_ingest_pass_output_identical_across_buffer_sizes(
-    run_xmltodict_pipeline: Callable[..., Any], sorted_reference_xml_entries: list[str], loader_file_format: str
+def test_xml_pass_output_identical_across_buffer_sizes(
+    run_xmltodict_pipeline_fxt: Callable[..., Any], sorted_reference_xml_entries: list[str], loader_file_format: str
 ) -> None:
     """List buffer size does not affect pipeline output for any chunk dir."""
     for chunk_dir in CHUNK_DIRS:
         load_info_and_dir = {
             f"{buffer_size}_{loader_file_format}": run_and_read(
-                run_xmltodict_pipeline, chunk_dir, buffer_size=buffer_size, loader_file_format=loader_file_format
+                run_xmltodict_pipeline_fxt, chunk_dir, buffer_size=buffer_size, loader_file_format=loader_file_format
             )
             for buffer_size in BUFFER_SIZES
         }
@@ -132,9 +137,9 @@ def test_xml_ingest_pass_output_identical_across_buffer_sizes(
     ids=[f"extract_{e}-normalize_{n}-load_{l}" for e, n, l in WORKER_CONFIGS],  # noqa: E741
 )
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_xml_ingest_pass_no_data_lost_across_worker_configs(
+def test_xml_pass_no_data_lost_across_worker_configs(
     *,
-    run_xmltodict_pipeline: Callable[..., Any],
+    run_xmltodict_pipeline_fxt: Callable[..., Any],
     sorted_reference_xml_entries: list[str],
     extract_workers: int,
     normalize_workers: int,
@@ -155,7 +160,7 @@ def test_xml_ingest_pass_no_data_lost_across_worker_configs(
         )
         with dlt.config.values(worker_config):
             load_info_and_dir[worker_key] = run_and_read(
-                run_xmltodict_pipeline, "chunk_5_el", loader_file_format=loader_file_format
+                run_xmltodict_pipeline_fxt, "chunk_5_el", loader_file_format=loader_file_format
             )
 
     assert_datasets_equal(load_info_and_dir)
@@ -163,14 +168,14 @@ def test_xml_ingest_pass_no_data_lost_across_worker_configs(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_xml_ingest_pass_reconstructed_matches_duckdb_reference(
-    run_xmltodict_pipeline: Callable[..., Any],
+def test_xml_pass_reconstructed_matches_duckdb_reference(
+    run_xmltodict_pipeline_fxt: Callable[..., Any],
     reference_xml_dataset: duckdb.DuckDBPyConnection,
     loader_file_format: str,
 ) -> None:
     """Reconstructed pipeline entries equal the entries loaded from the DuckDB reference."""
     (load_info, output_dir) = run_and_read(
-        run_xmltodict_pipeline, "chunk_100_el", loader_file_format=loader_file_format
+        run_xmltodict_pipeline_fxt, "chunk_100_el", loader_file_format=loader_file_format
     )
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     reconstructed = reconstruct_entries(tables)

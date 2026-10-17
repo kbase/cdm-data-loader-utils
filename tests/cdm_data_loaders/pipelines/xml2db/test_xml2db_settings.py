@@ -64,7 +64,7 @@ def settings_factory(tmp_path: Path, test_data_dir: Path) -> Callable[..., Xml2D
     return _factory
 
 
-def test_xml2db_ingest_settings_pass_defaults(settings_factory: Callable[..., Xml2DbSettings]) -> None:
+def test_xml2db_settings_pass_defaults(settings_factory: Callable[..., Xml2DbSettings]) -> None:
     """chunk_element_tag, xml2db_config_file default to None; chunk/compaction defaults are set."""
     settings = settings_factory()
     assert settings.chunk_element_tag is None
@@ -76,14 +76,14 @@ def test_xml2db_ingest_settings_pass_defaults(settings_factory: Callable[..., Xm
     assert settings.file_glob == DEFAULTS["file_glob"] or settings.file_glob == "*.xml*"
 
 
-def test_xml2db_ingest_settings_pass_common_cts_defaults(settings_factory: Callable[..., Xml2DbSettings]) -> None:
+def test_xml2db_settings_pass_common_cts_defaults(settings_factory: Callable[..., Xml2DbSettings]) -> None:
     """buffer_size and log_interval default to the common CTS defaults."""
     settings = settings_factory()
     assert settings.buffer_size == DEFAULTS["buffer_size"]
     assert settings.log_interval == DEFAULTS["log_interval"]
 
 
-def test_xml2db_ingest_settings_pass_custom_chunk_settings(settings_factory: Callable[..., Xml2DbSettings]) -> None:
+def test_xml2db_settings_pass_custom_chunk_settings(settings_factory: Callable[..., Xml2DbSettings]) -> None:
     """chunk_element_tag and chunk_size accept custom values."""
     custom_chunk_size = 5
     settings = settings_factory(chunk_element_tag="entry", chunk_size=custom_chunk_size)
@@ -91,7 +91,7 @@ def test_xml2db_ingest_settings_pass_custom_chunk_settings(settings_factory: Cal
     assert settings.chunk_size == custom_chunk_size
 
 
-def test_xml2db_ingest_settings_pass_namespaced_chunk_element_tag(
+def test_xml2db_settings_pass_namespaced_chunk_element_tag(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """chunk_element_tag accepts a namespaced (Clark notation) tag."""
@@ -99,7 +99,7 @@ def test_xml2db_ingest_settings_pass_namespaced_chunk_element_tag(
     assert settings.chunk_element_tag == "{http://uniprot.org/uniref}entry"
 
 
-def test_xml2db_ingest_settings_pass_empty_chunk_element_tag_rejected(
+def test_xml2db_settings_pass_empty_chunk_element_tag_rejected(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """An empty chunk_element_tag raises ValidationError."""
@@ -107,7 +107,7 @@ def test_xml2db_ingest_settings_pass_empty_chunk_element_tag_rejected(
         settings_factory(chunk_element_tag="")
 
 
-def test_xml2db_ingest_settings_fail_non_positive_chunk_size(
+def test_xml2db_settings_fail_non_positive_chunk_size(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """chunk_size must be a positive integer."""
@@ -115,7 +115,7 @@ def test_xml2db_ingest_settings_fail_non_positive_chunk_size(
         settings_factory(chunk_size=0)
 
 
-def test_xml2db_ingest_settings_fail_non_positive_buffer_size(
+def test_xml2db_settings_fail_non_positive_buffer_size(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """buffer_size must be a positive integer."""
@@ -123,7 +123,7 @@ def test_xml2db_ingest_settings_fail_non_positive_buffer_size(
         settings_factory(buffer_size=0)
 
 
-def test_xml2db_ingest_settings_fail_non_positive_log_interval(
+def test_xml2db_settings_fail_non_positive_log_interval(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """log_interval must be a positive integer."""
@@ -131,7 +131,7 @@ def test_xml2db_ingest_settings_fail_non_positive_log_interval(
         settings_factory(log_interval=0)
 
 
-def test_xml2db_ingest_settings_fail_missing_dataset_name(
+def test_xml2db_settings_fail_missing_dataset_name(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """Omitting dataset_name raises ValidationError."""
@@ -139,13 +139,13 @@ def test_xml2db_ingest_settings_fail_missing_dataset_name(
         settings_factory(dataset_name=None)
 
 
-def test_xml2db_ingest_settings_fail_missing_xsd_file() -> None:
+def test_xml2db_settings_fail_missing_xsd_file() -> None:
     """Omitting xsd_file raises ValidationError."""
     with pytest.raises(ValidationError):
         Xml2DbSettings(**{**MINIMAL_SETTINGS_KWARGS, "xsd_file": None})
 
 
-def test_xml2db_ingest_settings_fail_xsd_file_not_found(
+def test_xml2db_settings_fail_xsd_file_not_found(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A supplied xsd_file that does not exist raises ValidationError naming the file."""
@@ -153,7 +153,7 @@ def test_xml2db_ingest_settings_fail_xsd_file_not_found(
         settings_factory(xsd_file="does_not_exist.xsd")
 
 
-def test_xml2db_ingest_settings_fail_xml2db_config_file_not_found(
+def test_xml2db_settings_fail_xml2db_config_file_not_found(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A supplied xml2db_config_file that does not exist raises ValidationError naming the file."""
@@ -161,7 +161,7 @@ def test_xml2db_ingest_settings_fail_xml2db_config_file_not_found(
         settings_factory(xml2db_config_file="does_not_exist.yaml")
 
 
-def test_xml2db_ingest_settings_pass_xml2db_config_file_accepted(
+def test_xml2db_settings_pass_xml2db_config_file_accepted(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A xml2db_config_file that exists is accepted and preserved."""
@@ -170,7 +170,7 @@ def test_xml2db_ingest_settings_pass_xml2db_config_file_accepted(
     assert settings.xml2db_config_file == config_path
 
 
-def test_xml2db_ingest_settings_pass_local_destination_with_s3_output_dir_accepted_at_construction(
+def test_xml2db_settings_pass_local_destination_with_s3_output_dir_accepted_at_construction(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """use_destination='local_fs' with an s3:// output_dir is accepted at construction.
@@ -182,7 +182,7 @@ def test_xml2db_ingest_settings_pass_local_destination_with_s3_output_dir_accept
     assert settings.output_is_local is False
 
 
-def test_xml2db_ingest_settings_pass_s3_destination_with_local_output_dir_accepted_at_construction(
+def test_xml2db_settings_pass_s3_destination_with_local_output_dir_accepted_at_construction(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """use_destination='s3' with a local output_dir is accepted at construction.
@@ -194,7 +194,7 @@ def test_xml2db_ingest_settings_pass_s3_destination_with_local_output_dir_accept
     assert settings.output_is_local is True
 
 
-def test_xml2db_ingest_settings_pass_unknown_use_destination_accepted_at_construction(
+def test_xml2db_settings_pass_unknown_use_destination_accepted_at_construction(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A use_destination not present in the dlt config is accepted at construction.
@@ -206,13 +206,13 @@ def test_xml2db_ingest_settings_pass_unknown_use_destination_accepted_at_constru
     assert settings.use_destination == "not_a_destination"
 
 
-def test_xml2db_ingest_settings_pass_pipeline_name_constant() -> None:
+def test_xml2db_settings_pass_pipeline_name_constant() -> None:
     """PIPELINE_NAME is the CLI program name and the dlt pipeline name."""
-    assert PIPELINE_NAME == "xml2db_ingest"
+    assert PIPELINE_NAME == "xml2db"
     assert Xml2DbSettings.model_config.get("cli_prog_name") == PIPELINE_NAME
 
 
-def test_xml2db_ingest_settings_pass_cli_shortcut_g_targets_file_glob(tmp_path: Path, test_data_dir: Path) -> None:
+def test_xml2db_settings_pass_cli_shortcut_g_targets_file_glob(tmp_path: Path, test_data_dir: Path) -> None:
     """The '-g' shortcut added on top of the shared shortcuts parses as file_glob."""
     input_dir = tmp_path / "input"
     input_dir.mkdir()

@@ -3,7 +3,7 @@
 from collections.abc import Generator, Iterator
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any
 
 import dlt
 from dlt.common.pipeline import LoadInfo
@@ -18,12 +18,6 @@ if TYPE_CHECKING:
     from dlt.extract import DltResource
 
 logger: Logger = getLogger(__name__)
-
-SCHEMA_CONTRACT: Final[dict[str, str]] = {
-    "tables": "evolve",
-    "columns": "evolve",
-    "data_type": "discard_row",
-}
 
 
 def _read_items(items: Iterator[FileItemDict], settings: XmlToDictSettings) -> Generator[TDataItems, Any, Any]:
@@ -40,7 +34,7 @@ def _read_items(items: Iterator[FileItemDict], settings: XmlToDictSettings) -> G
         yield from process_xml_file_to_dict(settings, file_path=Path(file_item.local_file_path))
 
 
-def run_xml_ingest_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
+def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     """Run the XML to dict pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -67,7 +61,7 @@ def run_xml_ingest_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
 
 def cli() -> LoadInfo | None:
     """Command-line entry point for the XML to dictionary pipeline."""
-    return run_cli(XmlToDictSettings, run_xml_ingest_pipeline)
+    return run_cli(XmlToDictSettings, run_xmltodict_pipeline)
 
 
 if __name__ == "__main__":

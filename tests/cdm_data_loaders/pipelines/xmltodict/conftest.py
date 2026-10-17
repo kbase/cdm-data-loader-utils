@@ -1,4 +1,4 @@
-"""Shared fixtures for xml_ingest pipeline tests."""
+"""Shared fixtures for xml pipeline tests."""
 
 from collections.abc import Callable
 from pathlib import Path
@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
+from tests.conftest import LOCAL_FS
 
 
 @pytest.fixture

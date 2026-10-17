@@ -21,7 +21,7 @@ from jsonschema.validators import validator_for
 from cdm_data_loaders.pipelines.core import run_cli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
-    run_registry_ingest,
+    run_registry,
 )
 from cdm_data_loaders.pipelines.jsonlines.base import (
     build_entity_resource as build_shared_entity_resource,
@@ -119,7 +119,7 @@ def build_entity_resource(
     return build_shared_entity_resource(table_name, settings, resolve_error=_make_resolve_error(schema))
 
 
-def run_jsonlines_ingest_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo | None:
+def run_jsonlines_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo | None:
     """Validate the registry and load requested tables using the shared runner.
 
     :param settings: pipeline configuration
@@ -129,7 +129,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlJsonschemaIngestSettings) -> Lo
     :rtype:  LoadInfo | None
     """
     table_to_schema = load_entity_schemas(settings.schema_files_module)
-    return run_registry_ingest(
+    return run_registry(
         settings,
         table_to_schema,
         build_resource=build_entity_resource,
@@ -140,7 +140,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlJsonschemaIngestSettings) -> Lo
 
 def cli() -> LoadInfo | None:
     """Run JSON Schema ingestion using the standard CTS command-line settings."""
-    return run_cli(JsonlJsonschemaIngestSettings, run_jsonlines_ingest_pipeline)
+    return run_cli(JsonlJsonschemaIngestSettings, run_jsonlines_pipeline)
 
 
 if __name__ == "__main__":

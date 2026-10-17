@@ -1,4 +1,4 @@
-"""Integration tests for the xml2db_ingest pipeline against the uniref reference dataset."""
+"""Integration tests for the xml2db pipeline against the uniref reference dataset."""
 
 import gzip
 import json
@@ -85,22 +85,22 @@ def run_and_reconstruct(run_pipeline: Callable[..., Any], chunk_dir: str, **over
     return reconstruct_xml2db_entries(tables)
 
 
-def test_xml2db_ingest_pass_reference_dataset_matches_xmltodict(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_reference_dataset_matches_xmltodict(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
     reference_xml_data_dir: Path,
 ) -> None:
     """Reconstructed entries from the xml2db pipeline match a direct xmltodict parse, 1:1."""
-    reconstructed = run_and_reconstruct(run_xml2db_pipeline, "chunk_100_el")
+    reconstructed = run_and_reconstruct(run_xml2db_pipeline_fxt, "chunk_100_el")
     assert len(reconstructed) == EXPECTED_ENTRY_COUNT
 
     reference = xmltodict_reference_entries(reference_xml_data_dir)
     assert sorted_json(reconstructed) == sorted_json(reference)
 
 
-def test_xml2db_ingest_pass_output_identical_across_chunk_dirs(run_xml2db_pipeline: Callable[..., Any]) -> None:
+def test_xml2db_pass_output_identical_across_chunk_dirs(run_xml2db_pipeline_fxt: Callable[..., Any]) -> None:
     """Splitting the same 100 entries across differently-sized file chunks does not change the result."""
     reconstructed_by_chunk = {
-        chunk_dir: run_and_reconstruct(run_xml2db_pipeline, chunk_dir) for chunk_dir in CHUNK_DIRS
+        chunk_dir: run_and_reconstruct(run_xml2db_pipeline_fxt, chunk_dir) for chunk_dir in CHUNK_DIRS
     }
 
     for chunk_dir, entries in reconstructed_by_chunk.items():
@@ -113,63 +113,61 @@ def test_xml2db_ingest_pass_output_identical_across_chunk_dirs(run_xml2db_pipeli
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_xml2db_ingest_pass_output_identical_across_loader_file_formats(
-    run_xml2db_pipeline: Callable[..., Any], loader_file_format: str
+def test_xml2db_pass_output_identical_across_loader_file_formats(
+    run_xml2db_pipeline_fxt: Callable[..., Any], loader_file_format: str
 ) -> None:
     """The save format (jsonl vs parquet) does not affect the reconstructed content."""
-    reconstructed = run_and_reconstruct(run_xml2db_pipeline, "chunk_20_el", loader_file_format=loader_file_format)
+    reconstructed = run_and_reconstruct(run_xml2db_pipeline_fxt, "chunk_20_el", loader_file_format=loader_file_format)
     assert len(reconstructed) == EXPECTED_ENTRY_COUNT
 
 
-def test_xml2db_ingest_pass_referential_integrity_across_merged_files(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_referential_integrity_across_merged_files(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Every foreign key in the merged, multi-file dataset resolves to a row in its target table."""
-    (load_info, output_dir) = run_xml2db_pipeline("chunk_5_el")
+    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_5_el")
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
     assert_uniref_referential_integrity(tables)
 
 
-# chunked parsing (chunk_element_tag / chunk_size)
+# chunked parsing (xml_tag / chunk_size)
 
 
 @pytest.mark.parametrize("chunk_size", [1, 7, 33])
-def test_xml2db_ingest_pass_chunked_reference_dataset_matches_xmltodict(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_chunked_reference_dataset_matches_xmltodict(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
     reference_xml_data_dir: Path,
     chunk_size: int,
 ) -> None:
-    """With chunk_element_tag set, the pipeline still reconstructs the same entries as xmltodict.
+    """With xml_tag set, the pipeline still reconstructs the same entries as xmltodict.
 
     Runs against the single 100-entry master file (one file, many chunks per file) with chunk
     sizes that don't evenly divide 100, to exercise remainder handling as well as multi-chunk
     behaviour.
     """
-    reconstructed = run_and_reconstruct(
-        run_xml2db_pipeline, "chunk_100_el", chunk_element_tag="entry", chunk_size=chunk_size
-    )
+    reconstructed = run_and_reconstruct(run_xml2db_pipeline_fxt, "chunk_100_el", xml_tag="entry", chunk_size=chunk_size)
     assert len(reconstructed) == EXPECTED_ENTRY_COUNT
 
     reference = xmltodict_reference_entries(reference_xml_data_dir)
     assert sorted_json(reconstructed) == sorted_json(reference)
 
 
-def test_xml2db_ingest_pass_chunked_output_matches_unchunked_output(run_xml2db_pipeline: Callable[..., Any]) -> None:
+def test_xml2db_pass_chunked_output_matches_unchunked_output(run_xml2db_pipeline_fxt: Callable[..., Any]) -> None:
     """Enabling chunking does not change the reconstructed content, only how it's parsed internally."""
-    unchunked = run_and_reconstruct(run_xml2db_pipeline, "chunk_5_el")
-    chunked = run_and_reconstruct(run_xml2db_pipeline, "chunk_5_el", chunk_element_tag="entry", chunk_size=2)
+    unchunked = run_and_reconstruct(run_xml2db_pipeline_fxt, "chunk_5_el")
+    chunked = run_and_reconstruct(run_xml2db_pipeline_fxt, "chunk_5_el", xml_tag="entry", chunk_size=2)
 
     assert len(chunked) == len(unchunked) == EXPECTED_ENTRY_COUNT
     assert sorted_json(chunked) == sorted_json(unchunked)
 
 
-def test_xml2db_ingest_pass_chunked_referential_integrity_across_files_and_chunks(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_chunked_referential_integrity_across_files_and_chunks(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Foreign keys still resolve correctly when both multiple files and multiple chunks per file are involved."""
-    (load_info, output_dir) = run_xml2db_pipeline("chunk_5_el", chunk_element_tag="entry", chunk_size=2)
+    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_5_el", xml_tag="entry", chunk_size=2)
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
@@ -179,16 +177,16 @@ def test_xml2db_ingest_pass_chunked_referential_integrity_across_files_and_chunk
 # post-load compaction (Xml2DbSettings.compact_reused_tables)
 
 
-def test_xml2db_ingest_pass_chunked_compaction_matches_unchunked_row_counts_exactly(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_chunked_compaction_matches_unchunked_row_counts_exactly(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Compacted chunked "reused" tables end up with the exact same row count as unchunked.
 
     Not just the same *content*, which the reconstruction-based tests above already establish,
     but the same physical row count, with no literal duplicates left over.
     """
-    (unchunked_info, unchunked_dir) = run_xml2db_pipeline("chunk_100_el")
-    (chunked_info, chunked_dir) = run_xml2db_pipeline("chunk_100_el", chunk_element_tag="entry", chunk_size=7)
+    (unchunked_info, unchunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el")
+    (chunked_info, chunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
     assert unchunked_info is not None
     assert chunked_info is not None
     assert not unchunked_info.has_failed_jobs
@@ -201,8 +199,8 @@ def test_xml2db_ingest_pass_chunked_compaction_matches_unchunked_row_counts_exac
         assert len(chunked_tables[table_name]) == len(unchunked_tables[table_name]), table_name
 
 
-def test_xml2db_ingest_pass_chunked_compaction_root_table_is_left_alone(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_chunked_compaction_root_table_is_left_alone(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """The root table is exempt from content-addressing, so compaction never touches it.
 
@@ -210,7 +208,7 @@ def test_xml2db_ingest_pass_chunked_compaction_root_table_is_left_alone(
     the kind of literal duplicate compaction removes, so it still gets one row per chunk after
     compaction runs, unlike property/representative_member.
     """
-    (load_info, output_dir) = run_xml2db_pipeline("chunk_100_el", chunk_element_tag="entry", chunk_size=7)
+    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
@@ -219,24 +217,24 @@ def test_xml2db_ingest_pass_chunked_compaction_root_table_is_left_alone(
     assert len(tables["uniref"]) == n_chunks
 
 
-def test_xml2db_ingest_pass_chunked_compaction_preserves_referential_integrity(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_chunked_compaction_preserves_referential_integrity(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Every foreign key still resolves after compaction has removed literal duplicate rows."""
-    (load_info, output_dir) = run_xml2db_pipeline("chunk_100_el", chunk_element_tag="entry", chunk_size=7)
+    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
     assert_uniref_referential_integrity(tables)
 
 
-def test_xml2db_ingest_pass_compact_reused_tables_false_keeps_literal_duplicates(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_compact_reused_tables_false_keeps_literal_duplicates(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Disabling compact_reused_tables leaves the literal duplicate rows chunking can produce."""
-    (unchunked_info, unchunked_dir) = run_xml2db_pipeline("chunk_100_el")
-    (chunked_info, chunked_dir) = run_xml2db_pipeline(
-        "chunk_100_el", chunk_element_tag="entry", chunk_size=7, compact_reused_tables=False
+    (unchunked_info, unchunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el")
+    (chunked_info, chunked_dir) = run_xml2db_pipeline_fxt(
+        "chunk_100_el", xml_tag="entry", chunk_size=7, compact_reused_tables=False
     )
     assert unchunked_info is not None
     assert chunked_info is not None
@@ -252,20 +250,20 @@ def test_xml2db_ingest_pass_compact_reused_tables_false_keeps_literal_duplicates
     }
 
 
-def test_xml2db_ingest_pass_compaction_dedupes_across_separate_unchunked_files(
-    run_xml2db_pipeline: Callable[..., Any],
+def test_xml2db_pass_compaction_dedupes_across_separate_unchunked_files(
+    run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """compact_reused_tables also dedupes across multiple separate files, not just chunks.
 
-    chunk_5_el splits the same 100 entries across 20 files with no chunk_element_tag set, so
+    chunk_5_el splits the same 100 entries across 20 files with no xml_tag set, so
     every file parses into its own xml2db Document. Content shared across files (e.g. common
     `property` values like protein names, which real UniRef data repeats heavily) gets the same
     content-addressed key (see `is_xml2db_content_addressed_table`) but still lands as separate
     literal duplicate rows until compaction merges them -- exactly the same failure mode as
     chunking, just from multiple files instead of multiple chunks of one file.
     """
-    (compacted_info, compacted_dir) = run_xml2db_pipeline("chunk_5_el")
-    (uncompacted_info, uncompacted_dir) = run_xml2db_pipeline("chunk_5_el", compact_reused_tables=False)
+    (compacted_info, compacted_dir) = run_xml2db_pipeline_fxt("chunk_5_el")
+    (uncompacted_info, uncompacted_dir) = run_xml2db_pipeline_fxt("chunk_5_el", compact_reused_tables=False)
     assert compacted_info is not None
     assert uncompacted_info is not None
     assert not compacted_info.has_failed_jobs

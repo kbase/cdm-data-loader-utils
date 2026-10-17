@@ -25,7 +25,7 @@ from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import (
     validate_jsonschema,
 )
 
-PIPELINE_NAME: Final[str] = "xsv_ingest"
+PIPELINE_NAME: Final[str] = "xsv"
 
 logger: Logger = getLogger(__name__)
 

@@ -451,7 +451,7 @@ def process_xml_file_with_xml2db(
         key into it is correct immediately. A chunked run may still contain more (never fewer)
         literal rows than an unchunked run, until something collapses same-keyed duplicates
         (e.g. `cdm_data_loaders.pipelines.xml2db.compaction.compact_reused_tables`, run
-        automatically by `run_xml2db_ingest_pipeline` when `Xml2DbSettings.compact_reused_tables`
+        automatically by `run_xml2db_pipeline` when `Xml2DbSettings.compact_reused_tables`
         is set). Many-to-many junction tables have no primary key of their own, so chunking never
         duplicates them either way.
     """

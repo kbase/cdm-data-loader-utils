@@ -1,4 +1,4 @@
-"""Unit tests for run_xml2db_ingest_pipeline, _read_items, _maybe_compact, and cli wiring."""
+"""Unit tests for run_xml2db_pipeline, _read_items, _maybe_compact, and cli wiring."""
 
 import gzip
 import sys
@@ -15,7 +15,7 @@ from dlt.extract import DltResource
 from xml2db import DataModel
 
 import cdm_data_loaders.pipelines.xml2db.pipeline as xml2db_pipeline_module
-from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml2db_ingest_pipeline
+from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
@@ -153,18 +153,18 @@ def test_read_items_pass_gzip_files_are_decompressed(tmp_path: Path, library_mod
     assert len(book_rows) == 2  # noqa: PLR2004
 
 
-# run_xml2db_ingest_pipeline
+# run_xml2db_pipeline
 
 
 @pytest.mark.parametrize("loader_file_format", ["jsonl", "parquet"])
-def test_run_xml2db_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
+def test_run_xml2db_pipeline_pass_sets_core_run_pipeline_args_correctly(
     tmp_path: Path, library_xsd: Path, loader_file_format: str
 ) -> None:
-    """run_xml2db_ingest_pipeline builds the reader and delegates to run_pipeline with correct args."""
+    """run_xml2db_pipeline builds the reader and delegates to run_pipeline with correct args."""
     settings = fake_settings(tmp_path, library_xsd, loader_file_format=loader_file_format)
 
     with patch.object(xml2db_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     assert mock_run_pipeline.call_count == 1
     _, kwargs = mock_run_pipeline.call_args
@@ -178,12 +178,12 @@ def test_run_xml2db_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
     assert isinstance(kwargs["resource"], DltResource)
 
 
-def test_run_xml2db_ingest_pipeline_pass_binds_reader_before_run_pipeline(tmp_path: Path, library_xsd: Path) -> None:
+def test_run_xml2db_pipeline_pass_binds_reader_before_run_pipeline(tmp_path: Path, library_xsd: Path) -> None:
     """The resource passed to run_pipeline is the bound reader piped into the filesystem source."""
     settings = fake_settings(tmp_path, library_xsd)
 
     with patch.object(xml2db_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_run_pipeline.assert_called_once()
     resource = mock_run_pipeline.call_args.kwargs["resource"]
@@ -191,7 +191,7 @@ def test_run_xml2db_ingest_pipeline_pass_binds_reader_before_run_pipeline(tmp_pa
     assert resource._pipe.parent.name == "filesystem"  # noqa: SLF001
 
 
-def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_short_name(
+def test_run_xml2db_pipeline_pass_builds_model_with_settings_schema_and_short_name(
     tmp_path: Path, library_xsd: Path
 ) -> None:
     """The DataModel is built from settings.xsd_file and settings.short_name."""
@@ -203,7 +203,7 @@ def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_s
         ) as mock_build,
         patch.object(xml2db_pipeline_module, "run_pipeline"),
     ):
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_build.assert_called_once()
     args, kwargs = mock_build.call_args
@@ -212,7 +212,7 @@ def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_s
     assert kwargs["model_config"] is None
 
 
-def test_run_xml2db_ingest_pipeline_pass_loads_model_config_from_xml2db_config_file(
+def test_run_xml2db_pipeline_pass_loads_model_config_from_xml2db_config_file(
     tmp_path: Path, library_xsd: Path
 ) -> None:
     """A settings.xml2db_config_file is loaded via xml2db.load_config and passed to the model."""
@@ -226,7 +226,7 @@ def test_run_xml2db_ingest_pipeline_pass_loads_model_config_from_xml2db_config_f
         ) as mock_build,
         patch.object(xml2db_pipeline_module, "run_pipeline"),
     ):
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_build.assert_called_once()
     _, kwargs = mock_build.call_args
@@ -345,12 +345,12 @@ def test_maybe_compact_pass_logs_when_duplicates_removed(
 
 
 def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
-    """cli() delegates to run_cli with Xml2DbSettings and run_xml2db_ingest_pipeline."""
+    """cli() delegates to run_cli with Xml2DbSettings and run_xml2db_pipeline."""
     with patch.object(xml2db_pipeline_module, "run_cli") as mock_run_cli:
         cli()
 
     mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (Xml2DbSettings, run_xml2db_ingest_pipeline)
+    assert mock_run_cli.call_args[0] == (Xml2DbSettings, run_xml2db_pipeline)
     assert mock_run_cli.call_args.kwargs == {}
 
 
@@ -370,7 +370,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}', encoding="utf-8")
 
     argv = [
-        "xml2db_ingest",
+        "xml2db",
         "--input-dir",
         str(input_dir),
         "--output-dir",

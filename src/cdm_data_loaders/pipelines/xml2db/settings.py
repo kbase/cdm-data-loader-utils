@@ -17,7 +17,7 @@ from cdm_data_loaders.core.fields import (
 )
 from cdm_data_loaders.core.settings import CLI_SHORTCUTS, CtsSettings, default_settings_with_shortcuts
 
-PIPELINE_NAME: Final[str] = "xml2db_ingest"
+PIPELINE_NAME: Final[str] = "xml2db"
 DEFAULT_XML2DB_SHORT_NAME: Final[str] = "xml2db"
 DEFAULT_XML2DB_CHUNK_SIZE: Final[int] = 1000
 

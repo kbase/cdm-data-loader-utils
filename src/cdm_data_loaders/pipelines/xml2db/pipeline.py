@@ -41,7 +41,7 @@ def _read_items(
         yield from process_xml_file_with_xml2db(settings, model, file_path=Path(file_item.local_file_path))
 
 
-def run_xml2db_ingest_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
+def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     """Run the xml2db pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -110,7 +110,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
 
 def cli() -> LoadInfo | None:
     """Command-line entry point for the xml2db pipeline."""
-    return run_cli(Xml2DbSettings, run_xml2db_ingest_pipeline)
+    return run_cli(Xml2DbSettings, run_xml2db_pipeline)
 
 
 if __name__ == "__main__":
