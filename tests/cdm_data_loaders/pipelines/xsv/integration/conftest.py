@@ -1,4 +1,4 @@
-"""Shared fixtures for xsv_ingest pipeline integration tests."""
+"""Shared fixtures for xsv pipeline integration tests."""
 
 import json
 import os

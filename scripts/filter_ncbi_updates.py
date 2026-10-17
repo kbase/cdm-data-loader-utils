@@ -1,5 +1,4 @@
-"""
-Generate lists of NCBI assembly IDs to be updated, filtered by RefSeq membership and a list of assemblies of interest.
+"""Generate lists of NCBI assembly IDs to be updated, filtered by RefSeq membership and a list of assemblies of interest.
 
 Update dates for the NCBI FTP site can be found in the file:
 https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/ftp_mod_times.txt.gz
@@ -91,7 +90,7 @@ class Config(BaseSettings):
 
     @field_validator("mod_date", mode="before")
     @classmethod
-    def _parse_mod_date(cls, value: str):
+    def _parse_mod_date(cls, value: str) -> date:
         """Modification date parser."""
         if isinstance(value, date):
             return value
@@ -171,8 +170,7 @@ def build_interesting_membership_mask(
     interesting_ids: set[str],
     filter_refseq: bool,  # noqa: FBT001
 ) -> pd.Series:
-    """
-    Decide which rows of parsed_df should be included in the filtered subset.
+    """Decide which rows of parsed_df should be included in the filtered subset.
 
     - GenBank rows are always required to be in interesting_ids.
     - RefSeq rows are required to be in interesting_ids only if filter_refseq is True;
@@ -248,7 +246,7 @@ def batch(items: list[str], size: int) -> Iterable[list[str]]:
 
 
 def batch_count(n_items: int, batch_size: int) -> int:
-    """Count 'em batches and weep!"""
+    """Count 'em batches and weep."""
     return math.ceil(n_items / batch_size) if n_items else 0
 
 

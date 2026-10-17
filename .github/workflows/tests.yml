@@ -40,6 +40,17 @@ jobs:
     name: Run container tests
     needs: code_format_and_lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        suite:
+          - name: spark
+            args: tests/cdm_data_loaders/utils
+          - name: integration
+            args: tests/integration
+          - name: pipelines
+            args: tests/cdm_data_loaders/pipelines
+          - name: all the rest
+            args: --ignore=tests/cdm_data_loaders/utils --ignore=tests/integration --ignore=tests/cdm_data_loaders/pipelines
 
     steps:
       - name: Checkout
@@ -53,7 +64,7 @@ jobs:
           echo "Running tests inside container..."
           # slightly nasty hack
           chmod 777 .
-          docker run --rm -e NB_USER=runner -v .:/tmp/cdm ghcr.io/kbasedatalakehouse/spark_notebook:main /bin/bash /tmp/cdm/scripts/run_tests.sh
+          docker run --rm -e NB_USER=runner -v .:/tmp/cdm ghcr.io/kbasedatalakehouse/spark_notebook:main /bin/bash /tmp/cdm/scripts/run_tests.sh ${{matrix.suite.args}}
 
       - name: Send to Codecov
         id: send_to_codecov

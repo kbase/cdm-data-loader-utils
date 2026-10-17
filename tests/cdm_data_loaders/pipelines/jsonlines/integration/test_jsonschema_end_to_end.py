@@ -11,7 +11,7 @@ import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import (
     cli,
-    run_jsonlines_ingest_pipeline,
+    run_jsonlines_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JSONSCHEMA_PIPELINE_NAME, JsonlJsonschemaIngestSettings
 from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, parse_json_string, read_data_rows
@@ -51,7 +51,7 @@ def read_data_tables(settings: JsonlJsonschemaIngestSettings, dataset_name: str)
 
 
 @pytest.mark.parametrize("buffer_size", [1, 2, 10], ids=["single-row", "partial-pages", "single-page"])
-def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
+def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
     schema_input_dir: Path,
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
     loader_file_format: str,
@@ -62,7 +62,7 @@ def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
         input_dir=str(schema_input_dir), loader_file_format=loader_file_format, buffer_size=buffer_size
     )
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -97,7 +97,7 @@ def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
     ]
 
 
-def test_run_jsonlines_ingest_pipeline_pass_all_invalid(
+def test_run_jsonlines_pipeline_pass_all_invalid(
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings], loader_file_format: str
 ) -> None:
     """An entirely invalid entity still produces its complete rejection table."""
@@ -106,7 +106,7 @@ def test_run_jsonlines_ingest_pipeline_pass_all_invalid(
     table_dir.mkdir()
     (table_dir / "invalid.jsonl").write_text(f"{MALFORMED_RAW}\n{TYPE_ERROR_RAW}", encoding="utf-8")
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs

@@ -24,9 +24,9 @@ from cdm_data_loaders.core.settings import (
     default_settings_with_shortcuts,
 )
 
-EXTRACT_PIPELINE_NAME: Final[str] = "jsonlines_ingest"
-PYDANTIC_PIPELINE_NAME: Final[str] = "jsonlines_ingest_pydantic_validator"
-JSONSCHEMA_PIPELINE_NAME: Final[str] = "jsonlines_ingest_jsonschema_validator"
+EXTRACT_PIPELINE_NAME: Final[str] = "jsonlines"
+PYDANTIC_PIPELINE_NAME: Final[str] = "jsonlines_pydantic_validator"
+JSONSCHEMA_PIPELINE_NAME: Final[str] = "jsonlines_jsonschema_validator"
 
 ENTITY_MODELS_MODULE: Final[str] = "entity_models_module"
 SCHEMA_FILES_MODULE: Final[str] = "schema_files_module"

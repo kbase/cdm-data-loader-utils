@@ -26,7 +26,7 @@ from cdm_data_loaders.core.settings import (
 )
 from cdm_data_loaders.readers.xsd import find_list_and_single_child_paths, load_schema
 
-PIPELINE_NAME: Final[str] = "xmltodict_ingest"
+PIPELINE_NAME: Final[str] = "xmltodict"
 
 logger: Logger = getLogger(__name__)
 

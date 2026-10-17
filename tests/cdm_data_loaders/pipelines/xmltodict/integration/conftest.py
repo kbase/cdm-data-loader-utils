@@ -1,4 +1,4 @@
-"""Shared fixtures for xml_ingest pipeline integration tests."""
+"""Shared fixtures for xml pipeline integration tests."""
 
 import gzip
 import json
@@ -13,7 +13,9 @@ import xmltodict
 from dlt.common.pipeline import LoadInfo
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.xmltodict.pipeline import run_xml_ingest_pipeline
+from cdm_data_loaders.pipelines.xmltodict.pipeline import (
+    run_xmltodict_pipeline,
+)
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from cdm_data_loaders.readers.xml import DEFAULT_XMLTODICT_ARGS
 from tests.conftest import N_REFERENCE_XML_ENTRIES, REFERENCE_XML_FIXTURE_DIR, REFERENCE_XML_TAG
@@ -157,7 +159,7 @@ def reference_xml_dataset(reference_xml_as_jsonl: Path) -> duckdb.DuckDBPyConnec
 
 
 @pytest.fixture
-def run_xmltodict_pipeline(
+def run_xmltodict_pipeline_fxt(
     tmp_path: Path,
     reference_xml_data_dir: Path,
     dlt_destination_config: str,
@@ -193,7 +195,7 @@ def run_xmltodict_pipeline(
         }
         kwargs.update(overrides)
         settings = XmlToDictSettings(**kwargs)
-        load_info: LoadInfo | None = run_xml_ingest_pipeline(settings)
+        load_info: LoadInfo | None = run_xmltodict_pipeline(settings)
         return (load_info, output_dir)
 
     return _factory

@@ -39,7 +39,7 @@ def jsonl_reader(items: Iterator[FileItemDict], settings: JsonlExtractSettings) 
     )
 
 
-def run_jsonlines_ingest_pipeline(settings: JsonlExtractSettings) -> LoadInfo | None:
+def run_jsonlines_pipeline(settings: JsonlExtractSettings) -> LoadInfo | None:
     """Run the JSONL pipeline.
 
     :param settings: pipeline configuration
@@ -66,7 +66,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlExtractSettings) -> LoadInfo | 
 
 def cli() -> LoadInfo | None:
     """Command-line entry point for the JSONL ingestion pipeline."""
-    return run_cli(JsonlExtractSettings, run_jsonlines_ingest_pipeline)
+    return run_cli(JsonlExtractSettings, run_jsonlines_pipeline)
 
 
 if __name__ == "__main__":

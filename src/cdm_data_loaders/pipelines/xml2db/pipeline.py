@@ -41,7 +41,7 @@ def _read_items(
         yield from process_xml_file_with_xml2db(settings, model, file_path=Path(file_item.local_file_path))
 
 
-def run_xml2db_ingest_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
+def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     """Run the xml2db pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -77,7 +77,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
     """Run post-load compaction of "reused" tables, if configured and the run succeeded.
 
     xml2db's content-hash deduplication of "reused" tables only ever happens within a single
-    xml2db `Document` -- one per source file, or, when `settings.chunk_element_tag` is set, one
+    xml2db `Document` -- one per source file, or, when `settings.xml_tag` is set, one
     per chunk. Any run that parses more than one `Document` (multiple files, multiple chunks, or
     both) can leave literal duplicate rows behind in "reused" tables, so compaction runs
     regardless of whether chunking is enabled. Compaction rewrites files directly on the local
@@ -110,7 +110,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
 
 def cli() -> LoadInfo | None:
     """Command-line entry point for the xml2db pipeline."""
-    return run_cli(Xml2DbSettings, run_xml2db_ingest_pipeline)
+    return run_cli(Xml2DbSettings, run_xml2db_pipeline)
 
 
 if __name__ == "__main__":

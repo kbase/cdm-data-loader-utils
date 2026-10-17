@@ -137,7 +137,7 @@ def xsv_reader(
         yield from _process_xsv_file(file_path, settings, work_paths)
 
 
-def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
+def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
     """Run the XSV ingestion pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -184,7 +184,7 @@ def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
 
 def cli() -> LoadInfo | None:
     """Command-line entry point for the XSV ingestion pipeline."""
-    return run_cli(XsvIngestSettings, run_xsv_ingest_pipeline)
+    return run_cli(XsvIngestSettings, run_xsv_pipeline)
 
 
 if __name__ == "__main__":

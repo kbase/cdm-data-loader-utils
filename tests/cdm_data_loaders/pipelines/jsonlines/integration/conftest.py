@@ -1,4 +1,4 @@
-"""Shared fixtures for jsonlines_ingest pipeline tests."""
+"""Shared fixtures for jsonlines pipeline tests."""
 
 import json
 from collections.abc import Callable, Generator
@@ -12,11 +12,11 @@ from dlt.common.pipeline import LoadInfo
 from pydantic import BaseModel
 
 from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import (
-    run_jsonlines_ingest_pipeline as run_jsonschema_pipeline,
+    run_jsonlines_pipeline as run_jsonschema_pipeline,
 )
-from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import run_jsonlines_ingest_pipeline
+from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import run_jsonlines_pipeline
 from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline import (
-    run_jsonlines_ingest_with_validation_pipeline,
+    run_jsonlines_with_validation_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import (
     JsonlExtractSettings,
@@ -62,8 +62,8 @@ def run_reference_pipeline(
         ),
     }[pipeline_kind]
     run_fn = {
-        "extract": run_jsonlines_ingest_pipeline,
-        "extract_validate": run_jsonlines_ingest_with_validation_pipeline,
+        "extract": run_jsonlines_pipeline,
+        "extract_validate": run_jsonlines_with_validation_pipeline,
         "extract_jsonschema_validate": run_jsonschema_pipeline,
     }[pipeline_kind]
 

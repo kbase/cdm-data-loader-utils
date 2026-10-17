@@ -35,7 +35,7 @@ def test_run_uniref_pipeline_args_set_correctly(test_settings: UnirefSettings) -
     _, kwargs = mock_run_pipeline.call_args
     assert kwargs.keys() == {"settings", "resource", "pipeline_kwargs"}
     assert kwargs["pipeline_kwargs"] == {
-        "pipeline_name": "uniprot_kb",
+        "pipeline_name": "uniref",
         "dataset_name": f"uniref_{test_settings.variant}",
     }
     assert kwargs["settings"] == test_settings
@@ -60,7 +60,7 @@ def test_run_uniref_pipeline_sets_core_run_pipeline_args_correctly(
     mock_dlt.destination.assert_called_once_with(test_settings.use_destination, bucket_url=test_settings.output_dir)
     mock_dlt.pipeline.assert_called_once_with(
         destination=mock_dlt.destination.return_value,
-        pipeline_name="uniprot_kb",
+        pipeline_name="uniref",
         dataset_name=f"uniref_{test_settings.variant}",
     )
     first_run, load_info_save_run = mock_dlt.pipeline.return_value.run.call_args_list

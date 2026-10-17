@@ -90,7 +90,7 @@ def test_jsonlines_reference_jsonl_pass_matches_source(
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
 @pytest.mark.parametrize("source_dir", CHUNK_DIRS, ids=str)
-def test_jsonlines_ingest_pass_ingested_dataset_matches_reference(
+def test_jsonlines_passed_dataset_matches_reference(
     run_reference_pipeline: Callable[..., Any],
     source_dir: str,
     loader_file_format: str,
@@ -111,7 +111,7 @@ def test_jsonlines_ingest_pass_ingested_dataset_matches_reference(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_output_identical_across_chunk_dirs(
+def test_jsonlines_pass_output_identical_across_chunk_dirs(
     run_reference_pipeline: Callable[..., Any], sorted_reference_entities: list[str], loader_file_format: str
 ) -> None:
     """Pipeline output is identical across all three chunk dirs and matches the reference."""
@@ -130,7 +130,7 @@ def test_jsonlines_ingest_pass_output_identical_across_chunk_dirs(
     )
 
 
-def test_jsonlines_ingest_pass_reference_dataset_has_nested_structures(
+def test_jsonlines_pass_reference_dataset_has_nested_structures(
     reference_dataset: duckdb.DuckDBPyConnection,
 ) -> None:
     """The DuckDB reference stores nested JSON as STRUCT/LIST types, not JSON text columns."""
@@ -152,7 +152,7 @@ def test_jsonlines_ingest_pass_reference_dataset_has_nested_structures(
     assert count == (EXPECTED_ENTRY_COUNT,)
 
 
-def test_jsonlines_ingest_pass_diff_format_same_results(
+def test_jsonlines_pass_diff_format_same_results(
     run_reference_pipeline: Callable[..., Any], sorted_reference_entities: list[str]
 ) -> None:
     """Ensure that the save format does not affect the output."""
@@ -175,7 +175,7 @@ def test_jsonlines_ingest_pass_diff_format_same_results(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_output_identical_across_buffer_sizes(
+def test_jsonlines_pass_output_identical_across_buffer_sizes(
     run_reference_pipeline: Callable[..., Any], sorted_reference_entities: list[str], loader_file_format: str
 ) -> None:
     """List buffer size does not affect pipeline output for any chunk dir."""
@@ -203,7 +203,7 @@ def test_jsonlines_ingest_pass_output_identical_across_buffer_sizes(
     ids=[f"extract_{extract}-normalize_{normalize}-load_{load}" for extract, normalize, load in WORKER_CONFIGS],
 )
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_no_data_lost_across_worker_configs(
+def test_jsonlines_pass_no_data_lost_across_worker_configs(
     *,
     run_reference_pipeline: Callable[..., Any],
     sorted_reference_entities: list[str],
@@ -235,7 +235,7 @@ def test_jsonlines_ingest_pass_no_data_lost_across_worker_configs(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_reconstructed_matches_duckdb_reference(
+def test_jsonlines_pass_reconstructed_matches_duckdb_reference(
     run_reference_pipeline: Callable[..., Any],
     reference_dataset: duckdb.DuckDBPyConnection,
     loader_file_format: str,
@@ -258,7 +258,7 @@ def test_jsonlines_ingest_pass_reconstructed_matches_duckdb_reference(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_gzip_input_matches_plain_text(
+def test_jsonlines_pass_gzip_input_matches_plain_text(
     *,
     run_reference_pipeline: Callable[..., Any],
     tmp_path: Path,
@@ -285,7 +285,7 @@ def test_jsonlines_ingest_pass_gzip_input_matches_plain_text(
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-def test_jsonlines_ingest_pass_nesting_matches_pipeline_contract(
+def test_jsonlines_pass_nesting_matches_pipeline_contract(
     run_reference_pipeline: Callable[..., Any],
     pipeline_kind: str,
     loader_file_format: str,

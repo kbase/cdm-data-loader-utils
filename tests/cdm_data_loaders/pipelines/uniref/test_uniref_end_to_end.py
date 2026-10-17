@@ -143,7 +143,7 @@ def test_integration_cli_uniref_pipeline_output_validated(
         """Replacement for core.run_pipeline that runs the resource through DuckDB."""
         assert settings is duckdb_uniref_settings
         assert pipeline_kwargs == {
-            "pipeline_name": "uniprot_kb",
+            "pipeline_name": "uniref",
             "dataset_name": f"uniref_{duckdb_uniref_settings.variant}",
         }
         pipeline = duckdb_pipeline(
