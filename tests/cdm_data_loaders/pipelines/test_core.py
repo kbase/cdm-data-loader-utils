@@ -12,10 +12,7 @@ from unittest.mock import MagicMock, call, patch
 
 import dlt
 import pytest
-from dlt.common.destination.exceptions import DestinationTerminalException
 from dlt.common.pipeline import LoadInfo
-from dlt.common.schema.typing import TTableSchema
-from dlt.common.typing import TDataItems
 from dlt.extract.resource import DltResource
 from pydantic import ValidationError
 from pydantic_settings import SettingsError
@@ -35,7 +32,6 @@ from cdm_data_loaders.pipelines.core import (
     send_slack_message_carefully,
 )
 from tests.cdm_data_loaders.core.conftest import TEST_CTS_SETTINGS
-from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
 from tests.dlt_config_isolation import dlt_config_unset, isolated_dlt_config
 
 TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [

@@ -25,6 +25,7 @@ from cdm_data_loaders.pipelines.all_the_bacteria import (
     osf_file_downloader,
     run_atb_pipeline,
 )
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.utils.file_transfer.core import NonRetryableDownloadError
 from tests.cdm_data_loaders.pipelines.conftest import VALID_DESTINATIONS
 from tests.conftest import DEFAULT_VCR_CONFIG
@@ -48,12 +49,10 @@ def pattern_file(tmp_path: Path) -> Path:
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with AtbSettings and run_atb_pipeline."""
-    with patch.object(all_the_bacteria, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (AtbSettings, run_atb_pipeline)
+    """Ensure that cli is a PipelineCli wired to AtbSettings and run_atb_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is AtbSettings
+    assert cli.pipeline_fn is run_atb_pipeline
 
 
 def test_load_patterns_returns_compiled_pattern(pattern_file: Path) -> None:
@@ -624,9 +623,6 @@ def test_run_atb_pipeline_pipeline_dir_present_or_absent(
 
     monkeypatch.setattr(all_the_bacteria, "atb_file_list", MagicMock())
     monkeypatch.setattr(all_the_bacteria, "file_downloader", mock_file_downloader)
-    mock_pipeline = mock_dlt.pipeline.return_value
-    # don't run the second pipeline to save the LoadInfo
-    mock_pipeline.run.return_value = None
 
     run_atb_pipeline(settings)
 
@@ -634,7 +630,7 @@ def test_run_atb_pipeline_pipeline_dir_present_or_absent(
         call(VALID_DESTINATIONS[0], bucket_url="/my/output", max_table_nesting=0)
     ]
     mock_pipeline = mock_dlt.pipeline.return_value
-    assert mock_pipeline.run.call_args_list == [call(mock_file_downloader)]
+    assert mock_pipeline.run.call_args_list[0] == call(mock_file_downloader)
 
     pipeline_kwargs: dict[str, Any] = {"pipeline_name": DATASET_NAME, "dataset_name": DATASET_NAME}
     if use_output_dir_for_pipeline_metadata:

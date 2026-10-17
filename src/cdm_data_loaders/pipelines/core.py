@@ -194,7 +194,11 @@ def run_pipeline(  # noqa: PLR0913, PLR0917
         pipeline_kwargs["dev_mode"] = settings.dlt_dev_mode
 
     if destination is None:
-        destination = dlt.destination(settings.use_destination, **(destination_kwargs or {}))
+        # the settings output_dir is resolved against the config by run_cli / resolve_cts_settings,
+        # so it takes precedence over the destination block's default bucket_url
+        destination = dlt.destination(
+            settings.use_destination, bucket_url=settings.output_dir, **(destination_kwargs or {})
+        )
 
     pipeline = dlt.pipeline(destination=destination, **pipeline_kwargs)
 
