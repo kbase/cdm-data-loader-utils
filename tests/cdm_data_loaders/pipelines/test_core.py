@@ -2,16 +2,22 @@
 
 import gzip
 import logging
-from collections.abc import Iterator
+import sys
+from collections.abc import Callable, Iterator
+from dataclasses import FrozenInstanceError
 from json import loads
 from pathlib import Path
-from typing import Any, Final
-from unittest.mock import MagicMock, patch
+from typing import Any, Final, cast
+from unittest.mock import MagicMock, call, patch
 
 import dlt
 import pytest
+from dlt.common.destination.exceptions import DestinationTerminalException
 from dlt.common.pipeline import LoadInfo
+from dlt.common.schema.typing import TTableSchema
+from dlt.common.typing import TDataItems
 from dlt.extract.resource import DltResource
+from pydantic import ValidationError
 from pydantic_settings import SettingsError
 from requests import RequestException
 
@@ -22,12 +28,14 @@ from cdm_data_loaders.pipelines.core import (
     LOAD_INFO_TABLE_NAME,
     NO_MESSAGE,
     WEBHOOK_NOT_CONFIGURED,
+    PipelineCli,
     resolve_cts_settings,
     run_cli,
     run_pipeline,
     send_slack_message_carefully,
 )
 from tests.cdm_data_loaders.core.conftest import TEST_CTS_SETTINGS
+from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
 from tests.dlt_config_isolation import dlt_config_unset, isolated_dlt_config
 
 TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [
@@ -36,6 +44,9 @@ TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [
 ]
 TINY_PIPELINE_NAME: Final[str] = "test_core_tiny_pipeline"
 TINY_TABLE_NAME: Final[str] = "tiny"
+WORK_COMPLETE: Final[str] = "Work complete!"
+LOAD_INFO_SAVE_FAILED: Final[str] = "Loading pipeline load info failed: "
+LOAD_INFO_SAVE_FAILED_JOBS: Final[str] = "Loading pipeline load info had failed jobs: "
 
 SETTINGS_CLASSES: Final[list[type[CtsSettings]]] = [LoggerSettings, InputOutputSettings, CtsSettings]
 
@@ -104,6 +115,17 @@ def read_output_jsonl_records(settings: CtsSettings) -> list[dict[str, Any]]:
         records.extend(loads(record) for record in content.splitlines() if record)
     assert records
     return [{key: value for key, value in record.items() if not key.startswith("_dlt")} for record in records]
+
+
+def make_mock_pipeline(save_run_result: object, slack_hook: str | None = None) -> MagicMock:
+    """A mock dlt pipeline: the first run returns an entity load info; the second returns or raises save_run_result."""
+    pipeline = MagicMock()
+    pipeline.runtime_config.slack_incoming_hook = slack_hook
+    entity_load_info = MagicMock()
+    entity_load_info.has_failed_jobs = False
+    entity_load_info.asdict.return_value = {"loads_ids": ["1.0"]}
+    pipeline.run.side_effect = [entity_load_info, save_run_result]
+    return pipeline
 
 
 @pytest.fixture
@@ -745,56 +767,76 @@ def test_run_pipeline_load_info_returns_original_import_result(
     assert load_info.dataset_name == rows[0]["dataset_name"]
 
 
-def test_run_pipeline_load_info_save_resource_error_returns_none(
+def test_run_pipeline_load_info_save_resource_error_still_returns_load_info(
     dlt_test_settings: CtsSettings,
+    monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """An error saving the load_info is caught: run_pipeline logs and returns None."""
-    # dlt.resource on the module under test raises when the load_info save step
-    # builds its resource: the entity data has already been loaded by then
+    """An error building the load_info resource is logged; the entity load_info is still returned."""
     real_resource = core.dlt.resource
 
-    def resource_boom(*args: Any, **kwargs: Any) -> Any:
+    def resource_boom(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         if kwargs.get("name") == LOAD_INFO_TABLE_NAME:
             err_msg = "load info save failed"
             raise RuntimeError(err_msg)
         return real_resource(*args, **kwargs)
 
-    monkeypatch = pytest.MonkeyPatch()
-    with monkeypatch.context() as patch_context:
-        patch_context.setattr(core.dlt, "resource", resource_boom)
-        load_info = run_pipeline(dlt_test_settings, tiny_resource())
-    monkeypatch.undo()
+    resource = tiny_resource()
+    monkeypatch.setattr(core.dlt, "resource", resource_boom)
+    load_info = run_pipeline(dlt_test_settings, resource)
 
-    assert load_info is None
-    assert caplog.records[-1].levelno == logging.ERROR
-    assert caplog.records[-1].getMessage().startswith("Pipeline failed: ")
-    assert "load info save failed" in caplog.records[-1].getMessage()
-    for record in caplog.records:
-        assert not record.getMessage().startswith("Work complete")
+    assert load_info is not None
+    assert not load_info.has_failed_jobs
+    assert read_output_jsonl_records(dlt_test_settings) == TINY_RESOURCE_DATA
+    assert read_load_info_jsonl_rows(dlt_test_settings) == []
+    error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
+    assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}load info save failed"]
+    assert caplog.records[-1].getMessage() == WORK_COMPLETE
 
 
-def test_run_pipeline_load_info_save_pipeline_run_error_returns_none(
+@pytest.mark.parametrize("slack_configured", [True, False])
+def test_run_pipeline_load_info_save_run_error_still_returns_load_info(
     dlt_test_settings: CtsSettings,
+    careful_slack_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
+    *,
+    slack_configured: bool,
 ) -> None:
-    """A failure in the save pipeline's run() is caught: run_pipeline logs and returns None."""
-    mock_pipeline = MagicMock()
-    mock_pipeline.runtime_config.slack_incoming_hook = None
-    entity_load_info = MagicMock()
-    entity_load_info.has_failed_jobs = False
-    entity_load_info.loads_ids = ["1.0"]
-    entity_load_info.asdict.return_value = {"loads_ids": ["1.0"]}
-    mock_pipeline.run.side_effect = [entity_load_info, RuntimeError("save pipeline boom")]
+    """A failure in the save run is logged; the entity load_info is returned and only the success slack is sent."""
+    slack_hook = SLACK_HOOK if slack_configured else None
+    mock_pipeline = make_mock_pipeline(RuntimeError("save pipeline boom"), slack_hook)
     with patch.object(core.dlt, "pipeline", return_value=mock_pipeline):
         load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
-    assert load_info is None
-    assert caplog.records[-1].levelno == logging.ERROR
-    assert caplog.records[-1].getMessage().startswith("Pipeline failed: ")
-    assert "save pipeline boom" in caplog.records[-1].getMessage()
-    for record in caplog.records:
-        assert not record.getMessage().startswith("Work complete")
+    assert load_info is not None
+    assert load_info.asdict.return_value == {"loads_ids": ["1.0"]}
+    error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
+    assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}save pipeline boom"]
+    assert caplog.records[-1].getMessage() == WORK_COMPLETE
+    if slack_configured:
+        careful_slack_mock.assert_called_once_with(SLACK_HOOK, "Pipeline completed successfully!")
+    else:
+        careful_slack_mock.assert_not_called()
+
+
+def test_run_pipeline_load_info_save_failed_jobs_logged(
+    dlt_test_settings: CtsSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Failed jobs in the save run are logged as an error; the entity load_info is still returned."""
+    save_info = MagicMock()
+    save_info.has_failed_jobs = True
+    save_info.__str__.return_value = "save info with failed jobs"
+    mock_pipeline = make_mock_pipeline(save_info)
+    with patch.object(core.dlt, "pipeline", return_value=mock_pipeline):
+        load_info = run_pipeline(dlt_test_settings, tiny_resource())
+
+    assert load_info is not None
+    assert load_info is not save_info
+    assert load_info.asdict.return_value == {"loads_ids": ["1.0"]}
+    error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
+    assert error_messages == [f"{LOAD_INFO_SAVE_FAILED_JOBS}save info with failed jobs"]
+    assert caplog.records[-1].getMessage() == WORK_COMPLETE
 
 
 def test_run_pipeline_load_info_save_run_mock_shape(
@@ -810,3 +852,110 @@ def test_run_pipeline_load_info_save_run_mock_shape(
     assert first_call.args[0] is not None
     assert save_call.args[0] is not None
     assert save_call.kwargs == {"loader_file_format": "jsonl"}
+
+
+# send_slack_message_carefully: blank inputs, stripping and error propagation
+
+
+@pytest.mark.parametrize(
+    ("slack_hook", "message", "reason"),
+    [
+        pytest.param(None, TEST_MESSAGE, WEBHOOK_NOT_CONFIGURED, id="hook_none"),
+        pytest.param(SLACK_HOOK, "   ", NO_MESSAGE, id="message_spaces"),
+        pytest.param(SLACK_HOOK, "\n\t", NO_MESSAGE, id="message_newline_tab"),
+    ],
+)
+def test_send_slack_message_carefully_fail_blank_inputs(
+    slack_hook: str | None,
+    message: str,
+    reason: str,
+    slack_mock: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A missing hook or a blank message logs exactly one warning and sends nothing."""
+    send_slack_message_carefully(slack_hook, message)  # pyright: ignore[reportArgumentType]
+    slack_mock.assert_not_called()
+    assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
+        (logging.WARNING, f"Cannot send slack message: {reason}")
+    ]
+
+
+@pytest.mark.parametrize("is_markdown", [pytest.param(True, id="markdown"), pytest.param(False, id="plain")])
+def test_send_slack_message_carefully_pass_strips_message(is_markdown: bool, slack_mock: MagicMock) -> None:
+    """The message is stripped and sent once, with the is_markdown flag passed through."""
+    send_slack_message_carefully(SLACK_HOOK, f"  {TEST_MESSAGE} \n", is_markdown=is_markdown)
+    assert slack_mock.call_args_list == [call(SLACK_HOOK, TEST_MESSAGE, is_markdown)]
+
+
+def test_send_slack_message_carefully_fail_other_errors_propagate(
+    slack_mock: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Any error from the Slack sender is caught and logged as an error."""
+    slack_mock.side_effect = ValueError("bad payload")
+    send_slack_message_carefully(SLACK_HOOK, TEST_MESSAGE)
+    assert [(record.levelno, record.getMessage()) for record in caplog.records] == [
+        (logging.ERROR, "Failed to send slack message")
+    ]
+
+
+# PipelineCli
+
+RUN_RESULT: Final[LoadInfo] = cast("LoadInfo", object())
+
+
+def make_recorder() -> tuple[list[CtsSettings], Callable[[CtsSettings], LoadInfo | None]]:
+    """A pipeline function that records the settings it gets and returns RUN_RESULT."""
+    received: list[CtsSettings] = []
+
+    def pipeline_fn(settings: CtsSettings) -> LoadInfo | None:
+        received.append(settings)
+        return RUN_RESULT
+
+    return received, pipeline_fn
+
+
+@pytest.mark.usefixtures("restore_logging")
+def test_pipeline_cli_pass_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """run() builds settings from cli_args, env vars and kwargs, then returns the pipeline function's result."""
+    received, pipeline_fn = make_recorder()
+    monkeypatch.setenv("CDL_DLT_DEV_MODE", "true")
+    result = PipelineCli(CtsSettings, pipeline_fn).run(
+        cli_args=["-i", str(tmp_path), "-o", str(tmp_path / "out"), "-d", LOCAL_FS, "--buffer-size", "7"],
+        log_interval=3,
+    )
+    assert result is RUN_RESULT
+    assert [(s.input_dir, s.buffer_size, s.log_interval, s.dlt_dev_mode) for s in received] == [
+        (str(tmp_path), 7, 3, True)
+    ]
+
+
+@pytest.mark.usefixtures("restore_logging")
+def test_pipeline_cli_pass_call_reads_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Calling the CLI parses sys.argv, runs the pipeline and returns None so the process exits with 0."""
+    received, pipeline_fn = make_recorder()
+    monkeypatch.setattr(sys, "argv", ["prog", "-i", str(tmp_path), "-o", str(tmp_path / "out"), "-d", LOCAL_FS])
+    assert PipelineCli(CtsSettings, pipeline_fn)() is None
+    assert [s.input_dir for s in received] == [str(tmp_path)]
+
+
+@pytest.mark.parametrize(
+    "cli_args",
+    [
+        pytest.param(["--buffer-size", "0"], id="invalid_value"),
+        pytest.param(["-o", "s3://remote/bucket", "-p", "true"], id="remote_metadata_output_dir"),
+    ],
+)
+def test_pipeline_cli_fail_invalid_settings(cli_args: list[str]) -> None:
+    """Invalid settings raise before the pipeline function is called."""
+    received, pipeline_fn = make_recorder()
+    with pytest.raises((SettingsError, ValidationError)):
+        PipelineCli(CtsSettings, pipeline_fn).run(cli_args=cli_args)
+    assert received == []
+
+
+def test_pipeline_cli_fail_frozen() -> None:
+    """PipelineCli instances cannot be changed after creation."""
+    _, pipeline_fn = make_recorder()
+    pipeline_cli = PipelineCli(CtsSettings, pipeline_fn)
+    with pytest.raises(FrozenInstanceError):
+        pipeline_cli.settings_cls = LoggerSettings  # pyright: ignore[reportAttributeAccessIssue]

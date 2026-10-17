@@ -7,6 +7,7 @@ import pytest
 
 from cdm_data_loaders.parsers.uniprot.uniprot_kb import ENTRY_XML_TAG
 from cdm_data_loaders.pipelines import uniprot_kb as uniprot_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.uniprot_kb import (
     UniProtSettings,
     cli,
@@ -16,13 +17,10 @@ from cdm_data_loaders.pipelines.uniprot_kb import (
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with UniProtSettings and the UniProt log_interval default."""
-    with patch.object(uniprot_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (UniProtSettings, run_uniprot_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Ensure that cli is a PipelineCli wired to UniProtSettings and run_uniprot_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is UniProtSettings
+    assert cli.pipeline_fn is run_uniprot_pipeline
 
 
 # Tests for running the pipeline itself

@@ -305,7 +305,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
         "extract_validate": validate_cli,
         "extract_jsonschema_validate": jsonschema_cli,
     }[pipeline_kind]
-    load_info = cli()
+    load_info = cli.run()
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)

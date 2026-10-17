@@ -1,6 +1,7 @@
 """Common reusable pipeline elements."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from logging import Logger, getLogger
 from typing import Any, Final, TypeVar
 
@@ -9,10 +10,10 @@ from dlt.common.destination.reference import TDestinationReferenceArg
 from dlt.common.pipeline import LoadInfo
 from dlt.common.runtime.slack import send_slack_message
 from dlt.extract import DltResource
+from dlt.pipeline.exceptions import PipelineStepFailed
 from dlt.sources.filesystem import filesystem
 from pydantic import ValidationError
 from pydantic_settings import CliApp, SettingsError
-from requests import RequestException
 
 from cdm_data_loaders.core.destination import ConfigLookup, destinations_from_dlt_config, resolve_output_dir
 from cdm_data_loaders.core.fields import JSONL, OUTPUT_DIR
@@ -33,7 +34,27 @@ CtsSettingsT = TypeVar("CtsSettingsT", bound=CtsSettings)
 logger: Logger = getLogger(__name__)
 
 
-def send_slack_message_carefully(slack_hook: str, message: str, is_markdown: bool = False) -> None:  # noqa: FBT001, FBT002
+@dataclass(frozen=True, slots=True)
+class PipelineCli[S: LoggerSettings]:
+    """Console-script entry point for a pipeline; ``run`` returns the LoadInfo."""
+
+    settings_cls: type[S]
+    pipeline_fn: Callable[[S], LoadInfo | None]
+
+    def __call__(self) -> None:
+        """Parse sys.argv and run the pipeline. Returns None so the process exits with 0."""
+        self.run()
+
+    def run(self, cli_args: list[str] | None = None, **settings_kwargs: Any) -> LoadInfo | None:
+        """Parse ``cli_args`` (default ``sys.argv[1:]``), run the pipeline and return its LoadInfo."""
+        return run_cli(self.settings_cls, self.pipeline_fn, settings_kwargs, cli_args)
+
+
+def send_slack_message_carefully(
+    slack_hook: str,
+    message: str,
+    is_markdown: bool = False,  # noqa: FBT001, FBT002
+) -> None:
     """Carefully send a slack message by wrapping it in a try/except.
 
     :param slack_hook: slack webhook URL
@@ -52,7 +73,7 @@ def send_slack_message_carefully(slack_hook: str, message: str, is_markdown: boo
 
     try:
         send_slack_message(slack_hook, message.strip(), is_markdown)
-    except RequestException:
+    except Exception:
         logger.exception("Failed to send slack message")
 
 
@@ -100,6 +121,7 @@ def run_cli(
     settings_cls: type[LoggerSettings],
     pipeline_fn: Callable[[Any], LoadInfo | None],
     settings_kwargs: dict[str, Any] | None = None,
+    cli_args: list[str] | None = None,
 ) -> LoadInfo | None:
     """Run a DLT pipeline from a generic CLI entry point.
 
@@ -112,11 +134,13 @@ def run_cli(
     :type  pipeline_fn: Callable[[Any], LoadInfo | None]
     :param settings_kwargs: any extra non-cli/env var settings to be added
     :type  settings_kwargs: dict[str, Any] | None, optional
+    :param cli_args: command line args
+    :type  cli_args: list[str] | None, optional
     :return: pipeline load information
     :rtype: LoadInfo | None
     """
     try:
-        settings = CliApp.run(settings_cls, **(settings_kwargs or {}))
+        settings = CliApp.run(settings_cls, cli_args=cli_args, **(settings_kwargs or {}))
         init_logger(settings)
         if isinstance(settings, CtsSettings):
             settings = resolve_cts_settings(settings)
@@ -170,11 +194,7 @@ def run_pipeline(  # noqa: PLR0913, PLR0917
         pipeline_kwargs["dev_mode"] = settings.dlt_dev_mode
 
     if destination is None:
-        # the settings output_dir is resolved against the config by run_cli / resolve_cts_settings,
-        # so it takes precedence over the destination block's default bucket_url
-        destination = dlt.destination(
-            settings.use_destination, bucket_url=settings.output_dir, **(destination_kwargs or {})
-        )
+        destination = dlt.destination(settings.use_destination, **(destination_kwargs or {}))
 
     pipeline = dlt.pipeline(destination=destination, **pipeline_kwargs)
 
@@ -184,13 +204,9 @@ def run_pipeline(  # noqa: PLR0913, PLR0917
         logger.info("No Slack alerts will be sent: %s", WEBHOOK_NOT_CONFIGURED)
 
     try:
-        load_info: LoadInfo | None = pipeline.run(resource, **(pipeline_run_kwargs or {}))
-        if load_info:
-            load_info_resource: DltResource = dlt.resource(
-                [load_info.asdict()], name=LOAD_INFO_TABLE_NAME, max_table_nesting=0
-            )
-            pipeline.run(load_info_resource, loader_file_format=JSONL)
-    except Exception as e:
+        load_info: LoadInfo = pipeline.run(resource, **(pipeline_run_kwargs or {}))
+    except PipelineStepFailed as e:
+        # errors raise PipelineStepFailed
         err_msg = f"Pipeline failed: {e!s}"
         logger.exception(err_msg)
         if slack_hook:
@@ -198,8 +214,25 @@ def run_pipeline(  # noqa: PLR0913, PLR0917
         return None
 
     logger.info(load_info)
+    if load_info.has_failed_jobs:
+        logger.warning("")
+
+    try:
+        # save the load info as JSONL in the same destination as the ingested data
+        load_info_resource: DltResource = dlt.resource(
+            [load_info.asdict()], name=LOAD_INFO_TABLE_NAME, max_table_nesting=0
+        )
+        load_info_save_info: LoadInfo = pipeline.run(load_info_resource, loader_file_format=JSONL)
+        if load_info_save_info.has_failed_jobs:
+            logger.error("Loading pipeline load info had failed jobs: %s", load_info_save_info)
+    except Exception as e:
+        err_msg = f"Loading pipeline load info failed: {e!s}"
+        logger.exception(err_msg)
+
     logger.info("Work complete!")
     if slack_hook:
-        send_slack_message_carefully(slack_hook, "Pipeline completed successfully!")
+        send_slack_message_carefully(
+            slack_hook, f"Pipeline completed {'with errors' if load_info.has_failed_jobs else 'successfully!'}"
+        )
 
     return load_info

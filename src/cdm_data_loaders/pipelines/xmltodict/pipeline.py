@@ -10,7 +10,7 @@ from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
 
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from cdm_data_loaders.readers.xml import process_xml_file_to_dict
 
@@ -59,9 +59,7 @@ def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the XML to dictionary pipeline."""
-    return run_cli(XmlToDictSettings, run_xmltodict_pipeline)
+cli = PipelineCli(XmlToDictSettings, run_xmltodict_pipeline)
 
 
 if __name__ == "__main__":

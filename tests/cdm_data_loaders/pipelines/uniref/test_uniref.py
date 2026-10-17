@@ -7,6 +7,7 @@ import pytest
 
 from cdm_data_loaders.parsers.uniprot.uniref import ENTRY_XML_TAG
 from cdm_data_loaders.pipelines import uniref as uniref_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.uniref import (
     UnirefSettings,
     cli,
@@ -16,13 +17,10 @@ from cdm_data_loaders.pipelines.uniref import (
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with UnirefSettings and the UniRef log_interval default."""
-    with patch.object(uniref_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (UnirefSettings, run_uniref_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Ensure that cli is a PipelineCli wired to UnirefSettings and run_uniref_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is UnirefSettings
+    assert cli.pipeline_fn is run_uniref_pipeline
 
 
 # Tests for running the pipeline itself

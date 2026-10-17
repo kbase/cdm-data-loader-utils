@@ -1,6 +1,7 @@
 """Shared fixtures for pipelines tests."""
 
 import copy
+import logging
 import os
 from collections.abc import Callable, Iterator
 from itertools import count
@@ -18,6 +19,7 @@ from cdm_data_loaders.pipelines.core import (
     DISABLE_COMPRESSION_ENV_VAR,
     LOAD_INFO_TABLE_NAME,
 )
+from cdm_data_loaders.utils import cdm_logger
 
 DEFAULT_DLT_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", LOAD_INFO_TABLE_NAME}
 
@@ -172,3 +174,18 @@ def isolated_run_factory(tmp_path: Path) -> Callable[..., Callable[..., tuple[Lo
         return isolated_run(tmp_path, dataset_prefix, run_fn, base_kwargs)
 
     return _build
+
+
+@pytest.fixture
+def restore_logging() -> Iterator[None]:
+    """Undo the global logging changes made by init_logger, so caplog and later tests are unaffected."""
+    root = logging.getLogger()
+    handlers, level = root.handlers[:], root.level
+    applied_key = cdm_logger.applied_key
+    yield
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+    for handler in handlers:
+        root.addHandler(handler)
+    root.setLevel(level)
+    cdm_logger.applied_key = applied_key

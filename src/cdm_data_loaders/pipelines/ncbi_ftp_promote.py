@@ -12,7 +12,7 @@ from pydantic_settings import CliImplicitFlag
 
 from cdm_data_loaders.core.settings import LoggerSettings
 from cdm_data_loaders.ncbi_ftp.promote import promote_from_s3
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 
 DEFAULT_STAGING_BUCKET: PurePosixPath = PurePosixPath("cts")
 DEFAULT_DESTINATION_BUCKET: PurePosixPath = PurePosixPath("cdm-lake")
@@ -87,6 +87,8 @@ def run_promote(config: PromoteSettings) -> None:
         raise RuntimeError(msg)
 
 
-def cli() -> None:
-    """CLI entry point for ``ncbi_ftp_promote``."""
-    run_cli(PromoteSettings, run_promote)
+cli = PipelineCli(PromoteSettings, run_promote)
+
+
+if __name__ == "__main__":
+    cli()

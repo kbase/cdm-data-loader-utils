@@ -117,12 +117,13 @@ def test_integration_cli_uniprot_pipeline_output_validated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination."""
+    """Exercise the real ``cli.run()`` wiring end-to-end against a DuckDB destination."""
     captured: dict[str, Any] = {}
 
     def fake_run_cli(
         settings_cls: type[UniProtSettings],
         pipeline_fn: Callable[..., Any],
+        cli_args: list[str] | None = None,
         settings_kwargs: dict[str, Any] | None = None,
     ) -> Any:
         """Replacement for core.run_cli that dispatches to pipeline_fn with the fixture settings."""
@@ -142,10 +143,10 @@ def test_integration_cli_uniprot_pipeline_output_validated(
         captured["load_info"] = pipeline.run(resource)
         captured["pipeline"] = pipeline
 
-    monkeypatch.setattr(uniprot_module, "run_cli", fake_run_cli)
+    monkeypatch.setattr("cdm_data_loaders.pipelines.core.run_cli", fake_run_cli)
     monkeypatch.setattr(uniprot_module, "run_pipeline", fake_run_pipeline)
 
-    cli()
+    cli.run()
 
     load_info = captured["load_info"]
     pipeline = captured["pipeline"]

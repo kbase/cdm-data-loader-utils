@@ -31,7 +31,7 @@ from requests.exceptions import HTTPError
 from cdm_data_loaders.core.fields import SaveRawResponses
 from cdm_data_loaders.core.settings import CLI_SHORTCUTS, CtsSettings, default_settings_with_shortcuts
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
 from cdm_data_loaders.utils.batcher import NumericFileSequenceBatcher
@@ -392,9 +392,7 @@ def run_ncbi_pipeline(settings: NcbiRestApiSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """CLI interface for the NCBI REST API importer pipeline."""
-    return run_cli(NcbiRestApiSettings, run_ncbi_pipeline)
+cli = PipelineCli(NcbiRestApiSettings, run_ncbi_pipeline)
 
 
 if __name__ == "__main__":

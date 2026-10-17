@@ -141,7 +141,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     ]
     monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli()
+    load_info = cli.run()
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
