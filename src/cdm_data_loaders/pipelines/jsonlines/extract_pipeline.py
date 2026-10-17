@@ -17,7 +17,7 @@ from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
 from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.jsonlines.settings import (
     EXTRACT_PIPELINE_NAME,
     JsonlExtractSettings,
@@ -39,7 +39,7 @@ def jsonl_reader(items: Iterator[FileItemDict], settings: JsonlExtractSettings) 
     )
 
 
-def run_jsonlines_ingest_pipeline(settings: JsonlExtractSettings) -> LoadInfo | None:
+def run_jsonlines_pipeline(settings: JsonlExtractSettings) -> LoadInfo | None:
     """Run the JSONL pipeline.
 
     :param settings: pipeline configuration
@@ -47,7 +47,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlExtractSettings) -> LoadInfo | 
     :return: load information for the pipeline
     :rtype: LoadInfo | None
     """
-    files = filesystem(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     jsonl_resource = files | jsonl_reader(settings)
 
@@ -64,9 +64,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlExtractSettings) -> LoadInfo | 
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the JSONL ingestion pipeline."""
-    return run_cli(JsonlExtractSettings, run_jsonlines_ingest_pipeline)
+cli = PipelineCli(JsonlExtractSettings, run_jsonlines_pipeline)
 
 
 if __name__ == "__main__":

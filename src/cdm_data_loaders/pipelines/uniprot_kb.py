@@ -16,7 +16,7 @@ from cdm_data_loaders.core.settings import (
 )
 from cdm_data_loaders.parsers.uniprot.uniprot_kb import ENTRY_XML_TAG, parse_uniprot_entry
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
 from cdm_data_loaders.readers.xml import build_xml_file_resource
@@ -70,12 +70,7 @@ def run_uniprot_pipeline(settings: UniProtSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """CLI interface for the UniProt KB importer pipeline."""
-    return run_cli(
-        UniProtSettings,
-        run_uniprot_pipeline,
-    )
+cli = PipelineCli(UniProtSettings, run_uniprot_pipeline)
 
 
 if __name__ == "__main__":

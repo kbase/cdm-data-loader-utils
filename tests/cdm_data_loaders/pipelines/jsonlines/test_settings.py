@@ -5,7 +5,6 @@ from collections.abc import Callable
 import pytest
 from pydantic import ValidationError
 
-from cdm_data_loaders.pipelines.core import resolve_cts_settings
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlPydanticIngestSettings
 
 
@@ -26,14 +25,14 @@ def test_split_table_names_pass_various_inputs(raw: str | list[str] | None, expe
     assert JsonlPydanticIngestSettings.split_table_names(raw) == expected
 
 
-def test_jsonlines_ingest_settings_pass_defaults(settings_factory: Callable[..., JsonlPydanticIngestSettings]) -> None:
+def test_jsonlines_settings_pass_defaults(settings_factory: Callable[..., JsonlPydanticIngestSettings]) -> None:
     """write_disposition defaults to 'append'. table_names defaults to None. file_glob defaults to '*.jsonl*'."""
     settings = settings_factory()
     assert settings.table_names is None
     assert settings.file_glob == "*.jsonl*"
 
 
-def test_jsonlines_ingest_settings_fail_missing_entity_models_module(
+def test_jsonlines_settings_fail_missing_entity_models_module(
     settings_factory: Callable[..., JsonlPydanticIngestSettings],
 ) -> None:
     """Omitting entity_models_module raises ValidationError."""
@@ -41,28 +40,23 @@ def test_jsonlines_ingest_settings_fail_missing_entity_models_module(
         settings_factory(entity_models_module=None)
 
 
-def test_jsonlines_ingest_settings_pass_custom_file_glob(
+def test_jsonlines_settings_pass_custom_file_glob(
     settings_factory: Callable[..., JsonlPydanticIngestSettings],
 ) -> None:
     """file_glob accepts a custom glob pattern."""
     assert settings_factory(file_glob="*.txt").file_glob == "*.txt"
 
 
-def test_jsonlines_ingest_settings_fail_local_destination_with_s3_output_dir(
+def test_jsonlines_settings_fail_local_destination_with_s3_output_dir(
     settings_factory: Callable[..., JsonlPydanticIngestSettings],
 ) -> None:
-    """A local_fs destination with an s3:// output_dir raises ValueError at resolution.
-
-    The check lives in resolve_output_dir and runs when run_cli resolves the
-    settings, so constructing them still succeeds.
-    """
-    settings = settings_factory(output_dir="s3://some-bucket/path", use_destination="local_fs")
-    with pytest.raises(ValueError, match="uses protocol 's3', but destination 'local_fs' is configured for 'file'"):
-        resolve_cts_settings(settings, {"destination": {"local_fs": {"bucket_url": "/out"}}})
+    """An s3:// output_dir raises ValidationError at construction because output_dir must be a local path."""
+    with pytest.raises(ValidationError):
+        settings_factory(output_dir="s3://some-bucket/path", use_destination="local_fs")
 
 
 @pytest.mark.parametrize("dataset_name", [None, ""])
-def test_jsonlines_ingest_settings_fail_missing_dataset_name(
+def test_jsonlines_settings_fail_missing_dataset_name(
     settings_factory: Callable[..., JsonlPydanticIngestSettings], dataset_name: str | None
 ) -> None:
     """Omitting dataset_name raises ValidationError."""

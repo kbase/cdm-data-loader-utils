@@ -5,6 +5,10 @@ a mapping of table names to JSON Schema dictionaries, each declaring ``$schema``
 Files are read from one input subdirectory per table. Valid records are loaded
 unchanged; parsing and validation failures go to ``<table>_rejected`` with
 source_file, line_no, raw_record, and error_detail. Format checks are enabled.
+
+Each JSON Schema also sets its table's schema: it is dereferenced, converted to
+dlt columns through the JSON Schema to PyArrow converter, and applied as a dlt
+table variant, so destination types come from the schema rather than inference.
 """
 
 import json
@@ -12,13 +16,16 @@ from importlib import import_module
 from logging import Logger, getLogger
 from typing import Any
 
+from dlt.common.libs.pyarrow import py_arrow_to_table_schema_columns
 from dlt.common.pipeline import LoadInfo
+from dlt.common.schema.typing import TTableSchemaColumns
 from dlt.extract.resource import DltResource
 from jsonschema import FormatChecker
 from jsonschema.exceptions import SchemaError
 from jsonschema.validators import validator_for
 
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.converters.jsonschema_to_pyarrow import JSONSchemaToPyArrow
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
     run_registry_ingest,
@@ -27,6 +34,7 @@ from cdm_data_loaders.pipelines.jsonlines.base import (
     build_entity_resource as build_shared_entity_resource,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JSONSCHEMA_PIPELINE_NAME, JsonlJsonschemaIngestSettings
+from cdm_data_loaders.utils.jsonschema.dereferencer import dereference_schema
 
 logger: Logger = getLogger(__name__)
 
@@ -99,13 +107,30 @@ def _make_resolve_error(schema: dict[str, Any]) -> ParseErrorResolver:
     return _validate
 
 
+def table_columns_from_schema(schema: dict[str, Any]) -> TTableSchemaColumns:
+    """Convert a JSON Schema to dlt column schemas for table hints.
+
+    The schema is dereferenced first, then converted through the JSON Schema to
+    PyArrow converter and translated back to dlt columns. Nested-type hints are
+    dropped: these pipelines yield Python objects, and dlt's parquet writer
+    serializes nested values to strings, so nested types must stay json.
+    """
+    arrow_schema = JSONSchemaToPyArrow().convert(dereference_schema(schema))
+    columns = py_arrow_to_table_schema_columns(arrow_schema)
+    return {
+        name: {key: value for key, value in column.items() if key != "x-nested-type"}
+        for name, column in columns.items()
+    }
+
+
 def build_entity_resource(
     table_name: str, schema: dict[str, Any], settings: JsonlJsonschemaIngestSettings
 ) -> DltResource:
     """Read plain or gzip JSONL files for one entity and route validated pages.
 
     A missing entity directory produces no rows. Nested values are preserved
-    rather than normalized into child tables.
+    rather than normalized into child tables. The schema sets the entity
+    table's dlt columns after dereferencing.
 
     :param table_name: table name
     :type  table_name: str
@@ -116,10 +141,15 @@ def build_entity_resource(
     :return: resource yielding validated and rejected records for this entity
     :rtype: DltResource
     """
-    return build_shared_entity_resource(table_name, settings, resolve_error=_make_resolve_error(schema))
+    return build_shared_entity_resource(
+        table_name,
+        settings,
+        resolve_error=_make_resolve_error(schema),
+        table_columns=table_columns_from_schema(schema),
+    )
 
 
-def run_jsonlines_ingest_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo | None:
+def run_jsonlines_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo | None:
     """Validate the registry and load requested tables using the shared runner.
 
     :param settings: pipeline configuration
@@ -138,9 +168,7 @@ def run_jsonlines_ingest_pipeline(settings: JsonlJsonschemaIngestSettings) -> Lo
     )
 
 
-def cli() -> LoadInfo | None:
-    """Run JSON Schema ingestion using the standard CTS command-line settings."""
-    return run_cli(JsonlJsonschemaIngestSettings, run_jsonlines_ingest_pipeline)
+cli = PipelineCli(JsonlJsonschemaIngestSettings, run_jsonlines_pipeline)
 
 
 if __name__ == "__main__":

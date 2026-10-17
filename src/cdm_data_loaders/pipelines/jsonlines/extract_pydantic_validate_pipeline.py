@@ -28,6 +28,9 @@ Valid records go to a table named after the entity. Records that fail
 JSON parsing or model validation go to a `<table>_rejected` table. Each
 rejected record includes source file, line number, and error detail.
 Write disposition is `append` or `replace` only. No merge is performed.
+
+Each model also sets its table's schema: it is passed to dlt as the table's
+column hints, so destination types come from the model rather than inference.
 """
 
 import json
@@ -37,7 +40,7 @@ from typing import Any
 from dlt.common.pipeline import LoadInfo
 from pydantic import BaseModel, ValidationError
 
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
     run_registry_ingest,
@@ -90,7 +93,7 @@ def build_entity_resource(table_name: str, model: type[BaseModel], settings: Jso
     Reads files matching `settings.file_glob` from
     `settings.input_dir/table_name`. If that directory does not exist,
     uses an empty file list instead. A missing entity then produces zero
-    rows, not an error.
+    rows, not an error. The model sets the entity table's dlt columns.
 
     :param table_name: entity name; also the input_dir subdirectory name
     :type table_name: str
@@ -111,10 +114,11 @@ def build_entity_resource(table_name: str, model: type[BaseModel], settings: Jso
         resolve_error=_make_resolve_error(model),
         include_record=True,
         transform_valid=_dump_validated,
+        table_columns=model,
     )
 
 
-def run_jsonlines_ingest_with_validation_pipeline(settings: JsonlPydanticIngestSettings) -> LoadInfo | None:
+def run_jsonlines_with_validation_pipeline(settings: JsonlPydanticIngestSettings) -> LoadInfo | None:
     """Run the JSONL validate-and-load pipeline for every requested table.
 
     :param settings: pipeline configuration
@@ -133,9 +137,7 @@ def run_jsonlines_ingest_with_validation_pipeline(settings: JsonlPydanticIngestS
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the JSONL validate-and-load pipeline."""
-    return run_cli(JsonlPydanticIngestSettings, run_jsonlines_ingest_with_validation_pipeline)
+cli = PipelineCli(JsonlPydanticIngestSettings, run_jsonlines_with_validation_pipeline)
 
 
 if __name__ == "__main__":

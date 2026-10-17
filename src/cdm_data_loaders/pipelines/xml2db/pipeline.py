@@ -9,10 +9,10 @@ import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 from xml2db import DataModel, load_config
 
-from cdm_data_loaders.core.fields import LOCAL_FS
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xml2db.compaction import compact_reused_tables
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model, process_xml_file_with_xml2db
@@ -41,18 +41,18 @@ def _read_items(
         yield from process_xml_file_with_xml2db(settings, model, file_path=Path(file_item.local_file_path))
 
 
-def run_xml2db_ingest_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
+def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     """Run the xml2db pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
     :type  settings: Xml2DbSettings
     """
-    model_config = load_config(settings.xml2db_config_file) if settings.xml2db_config_file else None
+    model_config = load_config(str(settings.xml2db_config_file)) if settings.xml2db_config_file else None
     model = build_xml2db_model(settings.xsd_file, short_name=settings.short_name, model_config=model_config)
 
     reader = dlt.transformer(_read_items, name="xml2db_reader", parallelized=True)
 
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xml2db_resource: DltResource = files | reader(settings, model)
 
@@ -77,7 +77,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
     """Run post-load compaction of "reused" tables, if configured and the run succeeded.
 
     xml2db's content-hash deduplication of "reused" tables only ever happens within a single
-    xml2db `Document` -- one per source file, or, when `settings.chunk_element_tag` is set, one
+    xml2db `Document` -- one per source file, or, when `settings.xml_tag` is set, one
     per chunk. Any run that parses more than one `Document` (multiple files, multiple chunks, or
     both) can leave literal duplicate rows behind in "reused" tables, so compaction runs
     regardless of whether chunking is enabled. Compaction rewrites files directly on the local
@@ -90,27 +90,16 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
     :param load_info: the result of `pipeline.run(...)`, or None if the run failed to start.
     :type load_info: LoadInfo | None
     """
-    if load_info is None or load_info.has_failed_jobs:
-        return
-    if not settings.compact_reused_tables:
-        return
-    if settings.use_destination != LOCAL_FS:
-        logger.warning(
-            "Skipping post-load compaction: only supported for the %r destination, got %r",
-            LOCAL_FS,
-            settings.use_destination,
-        )
+    if load_info is None or load_info.has_failed_jobs or not settings.compact_reused_tables:
         return
 
-    dataset_dir = Path(settings.output_dir) / load_info.dataset_name
+    dataset_dir = settings.output_dir / load_info.dataset_name
     removed = compact_reused_tables(dataset_dir, model, str(settings.loader_file_format))
     if removed:
         logger.info("Post-load compaction removed duplicate rows: %s", removed)
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the xml2db pipeline."""
-    return run_cli(Xml2DbSettings, run_xml2db_ingest_pipeline)
+cli = PipelineCli(Xml2DbSettings, run_xml2db_pipeline)
 
 
 if __name__ == "__main__":

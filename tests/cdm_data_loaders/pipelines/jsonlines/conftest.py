@@ -1,4 +1,4 @@
-"""Shared fixtures for jsonlines_ingest pipeline tests."""
+"""Shared fixtures for jsonlines pipeline tests."""
 
 from collections.abc import Callable
 from pathlib import Path

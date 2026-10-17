@@ -436,7 +436,7 @@ def process_xml_file_with_xml2db(
     :yield: pages of table-tagged rows.
 
     .. note::
-        When `settings.chunk_element_tag` is set, the file is parsed in bounded-size pieces via
+        When `settings.xml_tag` is set, the file is parsed in bounded-size pieces via
         `iter_xml2db_chunk_fragments` instead. Peak memory use is then governed by
         `settings.chunk_size`, not the file's total size (see that function for the constraints
         this places on the schema). Rows are still buffered and yielded exactly as in the
@@ -451,18 +451,18 @@ def process_xml_file_with_xml2db(
         key into it is correct immediately. A chunked run may still contain more (never fewer)
         literal rows than an unchunked run, until something collapses same-keyed duplicates
         (e.g. `cdm_data_loaders.pipelines.xml2db.compaction.compact_reused_tables`, run
-        automatically by `run_xml2db_ingest_pipeline` when `Xml2DbSettings.compact_reused_tables`
+        automatically by `run_xml2db_pipeline` when `Xml2DbSettings.compact_reused_tables`
         is set). Many-to-many junction tables have no primary key of their own, so chunking never
         duplicates them either way.
     """
     logger.info("Reading from %s", str(file_path))
     buffer = DictBuffer(max_items=settings.buffer_size)
 
-    if settings.chunk_element_tag:
+    if settings.xml_tag:
         n_rows = 0
         n_chunks = 0
         for n_chunks, chunk_bytes in enumerate(
-            iter_xml2db_chunk_fragments(file_path, settings.chunk_element_tag, settings.chunk_size), start=1
+            iter_xml2db_chunk_fragments(file_path, settings.xml_tag, settings.chunk_size), start=1
         ):
             document = Document(model)
             document.parse_xml(BytesIO(chunk_bytes), skip_validation=settings.skip_xml_validation, iterparse=True)

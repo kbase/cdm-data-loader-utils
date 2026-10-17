@@ -10,11 +10,11 @@ import xmltodict
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.extract import DltResource
 from dlt.extract.items import DataItemWithMeta
+from dlt.sources.filesystem import filesystem
 from lxml.etree import Element, iterparse, tostring
 
 from cdm_data_loaders.core.fields import DEFAULT_XML_FILE_GLOB
 from cdm_data_loaders.core.settings import CtsSettings
-from cdm_data_loaders.pipelines.core import filesystem_resource
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from cdm_data_loaders.utils.batcher import get_file_batches
 from cdm_data_loaders.utils.buffer import DictBuffer, ListBuffer
@@ -211,7 +211,7 @@ def process_xml_file_items(
             settings=settings,
             xml_tag=xml_tag,
             parse_fn=parse_fn,
-            file_path=Path(settings.input_dir) / file_item["relative_path"],
+            file_path=settings.input_dir / file_item["relative_path"],
         )
 
 
@@ -236,7 +236,7 @@ def build_xml_file_resource(
     :return: resource yielding table-tagged rows
     :rtype: DltResource
     """
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=DEFAULT_XML_FILE_GLOB)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=DEFAULT_XML_FILE_GLOB)
     resource = dlt.transformer(
         process_xml_file_items,
         data_from=files,

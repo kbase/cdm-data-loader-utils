@@ -11,15 +11,17 @@ import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import (
     cli,
-    run_jsonlines_ingest_pipeline,
+    run_jsonlines_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JSONSCHEMA_PIPELINE_NAME, JsonlJsonschemaIngestSettings
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, parse_json_string, read_data_rows
+from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, PARQUET, parse_json_string, read_data_rows
 
 pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
 
 WIDGET_RECORD = {"widget_id": "a", "count": 0, "nested": {"tags": ["one", "two"]}}
+WIDGET_RECORD_AUTHORED = {**WIDGET_RECORD, "collected": None, "label": None}
 GADGET_RECORD = {"widget_id": "g", "count": 3}
+GADGET_RECORD_AUTHORED = {**GADGET_RECORD, "collected": None, "label": None}
 TYPE_ERROR_RAW = '{"widget_id":"bad", "count":"2"}'
 FORMAT_ERROR_RAW = '{"widget_id":"bad","count":1,"collected":"2023-02-29"}'
 MALFORMED_RAW = "{broken"
@@ -51,7 +53,7 @@ def read_data_tables(settings: JsonlJsonschemaIngestSettings, dataset_name: str)
 
 
 @pytest.mark.parametrize("buffer_size", [1, 2, 10], ids=["single-row", "partial-pages", "single-page"])
-def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
+def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
     schema_input_dir: Path,
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
     loader_file_format: str,
@@ -62,7 +64,7 @@ def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
         input_dir=str(schema_input_dir), loader_file_format=loader_file_format, buffer_size=buffer_size
     )
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -70,10 +72,10 @@ def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
     assert load_info.dataset_name == "schema_test"
     tables = read_data_tables(settings, load_info.dataset_name)
     assert set(tables) == {"widget", "widget_rejected", "gadget"}
-    assert [{key: parse_json_string(value) for key, value in row.items()} for row in tables["widget"]] == [
-        WIDGET_RECORD
-    ] * 3
-    assert tables["gadget"] == [GADGET_RECORD]
+    # parquet materializes schema-declared optional columns as NULL; jsonl keeps the raw input shape
+    authored = WIDGET_RECORD_AUTHORED if loader_file_format == PARQUET else WIDGET_RECORD
+    assert [{key: parse_json_string(value) for key, value in row.items()} for row in tables["widget"]] == [authored] * 3
+    assert tables["gadget"] == [GADGET_RECORD_AUTHORED if loader_file_format == PARQUET else GADGET_RECORD]
     assert sorted(tables["widget_rejected"], key=lambda row: (row["source_file"], row["line_no"])) == [
         {
             "source_file": "compressed.jsonl.gz",
@@ -97,7 +99,7 @@ def test_run_jsonlines_ingest_pipeline_pass_persists_valid_and_rejected_rows(
     ]
 
 
-def test_run_jsonlines_ingest_pipeline_pass_all_invalid(
+def test_run_jsonlines_pipeline_pass_all_invalid(
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings], loader_file_format: str
 ) -> None:
     """An entirely invalid entity still produces its complete rejection table."""
@@ -106,7 +108,7 @@ def test_run_jsonlines_ingest_pipeline_pass_all_invalid(
     table_dir.mkdir()
     (table_dir / "invalid.jsonl").write_text(f"{MALFORMED_RAW}\n{TYPE_ERROR_RAW}", encoding="utf-8")
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -157,9 +159,11 @@ def test_cli_pass_loads_selected_entity(
         ],
     )
 
-    load_info = cli()
+    load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
     assert load_info.dataset_name == "schema_cli"
-    assert read_data_tables(settings, load_info.dataset_name) == {"gadget": [GADGET_RECORD]}
+    assert read_data_tables(settings, load_info.dataset_name) == {
+        "gadget": [GADGET_RECORD_AUTHORED if loader_file_format == PARQUET else GADGET_RECORD]
+    }

@@ -7,7 +7,7 @@ in the schema, into `table_name`. Files that fail cleaning/validation are routed
 left in its scratch output directory and are not currently surfaced as rows.
 """
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,9 +16,11 @@ from typing import Any, Final
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TSchemaContractDict
+from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_reader import read_validated_rows
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import CleanerValidatorArgs, ErrorRecord
@@ -58,14 +60,14 @@ class XsvWorkPaths:
 
 
 def _process_xsv_file(
-    file_path: Path,
+    file_item: FileItemDict,
     settings: XsvIngestSettings,
     work_paths: XsvWorkPaths,
 ) -> Generator[TDataItems, Any, Any]:
     """Clean, validate, and load one XSV file. Yield rows for table_name and its rejected table.
 
-    :param file_path: path to the raw XSV file
-    :type  file_path: Path
+    :param file_item: raw XSV file as a FileItemDict
+    :type  file_item: FileItemDict
     :param settings: pipeline configuration
     :type  settings: XsvIngestSettings
     :param work_paths: scratch resources shared across the pipeline run
@@ -73,6 +75,7 @@ def _process_xsv_file(
     :yield: rows routed to table_name and/or ``{table_name}_rejected``
     :rtype: Generator[TDataItems, Any, Any]
     """
+    file_path = settings.input_dir / file_item["relative_path"]
     args = CleanerValidatorArgs(
         qsv_cmd=work_paths.qsv_cmd,
         xsv_file_path=file_path,
@@ -116,16 +119,15 @@ def _process_xsv_file(
     yield from rejected_buffer.flush()
 
 
-@dlt.resource(name="xsv_reader", max_table_nesting=0)
-def xsv_reader(
-    file_paths: list[Path],
+def _read_items(
+    items: Iterator[FileItemDict],
     settings: XsvIngestSettings,
     work_paths: XsvWorkPaths,
 ) -> Generator[TDataItems, Any, Any]:
     """Clean, validate, and load each file in file_paths.
 
-    :param file_paths: paths to the raw XSV files to process
-    :type  file_paths: list[Path]
+    :param items: file items to read
+    :type  items: Iterator[FileItemDict]
     :param settings: pipeline configuration
     :type  settings: XsvIngestSettings
     :param work_paths: scratch resources shared across the pipeline run
@@ -133,11 +135,11 @@ def xsv_reader(
     :yield: rows routed to table_name and/or ``{table_name}_rejected``
     :rtype: Generator[TDataItems, Any, Any]
     """
-    for file_path in file_paths:
-        yield from _process_xsv_file(file_path, settings, work_paths)
+    for file_item in items:
+        yield from _process_xsv_file(file_item, settings, work_paths)
 
 
-def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
+def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
     """Run the XSV ingestion pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -147,11 +149,9 @@ def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
     """
     qsv_cmd = qsv_check()
 
-    input_dir = Path(settings.input_dir)
-    schema_path = (input_dir / settings.schema_file).resolve()
-    file_paths = sorted(
-        path for path in input_dir.glob(settings.file_glob) if path.is_file() and path.resolve() != schema_path
-    )
+    xsv_reader = dlt.transformer(_read_items, name="xsv_reader", parallelized=True)
+
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     with (
         TemporaryDirectory(prefix="xsv_tmp_") as tmp_dir,
@@ -166,7 +166,8 @@ def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
             validated_dir=Path(validated_dir),
         )
 
-        xsv_resource = xsv_reader(file_paths, settings, work_paths)
+        # CHECK ME!
+        xsv_resource = files | xsv_reader(settings, work_paths)
         xsv_resource.apply_hints(schema_contract=TSchemaContractDict(**SCHEMA_CONTRACT))  # pyright: ignore[reportCallIssue]
 
         return run_pipeline(
@@ -182,9 +183,7 @@ def run_xsv_ingest_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
         )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the XSV ingestion pipeline."""
-    return run_cli(XsvIngestSettings, run_xsv_ingest_pipeline)
+cli = PipelineCli(XsvIngestSettings, run_xsv_pipeline)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
-"""Shared fixtures for jsonlines_ingest pipeline tests."""
+"""Shared fixtures for jsonlines pipeline tests."""
 
 import json
 from collections.abc import Callable, Generator
-from itertools import count
 from pathlib import Path
 from typing import Any
 
@@ -12,11 +11,11 @@ from dlt.common.pipeline import LoadInfo
 from pydantic import BaseModel
 
 from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import (
-    run_jsonlines_ingest_pipeline as run_jsonschema_pipeline,
+    run_jsonlines_pipeline as run_jsonschema_pipeline,
 )
-from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import run_jsonlines_ingest_pipeline
+from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import run_jsonlines_pipeline
 from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline import (
-    run_jsonlines_ingest_with_validation_pipeline,
+    run_jsonlines_with_validation_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import (
     JsonlExtractSettings,
@@ -42,10 +41,12 @@ def pipeline_kind(request: pytest.FixtureRequest) -> str:
 
 @pytest.fixture
 def run_reference_pipeline(
-    pipeline_kind: str, tmp_path: Path, reference_data_dir: Path, dlt_destination_config: str
+    pipeline_kind: str,
+    reference_data_dir: Path,
+    dlt_destination_config: str,
+    isolated_run_factory: Callable[..., Callable[..., tuple[LoadInfo | None, Path]]],
 ) -> PipelineRunner:
     """Run the selected JSONL pipeline on a chunk dir with per-run isolated output directories."""
-    run_counter = count()
     settings_cls, registry_kwarg, dataset_prefix, file_glob = {
         "extract": (JsonlExtractSettings, {"table_name": "dataset"}, "jsonl_extract_run", "**/*.jsonl*"),
         "extract_validate": (
@@ -62,33 +63,24 @@ def run_reference_pipeline(
         ),
     }[pipeline_kind]
     run_fn = {
-        "extract": run_jsonlines_ingest_pipeline,
-        "extract_validate": run_jsonlines_ingest_with_validation_pipeline,
+        "extract": run_jsonlines_pipeline,
+        "extract_validate": run_jsonlines_with_validation_pipeline,
         "extract_jsonschema_validate": run_jsonschema_pipeline,
     }[pipeline_kind]
+    base_kwargs: dict[str, Any] = {
+        "buffer_size": 10,
+        "dlt_dev_mode": False,
+        "file_glob": file_glob,
+        "settings_cls": settings_cls,
+        "use_destination": dlt_destination_config,
+        "use_output_dir_for_pipeline_metadata": True,
+        **registry_kwarg,
+    }
+    runner = isolated_run_factory(dataset_prefix=dataset_prefix, run_fn=run_fn, base_kwargs=base_kwargs)
 
     def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:
-        run_index = next(run_counter)
-        output_dir = tmp_path / f"output_{run_index}"
-        output_dir.mkdir()
-        log_config_file = tmp_path / "logging.conf"
-        log_config_file.touch()
-        kwargs: dict[str, Any] = {
-            "buffer_size": 10,
-            "dataset_name": f"{dataset_prefix}_{run_index}",
-            "dlt_dev_mode": False,
-            "file_glob": file_glob,
-            "input_dir": str(reference_data_dir / chunk_dir),
-            "log_config_file": str(log_config_file),
-            "output_dir": str(output_dir),
-            "use_destination": dlt_destination_config,
-            "use_output_dir_for_pipeline_metadata": True,
-            **registry_kwarg,
-        }
-        kwargs.update(overrides)
-        settings = settings_cls(**kwargs)
-        load_info: LoadInfo | None = run_fn(settings)
-        return (load_info, output_dir)
+        kwargs = {"input_dir": str(reference_data_dir / chunk_dir), **overrides}
+        return runner(**kwargs)
 
     return _factory
 

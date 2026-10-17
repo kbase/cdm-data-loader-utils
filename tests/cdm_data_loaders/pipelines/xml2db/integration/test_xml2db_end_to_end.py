@@ -1,4 +1,4 @@
-"""End-to-end tests for the xml2db_ingest pipeline, using a small library.xsd schema."""
+"""End-to-end tests for the xml2db pipeline, using a small library.xsd schema."""
 
 import sys
 from collections.abc import Callable
@@ -8,7 +8,7 @@ import pytest
 from dlt.common.pipeline import LoadInfo
 from pandas import DataFrame
 
-from cdm_data_loaders.pipelines.xml2db.pipeline import cli, run_xml2db_ingest_pipeline
+from cdm_data_loaders.pipelines.xml2db.pipeline import cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
 from tests.xml_samples import SIMPLE_LIBRARY_XML
@@ -29,7 +29,7 @@ def check_book_list_results(load_info: LoadInfo | None) -> tuple[DataFrame, Data
     return library_df, book_df
 
 
-def test_run_xml2db_ingest_pipeline_pass_writes_expected_output(
+def test_run_xml2db_pipeline_pass_writes_expected_output(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """Running the pipeline loads one row per library root and one row per book."""
@@ -38,14 +38,14 @@ def test_run_xml2db_ingest_pipeline_pass_writes_expected_output(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml2db_ingest_pipeline(settings)
+    load_info = run_xml2db_pipeline(settings)
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
     assert sorted(book_df["title"].tolist()) == ["The Shining", "The Stand", "The Tommyknockers"]
 
 
-def test_run_xml2db_ingest_pipeline_pass_gzip_files_are_loaded(
+def test_run_xml2db_pipeline_pass_gzip_files_are_loaded(
     settings_factory: Callable[..., Xml2DbSettings],
     write_gzip_file: Callable[[Path, str, str], Path],
 ) -> None:
@@ -62,7 +62,7 @@ def test_run_xml2db_ingest_pipeline_pass_gzip_files_are_loaded(
     (input_dir / "plain.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
     write_gzip_file(input_dir, "library.xml.gz", SIMPLE_LIBRARY_XML)
 
-    load_info = run_xml2db_ingest_pipeline(settings)
+    load_info = run_xml2db_pipeline(settings)
     library_df, book_df = check_book_list_results(load_info)
     # one root row from each of the two files: the root table is never compacted
     assert len(library_df) == EXPECTED_LIBRARY_ROOT_COUNT_TWO_FILES
@@ -70,14 +70,14 @@ def test_run_xml2db_ingest_pipeline_pass_gzip_files_are_loaded(
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
 
 
-def test_run_xml2db_ingest_pipeline_pass_no_matching_files_yields_no_data_table(
+def test_run_xml2db_pipeline_pass_no_matching_files_yields_no_data_table(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """An input dir with no matching xml files does not fail the run and creates no data table."""
     settings = settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = run_xml2db_ingest_pipeline(settings)
+    load_info = run_xml2db_pipeline(settings)
     assert load_info is not None
     assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
@@ -85,7 +85,7 @@ def test_run_xml2db_ingest_pipeline_pass_no_matching_files_yields_no_data_table(
     assert set(dataset.tables) == DEFAULT_DLT_TABLES
 
 
-def test_run_xml2db_ingest_pipeline_pass_custom_short_name_used_for_root_table(
+def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """The `short_name` setting only affects the virtual root table name for multi-root schemas.
@@ -99,7 +99,7 @@ def test_run_xml2db_ingest_pipeline_pass_custom_short_name_used_for_root_table(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml2db_ingest_pipeline(settings)
+    load_info = run_xml2db_pipeline(settings)
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
@@ -115,8 +115,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     input_dir = tmp_path / "cli_input"
     input_dir.mkdir()
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
+    output_dir = tmp_path / "bucket"
+    output_dir.mkdir(exist_ok=True)
     log_config_file = tmp_path / "logging.json"
     log_config_file.write_text('{"version": 1}')
 
@@ -136,12 +136,12 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(library_xsd),
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli()
+    load_info = cli.run()
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]

@@ -9,14 +9,14 @@ registry loader.
 
 from collections.abc import Callable, Generator
 from logging import Logger, getLogger
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import dlt
 from dlt.common.pipeline import LoadInfo
-from dlt.common.schema.typing import TSchemaContractDict
+from dlt.common.schema.typing import TAnySchemaColumns, TSchemaContractDict
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_pipeline
+from cdm_data_loaders.pipelines.core import run_pipeline
 from cdm_data_loaders.readers.jsonlines import stream_jsonl_lines
 from cdm_data_loaders.utils.buffer import ListBuffer
 
@@ -106,11 +106,18 @@ def build_entity_resource(  # noqa: PLR0913
     rejected_suffix: str = DEFAULT_REJECTED_SUFFIX,
     include_record: bool = False,
     transform_valid: Callable[[Any], Any] | None = None,
+    table_columns: TAnySchemaColumns | None = None,
 ) -> "DltResource":
     """Read plain or gzip JSONL files for one entity and route validated pages.
 
     A missing entity directory produces no rows. Nested values are preserved
     rather than normalized into child tables.
+
+    `table_columns` optionally sets the entity table's schema. It is applied as
+    a dlt table variant, so the columns land on `table_name` only; the rejected
+    table keeps dlt's column inference for its provenance rows. Accepted forms
+    are a column dict, a list of column schemas, a pydantic model, or a
+    pyarrow schema.
 
     :param table_name: table name; also the input_dir subdirectory name
     :type  table_name: str
@@ -124,12 +131,14 @@ def build_entity_resource(  # noqa: PLR0913
     :type  include_record: bool
     :param transform_valid: function applied to each valid record before yielding
     :type  transform_valid: Callable[[Any], Any] | None
+    :param table_columns: optional column schema for the entity table
+    :type  table_columns: TAnySchemaColumns | None
     :return: resource yielding validated and rejected records for this entity
     :rtype: DltResource
     """
-    entity_dir = Path(settings.input_dir) / table_name
+    entity_dir = settings.input_dir / table_name
     if entity_dir.is_dir():
-        files = filesystem_resource(bucket_url=str(entity_dir), file_glob=settings.file_glob)
+        files = filesystem(bucket_url=str(entity_dir), file_glob=settings.file_glob)
     else:
         logger.warning("Entity directory does not exist, skipping: %s", entity_dir)
         files = dlt.resource([], name=f"{table_name}_files")
@@ -157,6 +166,15 @@ def build_entity_resource(  # noqa: PLR0913
         parallelized=True,
     )
     validated.apply_hints(schema_contract=TSchemaContractDict(**SCHEMA_CONTRACT))  # pyright: ignore[reportCallIssue]
+    if table_columns is not None:
+        # pipeline.run applies loader_file_format to the base hints, but a variant shadows them
+        # for the entity table, so the variant must carry the file format itself
+        validated.apply_hints(  # pyright: ignore[reportCallIssue]
+            table_name=table_name,
+            columns=table_columns,
+            file_format=str(settings.loader_file_format),
+            create_table_variant=True,
+        )
     return validated
 
 

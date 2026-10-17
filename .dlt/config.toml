@@ -29,3 +29,11 @@ buffer_max_items = 100000
 file_max_items = 100000000
 # files will rotate when file size is greater than 1_000 MB
 file_max_bytes = 1000000000
+
+[sources.cts]
+bucket_url = "/input_dir"
+resource_type = "filesystem"
+
+[destination.cts]
+bucket_url = "/output_dir"
+destination_type = "filesystem"

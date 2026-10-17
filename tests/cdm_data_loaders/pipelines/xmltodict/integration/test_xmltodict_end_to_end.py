@@ -1,4 +1,4 @@
-"""End-to-end tests for the xmltodict_ingest pipeline."""
+"""End-to-end tests for the xmltodict pipeline."""
 
 import sys
 from collections.abc import Callable
@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from cdm_data_loaders.pipelines.xmltodict.pipeline import (
     cli,
-    run_xml_ingest_pipeline,
+    run_xmltodict_pipeline,
 )
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
@@ -31,7 +31,7 @@ def check_book_list_results(load_info: LoadInfo | None, table_name: str | None =
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
-def test_run_xml_ingest_pipeline_pass_writes_expected_output(
+def test_run_xmltodict_pipeline_pass_writes_expected_output(
     settings_factory: Callable[..., XmlToDictSettings],
     loader_file_format: str,
 ) -> None:
@@ -41,12 +41,12 @@ def test_run_xml_ingest_pipeline_pass_writes_expected_output(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml_ingest_pipeline(settings)
+    load_info = run_xmltodict_pipeline(settings)
     book_df = check_book_list_results(load_info)
     assert sorted(book_df["book___id"].tolist()) == ["1", "2", "3"]
 
 
-def test_run_xml_ingest_pipeline_pass_gzip_files_are_loaded(
+def test_run_xmltodict_pipeline_pass_gzip_files_are_loaded(
     settings_factory: Callable[..., XmlToDictSettings],
     write_gzip_file: Callable[[Path, str, str], Path],
 ) -> None:
@@ -57,20 +57,20 @@ def test_run_xml_ingest_pipeline_pass_gzip_files_are_loaded(
     (input_dir / "plain.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
     write_gzip_file(input_dir, "library.xml.gz", SIMPLE_LIBRARY_XML)
 
-    load_info = run_xml_ingest_pipeline(settings)
+    load_info = run_xmltodict_pipeline(settings)
     book_df = check_book_list_results(load_info)
     # one copy of the three books from the plain file, one from the gzipped copy
     assert sorted(book_df["book___id"].tolist()) == ["1", "1", "2", "2", "3", "3"]
 
 
-def test_run_xml_ingest_pipeline_pass_no_matching_files_yields_no_data_table(
+def test_run_xmltodict_pipeline_pass_no_matching_files_yields_no_data_table(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
     """An input dir with no matching xml files does not fail the run and creates no data table."""
     settings = settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = run_xml_ingest_pipeline(settings)
+    load_info = run_xmltodict_pipeline(settings)
     assert load_info is not None
     assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
@@ -78,7 +78,7 @@ def test_run_xml_ingest_pipeline_pass_no_matching_files_yields_no_data_table(
     assert set(dataset.tables) == DEFAULT_DLT_TABLES
 
 
-def test_run_xml_ingest_pipeline_pass_custom_table_name_is_respected(
+def test_run_xmltodict_pipeline_pass_custom_table_name_is_respected(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
     """Rows land in the table named by table_name, not in a name derived from the xml tag."""
@@ -87,7 +87,7 @@ def test_run_xml_ingest_pipeline_pass_custom_table_name_is_respected(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml_ingest_pipeline(settings)
+    load_info = run_xmltodict_pipeline(settings)
     book_df = check_book_list_results(load_info, "library_entries")
     # the record dict is keyed by the xml tag, so the flattened column prefix is `book`
     assert sorted(book_df["book___id"].tolist()) == ["1", "2", "3"]
@@ -108,7 +108,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict_ingest",
+        "xmltodict",
         "--input-dir",
         str(input_dir),
         "--output-dir",
@@ -125,11 +125,11 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "book",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli()
+    load_info = cli.run()
     book_df = check_book_list_results(load_info)
     assert sorted(book_df["book___id"].tolist()) == ["1", "2", "3"]

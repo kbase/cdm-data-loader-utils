@@ -1,4 +1,4 @@
-"""Shared fixtures for xsv_ingest pipeline integration tests."""
+"""Shared fixtures for xsv pipeline integration tests."""
 
 import json
 import os
@@ -94,7 +94,7 @@ def make_settings(
         "log_config_file": str(log_config_file),
         "log_interval": 1000,
         "output_dir": str(output_dir),
-        "schema_file": "schema.json",
+        "schema_file": str(Path(input_dir) / "schema.json"),
         "table_name": "my_table",
         "use_destination": dlt_destination_config,
         "use_output_dir_for_pipeline_metadata": False,

@@ -86,12 +86,10 @@ def assert_cli_field_roundtrips(
     specs = build_cli_arg_specs(settings_cls)
     option_strings = specs[field_name].option_strings
 
-    if not required:
-        required = {}
-    if field_name in required:
-        required.pop(field_name)
-
-    required_list = [element for item in {make_cli_arg(k): v for k, v in required.items()}.items() for element in item]
+    required_args = {k: str(v) for k, v in (required or {}).items() if k != field_name}
+    required_list = [
+        element for item in {make_cli_arg(k): v for k, v in required_args.items()}.items() for element in item
+    ]
 
     results = [
         CliApp.run(model_cls=settings_cls, cli_args=[*required_list, option, str(raw_value)])

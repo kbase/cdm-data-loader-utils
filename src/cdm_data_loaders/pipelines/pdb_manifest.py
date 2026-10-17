@@ -42,7 +42,7 @@ from cdm_data_loaders.pdb.constants import (
     ManifestData,
     PDBRecord,
 )
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.utils.file_transfer.s3 import client
 
 logger: Logger = getLogger(__name__)
@@ -134,13 +134,7 @@ def run_manifest_generation(config: PdbManfestSettings) -> None:
     _save_summary_file(manifest_data, config.regex_filter, config.output_path)
 
 
-def cli() -> None:
-    """CLI interface for the PDB manifest generation pipeline."""
-    run_cli(PdbManfestSettings, run_manifest_generation)
-
-
-if __name__ == "__main__":
-    cli()
+cli = PipelineCli(PdbManfestSettings, run_manifest_generation)
 
 
 # ------------------------
@@ -319,3 +313,7 @@ def _save_summary_file(data: ManifestData, regex_filter: str | None, output_path
         f"{len(data.removed)} removed; {len(data.missing_dates)} missing dates"
     )
     logger.info(msg)
+
+
+if __name__ == "__main__":
+    cli()

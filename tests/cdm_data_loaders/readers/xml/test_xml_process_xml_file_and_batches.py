@@ -227,7 +227,7 @@ def fake_settings(
     settings = MagicMock(spec=settings_class)
     settings.buffer_size = buffer_size
     settings.log_interval = log_interval
-    settings.input_dir = str(input_dir)
+    settings.input_dir = Path(input_dir)
     return settings
 
 
@@ -668,17 +668,22 @@ def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_file
     """
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
+    output_dir = tmp_path / "output"
+    output_dir.mkdir(exist_ok=True)
     log_config_file = tmp_path / "logging.json"
     log_config_file.write_text('{"version": 1}', encoding="utf-8")
 
     xsd_file = None
     if xsd_filename is not None:
         xsd_content = (test_data_dir / "xsd" / xsd_filename).read_text(encoding="utf-8")
-        (input_dir / xsd_filename).write_text(xsd_content, encoding="utf-8")
-        xsd_file = xsd_filename
+        xsd_path = input_dir / xsd_filename
+        xsd_path.write_text(xsd_content, encoding="utf-8")
+        xsd_file = str(xsd_path)
 
     return XmlToDictSettings(
         input_dir=str(input_dir),
+        output_dir=str(output_dir),
+        use_destination="local_fs",
         log_config_file=str(log_config_file),
         dataset_name="xsd_test_dataset",
         table_name="entry",

@@ -73,14 +73,14 @@ def _rows_by_table(items: Iterable[DataItemWithMeta]) -> dict[str, list[dict[str
 def fake_xml2db_settings(
     buffer_size: int = 100,
     skip_xml_validation: bool = True,
-    chunk_element_tag: str | None = None,
+    xml_tag: str | None = None,
     chunk_size: int = 1000,
 ) -> Xml2DbSettings:
     """Build a MagicMock stand-in for Xml2DbSettings exposing just the attributes the reader uses."""
     settings = MagicMock(spec=Xml2DbSettings)
     settings.buffer_size = buffer_size
     settings.skip_xml_validation = skip_xml_validation
-    settings.chunk_element_tag = chunk_element_tag
+    settings.xml_tag = xml_tag
     settings.chunk_size = chunk_size
     return settings
 
@@ -368,7 +368,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_matches_unchunked_row_counts(
     unchunked_rows = _rows_by_table(process_xml_file_with_xml2db(fake_xml2db_settings(), uniref_model, MASTER_100))
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
     # the virtual root table gets one (namespaced, never content-addressed -- see
@@ -394,7 +394,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_entry_content_matches_unchunk
     unchunked_rows = _rows_by_table(process_xml_file_with_xml2db(fake_xml2db_settings(), uniref_model, MASTER_100))
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
 
@@ -408,7 +408,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_preserves_same_distinct_value
     unchunked_rows = _rows_by_table(process_xml_file_with_xml2db(fake_xml2db_settings(), uniref_model, MASTER_100))
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
 
@@ -422,7 +422,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_entry_count_matches(uniref_mo
     """Chunked parsing yields exactly one entry row per source <entry> element, none lost or duplicated."""
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
     assert len(chunked_rows[ENTRY_TABLE]) == ENTRIES_IN_MASTER
@@ -433,7 +433,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_keys_unique_across_chunks(uni
     """Entry keys are content-addressed, and the 100 fixture entries remain distinct across chunks."""
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
     entry_pks = [row["pk_entry"] for row in chunked_rows[ENTRY_TABLE]]
@@ -458,7 +458,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_reused_table_distinct_key_cou
     unchunked_rows = _rows_by_table(process_xml_file_with_xml2db(fake_xml2db_settings(), uniref_model, MASTER_100))
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
 
@@ -484,7 +484,7 @@ def test_process_xml_file_with_xml2db_pass_chunked_root_table_keys_are_not_conte
     """
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=7), uniref_model, MASTER_100
         )
     )
     root_table_name = uniref_model.tables[uniref_model.root_table].name
@@ -499,7 +499,7 @@ def test_process_xml_file_with_xml2db_pass_chunk_size_one_still_produces_all_row
     """The degenerate case of one entry per chunk (many tiny Documents) still yields correct output."""
     chunked_rows = _rows_by_table(
         process_xml_file_with_xml2db(
-            fake_xml2db_settings(chunk_element_tag=ENTRY_LOCAL_NAME, chunk_size=1), uniref_model, PART_01
+            fake_xml2db_settings(xml_tag=ENTRY_LOCAL_NAME, chunk_size=1), uniref_model, PART_01
         )
     )
     assert len(chunked_rows[ENTRY_TABLE]) == ENTRIES_PER_PART

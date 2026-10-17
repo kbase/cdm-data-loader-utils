@@ -3,14 +3,15 @@
 from collections.abc import Generator, Iterator
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any
 
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from cdm_data_loaders.readers.xml import process_xml_file_to_dict
 
@@ -18,12 +19,6 @@ if TYPE_CHECKING:
     from dlt.extract import DltResource
 
 logger: Logger = getLogger(__name__)
-
-SCHEMA_CONTRACT: Final[dict[str, str]] = {
-    "tables": "evolve",
-    "columns": "evolve",
-    "data_type": "discard_row",
-}
 
 
 def _read_items(items: Iterator[FileItemDict], settings: XmlToDictSettings) -> Generator[TDataItems, Any, Any]:
@@ -40,7 +35,7 @@ def _read_items(items: Iterator[FileItemDict], settings: XmlToDictSettings) -> G
         yield from process_xml_file_to_dict(settings, file_path=Path(file_item.local_file_path))
 
 
-def run_xml_ingest_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
+def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     """Run the XML to dict pipeline on matching files in settings.input_dir.
 
     :param settings: pipeline configuration
@@ -48,7 +43,7 @@ def run_xml_ingest_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     """
     reader = dlt.transformer(_read_items, name="xmltodict_reader", parallelized=True)
 
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xmltodict_resource: DltResource = files | reader(settings)
 
@@ -65,9 +60,7 @@ def run_xml_ingest_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the XML to dictionary pipeline."""
-    return run_cli(XmlToDictSettings, run_xml_ingest_pipeline)
+cli = PipelineCli(XmlToDictSettings, run_xmltodict_pipeline)
 
 
 if __name__ == "__main__":

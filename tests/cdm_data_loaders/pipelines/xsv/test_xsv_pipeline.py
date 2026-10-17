@@ -1,4 +1,4 @@
-"""Tests for _process_xsv_file, run_xsv_ingest_pipeline, and cli wiring.
+"""Tests for _process_xsv_file, run_xsv_pipeline, and cli wiring.
 
 These tests drive the real qsv binary (see the `qsv_cmd` fixture in conftest.py); tests are
 skipped when qsv is not available on PATH or via the QSV_BIN env var.
@@ -15,15 +15,15 @@ import dlt
 import pytest
 
 import cdm_data_loaders.pipelines.xsv.pipeline as xsv_pipeline_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.xsv.pipeline import (
     REJECTED_SUFFIX,
     XsvWorkPaths,
     _process_xsv_file,
     cli,
-    run_xsv_ingest_pipeline,
+    run_xsv_pipeline,
 )
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
-from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
 
 VALID_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
 
@@ -38,6 +38,24 @@ SIMPLE_SCHEMA: dict[str, Any] = {
 """_process_xsv_file"""
 
 
+import pendulum
+from dlt.common.storages.fsspec_filesystem import FileItemDict
+
+
+def make_file_item(file_path: Path) -> FileItemDict:
+    """Build a dlt FileItemDict for a local file."""
+    return FileItemDict(
+        {
+            "file_url": file_path.as_uri(),
+            "file_name": file_path.name,
+            "relative_path": file_path.name,
+            "mime_type": "text/csv",
+            "modification_date": pendulum.now(),
+            "size_in_bytes": file_path.stat().st_size,
+        }
+    )
+
+
 def test_process_xsv_file_pass_routes_valid_rows_to_table(
     settings_factory: Callable[..., XsvIngestSettings],
     work_paths_factory: Callable[[XsvIngestSettings], XsvWorkPaths],
@@ -46,7 +64,7 @@ def test_process_xsv_file_pass_routes_valid_rows_to_table(
     settings = settings_factory(SIMPLE_SCHEMA, {"data.csv": "number,name\n1,alice\n2,bob\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "data.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "data.csv"), settings, work_paths))
 
     assert [(result.meta.table_name, result.data) for result in results] == [
         ("my_table", [{"number": 1, "name": "alice"}, {"number": 2, "name": "bob"}]),
@@ -63,7 +81,7 @@ def test_process_xsv_file_pass_replaces_configured_null_placeholder(
     settings = settings_factory(schema, {"data.csv": "number,name\n1,NA\n2,bob\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "data.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "data.csv"), settings, work_paths))
 
     assert results[0].data == [{"number": 1, "name": None}, {"number": 2, "name": "bob"}]
 
@@ -76,7 +94,7 @@ def test_process_xsv_file_pass_routes_total_failure_to_rejected_table(
     settings = settings_factory(SIMPLE_SCHEMA, {"bad.csv": "number,name\n1\n2,bob,extra\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "bad.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "bad.csv"), settings, work_paths))
 
     table_names = [result.meta.table_name for result in results]
     assert table_names == [f"my_table{REJECTED_SUFFIX}"]
@@ -85,11 +103,11 @@ def test_process_xsv_file_pass_routes_total_failure_to_rejected_table(
     assert rejected["message"]
 
 
-"""run_xsv_ingest_pipeline"""
+"""run_xsv_pipeline"""
 
 
 @pytest.mark.usefixtures("qsv_cmd")
-def test_run_xsv_ingest_pipeline_pass_end_to_end_via_duckdb(
+def test_run_xsv_pipeline_pass_end_to_end_via_duckdb(
     settings_factory: Callable[..., XsvIngestSettings],
     tmp_path: Path,
 ) -> None:
@@ -106,7 +124,7 @@ def test_run_xsv_ingest_pipeline_pass_end_to_end_via_duckdb(
         },
     )
 
-    pipeline_name = f"test_xsv_ingest_pipeline_{uuid4().hex}"
+    pipeline_name = f"test_xsv_pipeline_{uuid4().hex}"
     captured: dict[str, Any] = {}
     output_dir = tmp_path / "duckdb_output"
     output_dir.mkdir()
@@ -127,7 +145,7 @@ def test_run_xsv_ingest_pipeline_pass_end_to_end_via_duckdb(
         captured["load_info"] = pipeline.run(resource)
 
     with patch.object(xsv_pipeline_module, "run_pipeline", fake_run_pipeline):
-        run_xsv_ingest_pipeline(settings)
+        run_xsv_pipeline(settings)
 
     load_info = captured["load_info"]
     assert not load_info.has_failed_jobs
@@ -147,14 +165,14 @@ def test_run_xsv_ingest_pipeline_pass_end_to_end_via_duckdb(
 
 
 @pytest.mark.usefixtures("qsv_cmd")
-def test_run_xsv_ingest_pipeline_pass_no_matching_files_loads_nothing(
+def test_run_xsv_pipeline_pass_no_matching_files_loads_nothing(
     settings_factory: Callable[..., XsvIngestSettings],
     tmp_path: Path,
 ) -> None:
     """When no data files are present besides the schema, no rows are extracted."""
     settings = settings_factory(SIMPLE_SCHEMA, {}, file_glob="*.csv")
 
-    pipeline_name = f"test_xsv_ingest_pipeline_empty_{uuid4().hex}"
+    pipeline_name = f"test_xsv_pipeline_empty_{uuid4().hex}"
     captured: dict[str, Any] = {}
 
     def fake_run_pipeline(*, resource: Any, **_: Any) -> None:  # noqa: ANN401
@@ -167,7 +185,7 @@ def test_run_xsv_ingest_pipeline_pass_no_matching_files_loads_nothing(
         captured["load_info"] = pipeline.run(resource)
 
     with patch.object(xsv_pipeline_module, "run_pipeline", fake_run_pipeline):
-        run_xsv_ingest_pipeline(settings)
+        run_xsv_pipeline(settings)
 
     load_info = captured["load_info"]
     assert not load_info.has_failed_jobs
@@ -178,13 +196,10 @@ def test_run_xsv_ingest_pipeline_pass_no_matching_files_loads_nothing(
 
 
 def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
-    """cli() delegates to run_cli with XsvIngestSettings and run_xsv_ingest_pipeline."""
-    with patch.object(xsv_pipeline_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (XsvIngestSettings, run_xsv_ingest_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Cli is a PipelineCli wired to XsvIngestSettings and run_xsv_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is XsvIngestSettings
+    assert cli.pipeline_fn is run_xsv_pipeline
 
 
 @pytest.mark.usefixtures("qsv_cmd")
@@ -197,20 +212,22 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     settings = settings_factory(SIMPLE_SCHEMA, {"data.csv": "number,name\n1,alice\n2,bob\n"})
 
     argv = [
-        "xsv_ingest",
+        "xsv",
         "--input-dir",
-        settings.input_dir,
+        str(settings.input_dir),
         "--output-dir",
-        settings.output_dir,
+        str(settings.output_dir),
+        "--use-destination",
+        "local_fs",
         "--dataset-name",
         "cli_dataset",
         "--schema-file",
-        "schema.json",
+        str(settings.schema_file),
         "--table-name",
         "my_table",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
@@ -234,7 +251,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         captured["load_info"] = pipeline.run(resource)
 
     with patch.object(xsv_pipeline_module, "run_pipeline", fake_run_pipeline):
-        cli()
+        cli.run()
 
     load_info = captured["load_info"]
     assert not load_info.has_failed_jobs

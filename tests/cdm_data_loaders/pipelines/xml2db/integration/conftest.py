@@ -8,7 +8,7 @@ import pytest
 from dlt.common.pipeline import LoadInfo
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.xml2db.pipeline import run_xml2db_ingest_pipeline
+from cdm_data_loaders.pipelines.xml2db.pipeline import run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import Xml2DbSettings
 from tests.conftest import (
     REFERENCE_XML_FIXTURE_DIR,
@@ -53,7 +53,7 @@ def make_settings(
     """Build a valid xml2db settings dict, with fields open to override."""
     log_config_file = overrides.get("log_config_file", tmp_path / "logging.conf")
     log_config_file.touch()
-    output_dir = overrides.get("output_dir", tmp_path / "output")
+    output_dir = overrides.get("output_dir", tmp_path / "bucket")
     output_dir.mkdir(exist_ok=True)
     input_dir = overrides.get("input_dir", tmp_path / "input")
 
@@ -84,7 +84,7 @@ def settings_factory(tmp_path: Path, dlt_destination_config: str, library_xsd: P
 
 
 @pytest.fixture
-def run_xml2db_pipeline(
+def run_xml2db_pipeline_fxt(
     reference_xml_data_dir: Path,
     reference_xsd: Path,
     dlt_destination_config: str,
@@ -100,7 +100,7 @@ def run_xml2db_pipeline(
     """
     run = isolated_run_factory(
         "reference_run",
-        run_xml2db_ingest_pipeline,
+        run_xml2db_pipeline,
         {
             "buffer_size": 10,
             "dlt_dev_mode": False,

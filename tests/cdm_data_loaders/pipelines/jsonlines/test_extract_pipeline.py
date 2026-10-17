@@ -1,11 +1,10 @@
-"""Unit tests for run_jsonlines_ingest_pipeline and cli wiring."""
+"""Unit tests for run_jsonlines_pipeline and cli wiring."""
 
 import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
-from uuid import uuid4
 
 import dlt
 import pytest
@@ -14,7 +13,7 @@ from dlt.extract import DltResource
 
 import cdm_data_loaders.pipelines.jsonlines.extract_pipeline as extract_pipeline_module
 from cdm_data_loaders.core.fields import LoaderFileFormatEnum
-from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import cli, run_jsonlines_ingest_pipeline
+from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import cli, run_jsonlines_pipeline
 from cdm_data_loaders.pipelines.jsonlines.settings import EXTRACT_PIPELINE_NAME, JsonlExtractSettings
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
 
@@ -24,15 +23,15 @@ SIMPLE_JSONL = """{"widget_id": "a", "count": 1}
 
 
 @pytest.mark.parametrize("loader_file_format", list(LoaderFileFormatEnum), ids=str)
-def test_run_jsonlines_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
+def test_run_jsonlines_pipeline_pass_sets_core_run_pipeline_args_correctly(
     extract_settings_factory: Callable[..., JsonlExtractSettings],
     loader_file_format: str,
 ) -> None:
-    """run_jsonlines_ingest_pipeline builds the reader and delegates to run_pipeline with the correct args."""
+    """run_jsonlines_pipeline builds the reader and delegates to run_pipeline with the correct args."""
     settings = extract_settings_factory(loader_file_format=loader_file_format)
 
     with patch.object(extract_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_jsonlines_ingest_pipeline(settings)
+        run_jsonlines_pipeline(settings)
 
     assert mock_run_pipeline.call_count == 1
     _, kwargs = mock_run_pipeline.call_args
@@ -46,20 +45,20 @@ def test_run_jsonlines_ingest_pipeline_pass_sets_core_run_pipeline_args_correctl
     assert isinstance(kwargs["resource"], DltResource)
 
 
-def test_run_jsonlines_ingest_pipeline_pass_resource_is_reader_piped_into_source(
+def test_run_jsonlines_pipeline_pass_resource_is_reader_piped_into_source(
     extract_settings_factory: Callable[..., JsonlExtractSettings],
 ) -> None:
     """The resource passed to run_pipeline combines the filesystem source with the bound reader."""
     settings = extract_settings_factory()
 
     with patch.object(extract_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_jsonlines_ingest_pipeline(settings)
+        run_jsonlines_pipeline(settings)
 
     resource = mock_run_pipeline.call_args.kwargs["resource"]
     assert isinstance(resource, dlt.sources.DltResource)
 
 
-def test_run_jsonlines_ingest_pipeline_pass_routes_lines_by_directory(
+def test_run_jsonlines_pipeline_pass_routes_lines_by_directory(
     extract_settings_factory: Callable[..., JsonlExtractSettings],
 ) -> None:
     """Top-level and nested files all land in the table_name table regardless of directory."""
@@ -70,7 +69,7 @@ def test_run_jsonlines_ingest_pipeline_pass_routes_lines_by_directory(
     (input_dir / "gadget").mkdir()
     (input_dir / "gadget" / "data.jsonl").write_text('{"widget_id": "g", "count": 0}\n', encoding="utf-8")
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -78,7 +77,7 @@ def test_run_jsonlines_ingest_pipeline_pass_routes_lines_by_directory(
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "b", "g"]
 
 
-def test_run_jsonlines_ingest_pipeline_pass_invalid_rows_routed_to_invalid_table(
+def test_run_jsonlines_pipeline_pass_invalid_rows_routed_to_invalid_table(
     extract_settings_factory: Callable[..., JsonlExtractSettings],
 ) -> None:
     """Lines that are not valid JSON land in <table_name>_invalid with parse error detail."""
@@ -87,7 +86,7 @@ def test_run_jsonlines_ingest_pipeline_pass_invalid_rows_routed_to_invalid_table
     (input_dir / "widget").mkdir(parents=True)
     (input_dir / "widget" / "data.jsonl").write_text('{"widget_id": "a"}\n{broken\n', encoding="utf-8")
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -98,14 +97,14 @@ def test_run_jsonlines_ingest_pipeline_pass_invalid_rows_routed_to_invalid_table
     assert invalid_df.iloc[0]["raw_record"] == "{broken"
 
 
-def test_run_jsonlines_ingest_pipeline_pass_no_matching_files_yields_no_tables(
+def test_run_jsonlines_pipeline_pass_no_matching_files_yields_no_tables(
     extract_settings_factory: Callable[..., JsonlExtractSettings],
 ) -> None:
     """An input dir with no matching files does not fail the run and creates no data tables."""
     settings = extract_settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = run_jsonlines_ingest_pipeline(settings)
+    load_info = run_jsonlines_pipeline(settings)
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -128,7 +127,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "jsonlines_ingest",
+        "jsonlines",
         "--input-dir",
         str(input_dir),
         "--output-dir",
@@ -143,7 +142,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "widget",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
@@ -156,7 +155,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         return pipeline.run(resource)
 
     with patch.object(extract_pipeline_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli()
+        load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
