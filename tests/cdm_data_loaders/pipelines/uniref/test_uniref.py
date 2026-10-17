@@ -35,7 +35,7 @@ def test_run_uniref_pipeline_args_set_correctly(test_settings: UnirefSettings) -
     _, kwargs = mock_run_pipeline.call_args
     assert kwargs.keys() == {"settings", "resource", "pipeline_kwargs"}
     assert kwargs["pipeline_kwargs"] == {
-        "pipeline_name": "uniprot_kb",
+        "pipeline_name": "uniref",
         "dataset_name": f"uniref_{test_settings.variant}",
     }
     assert kwargs["settings"] == test_settings
