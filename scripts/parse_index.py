@@ -20,6 +20,7 @@ def main() -> None:
 
     Output:
         Prints the values associated with the specified key, one per line.
+
     """
     # Check if the correct number of arguments is provided
     if len(sys.argv) < N_EXPECTED_ARGS:

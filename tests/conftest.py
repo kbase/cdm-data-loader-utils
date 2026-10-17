@@ -136,7 +136,7 @@ def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
     """Generate a local spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
     logger = logging.getLogger(__name__)
     try:
-        from berdl_notebook_utils.setup_spark_session import get_spark_session  # pyright: ignore[reportMissingImports]  # noqa: I001, PLC0415
+        from berdl_notebook_utils.setup_spark_session import get_spark_session  # pyright: ignore[reportMissingImports]  # noqa: PLC0415
     except ModuleNotFoundError:
         logger.exception("berdl_notebook_utils not available: cannot create a spark session")
         raise

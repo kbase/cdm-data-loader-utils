@@ -12,7 +12,9 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import dlt
+import pendulum
 import pytest
+from dlt.common.storages.fsspec_filesystem import FileItemDict
 
 import cdm_data_loaders.pipelines.xsv.pipeline as xsv_pipeline_module
 from cdm_data_loaders.pipelines.xsv.pipeline import (
@@ -37,6 +39,20 @@ SIMPLE_SCHEMA: dict[str, Any] = {
 """_process_xsv_file"""
 
 
+def make_file_item(file_path: Path) -> FileItemDict:
+    """Build a dlt FileItemDict for a local file."""
+    return FileItemDict(
+        {
+            "file_url": file_path.as_uri(),
+            "file_name": file_path.name,
+            "relative_path": file_path.name,
+            "mime_type": "text/csv",
+            "modification_date": pendulum.now(),
+            "size_in_bytes": file_path.stat().st_size,
+        }
+    )
+
+
 def test_process_xsv_file_pass_routes_valid_rows_to_table(
     settings_factory: Callable[..., XsvIngestSettings],
     work_paths_factory: Callable[[XsvIngestSettings], XsvWorkPaths],
@@ -45,7 +61,7 @@ def test_process_xsv_file_pass_routes_valid_rows_to_table(
     settings = settings_factory(SIMPLE_SCHEMA, {"data.csv": "number,name\n1,alice\n2,bob\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "data.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "data.csv"), settings, work_paths))
 
     assert [(result.meta.table_name, result.data) for result in results] == [
         ("my_table", [{"number": 1, "name": "alice"}, {"number": 2, "name": "bob"}]),
@@ -62,7 +78,7 @@ def test_process_xsv_file_pass_replaces_configured_null_placeholder(
     settings = settings_factory(schema, {"data.csv": "number,name\n1,NA\n2,bob\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "data.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "data.csv"), settings, work_paths))
 
     assert results[0].data == [{"number": 1, "name": None}, {"number": 2, "name": "bob"}]
 
@@ -75,7 +91,7 @@ def test_process_xsv_file_pass_routes_total_failure_to_rejected_table(
     settings = settings_factory(SIMPLE_SCHEMA, {"bad.csv": "number,name\n1\n2,bob,extra\n"})
     work_paths = work_paths_factory(settings)
 
-    results = list(_process_xsv_file(Path(settings.input_dir) / "bad.csv", settings, work_paths))
+    results = list(_process_xsv_file(make_file_item(Path(settings.input_dir) / "bad.csv"), settings, work_paths))
 
     table_names = [result.meta.table_name for result in results]
     assert table_names == [f"my_table{REJECTED_SUFFIX}"]
