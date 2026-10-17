@@ -11,8 +11,6 @@ from cdm_data_loaders.core.fields import (
     FILE_GLOB,
     LOADER_FILE_FORMAT,
     TABLE_NAME,
-    BufferSize,
-    DatasetName,
     FileGlob,
     LoaderFileFormat,
     NonEmptyStr,
@@ -20,7 +18,7 @@ from cdm_data_loaders.core.fields import (
 )
 from cdm_data_loaders.core.settings import (
     CLI_SHORTCUTS,
-    CtsSettings,
+    FileFormatIngestSettings,
     default_settings_with_shortcuts,
 )
 
@@ -42,11 +40,9 @@ LOCAL_CLI_SHORTCUTS: Final[dict[str, str]] = {
 }
 
 
-class JsonlIngestSettings(CtsSettings):
+class JsonlIngestSettings(FileFormatIngestSettings):
     """Settings for the JSONL ingest pipeline."""
 
-    buffer_size: BufferSize
-    dataset_name: DatasetName
     file_glob: Annotated[
         FileGlob,
         Field(

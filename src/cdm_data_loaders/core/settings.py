@@ -14,14 +14,17 @@ from cdm_data_loaders.core.fields import (
     DEFAULTS,
     DLT_DEV_MODE,
     INPUT_DIR,
+    LOADER_FILE_FORMAT,
     LOG_CONFIG_FILE,
     LOG_INTERVAL,
     OUTPUT_DIR,
     USE_DESTINATION,
     USE_OUTPUT_DIR_FOR_PIPELINE_METADATA,
     BufferSize,
+    DatasetName,
     DltDevMode,
     InputDir,
+    LoaderFileFormat,
     LogConfigFile,
     LogInterval,
     OutputDir,
@@ -280,3 +283,14 @@ class CtsSettings(InputOutputSettings):
         if self.use_output_dir_for_pipeline_metadata:
             return self._output_subdir(".dlt_conf")
         return None
+
+
+class FileFormatIngestSettings(CtsSettings):
+    """Configuration for DLT pipelines that import a particular file format."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_shortcuts={**CLI_SHORTCUTS, LOADER_FILE_FORMAT: "f"}
+    )
+
+    dataset_name: DatasetName
+    loader_file_format: LoaderFileFormat

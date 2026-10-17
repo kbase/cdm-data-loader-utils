@@ -59,7 +59,7 @@ def settings_factory(tmp_path: Path) -> Callable[..., XsvIngestSettings]:
             "input_dir": str(input_dir),
             "output_dir": str(output_dir),
             "file_glob": DEFAULTS["file_glob"],
-            "schema_file": "schema.json",
+            "schema_file": str(input_dir / "schema.json"),
         }
         kwargs.update(overrides)
         return XsvIngestSettings(**kwargs)
@@ -88,8 +88,8 @@ def test_xsv_settings_pass_loads_and_validates_schema(
 
 
 def test_xsv_settings_fail_missing_schema_file(settings_factory: Callable[..., XsvIngestSettings]) -> None:
-    """A schema_file that does not exist on disk raises RuntimeError."""
-    with pytest.raises(RuntimeError, match="Could not load JSON Schema"):
+    """A schema_file that does not exist on disk raises ValidationError."""
+    with pytest.raises(ValidationError, match="Path does not point to a file"):
         settings_factory(schema=None, schema_file="does_not_exist.json")
 
 

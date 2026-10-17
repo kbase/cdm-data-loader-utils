@@ -149,7 +149,7 @@ def test_xml2db_settings_fail_xsd_file_not_found(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A supplied xsd_file that does not exist raises ValidationError naming the file."""
-    with pytest.raises(ValidationError, match="File does not exist"):
+    with pytest.raises(ValidationError, match="Path does not point to a file"):
         settings_factory(xsd_file="does_not_exist.xsd")
 
 
@@ -157,7 +157,7 @@ def test_xml2db_settings_fail_xml2db_config_file_not_found(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
     """A supplied xml2db_config_file that does not exist raises ValidationError naming the file."""
-    with pytest.raises(ValidationError, match="File does not exist"):
+    with pytest.raises(ValidationError, match="Path does not point to a file"):
         settings_factory(xml2db_config_file="does_not_exist.yaml")
 
 

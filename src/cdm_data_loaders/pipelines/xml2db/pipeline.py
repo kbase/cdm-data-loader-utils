@@ -47,7 +47,7 @@ def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     :param settings: pipeline configuration
     :type  settings: Xml2DbSettings
     """
-    model_config = load_config(settings.xml2db_config_file) if settings.xml2db_config_file else None
+    model_config = load_config(str(settings.xml2db_config_file)) if settings.xml2db_config_file else None
     model = build_xml2db_model(settings.xsd_file, short_name=settings.short_name, model_config=model_config)
 
     reader = dlt.transformer(_read_items, name="xml2db_reader", parallelized=True)
