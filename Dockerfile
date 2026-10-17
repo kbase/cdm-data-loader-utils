@@ -6,7 +6,7 @@
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.14-trixie
 
-ARG QSV_VERSION="22.0.1"
+ARG QSV_VERSION="25.0.0"
 ARG XML_FILE_SPLITTER_VERSION="v0.1.4"
 
 # Set environment variable to noninteractive to prevent prompts during apt operations
@@ -81,14 +81,18 @@ COPY --chown=nonroot:nonroot uv.lock /app/uv.lock
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
+RUN chown -R nonroot:nonroot /app
+RUN chmod +x ./scripts/*.sh
+
+# create a home dir for the user for dlt config files
+# files in $HOME override those in the execution directory
+# Note: set HOME after `uv sync` so root build steps use /root/.cache/uv
+# rather than creating root-owned cache files in /home/nonroot/.cache/uv
+RUN mkdir -p /home/nonroot && chown -R nonroot:nonroot /home/nonroot
+ENV HOME="/home/nonroot"
+
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN chmod +x ./scripts/*.sh
-
-# make sure that the nonroot user owns the app directory
-RUN chown nonroot:nonroot /app
-
-# Use the non-root user to run our application
 USER nonroot
 ENTRYPOINT ["./scripts/entrypoint.sh"]

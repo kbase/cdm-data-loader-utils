@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Each pipeline name must match a uv script name, as it is run as `uv run <name>`.
-PIPELINES=(all_the_bacteria ncbi_ftp_sync ncbi_rest_api uniprot uniref)
+# use for running python pipelines; the pipeline is specified as the second arg
+PIPELINES=(pipeline)
 OTHER=(xml_split test ceph_integration_test bash)
 VALID_COMMANDS=("${PIPELINES[@]}" "${OTHER[@]}")
 
 DLT_CONF_SRC_DIR=/input_dir/dlt_conf
-DLT_CONF_DEST_DIR=.dlt
+DLT_CONF_DEST_DIR="$HOME"/.dlt
 
 usage() {
   local joined
@@ -28,7 +28,8 @@ contains() {
   return 1
 }
 
-# Copy any dlt config files from the input dir into ./.dlt; exit on any failure.
+# Copy any dlt config files from the input dir into $HOME/.dlt; exit on any failure.
+# $HOME configs are merged with those in the execution directory, with $HOME taking priority
 copy_dlt_config() {
   local file
   for file in config.toml secrets.toml; do
@@ -53,9 +54,24 @@ fi
 cmd="$1"
 shift
 
+# if this is a pipeline, $@ contains the pipeline name and args
 if contains "$cmd" "${PIPELINES[@]}"; then
   copy_dlt_config
-  exec /usr/bin/tini -- uv run --no-sync "$cmd" "$@"
+  if [ -n "${UPDATE_CDM_LOADERS:-}" ]; then
+    echo "Using the develop branch of cdm-data-loaders..."
+    wget -q -O /app/pyproject.toml \
+      https://raw.githubusercontent.com/kbase/cdm-data-loaders/refs/heads/develop/pyproject.toml
+    uv pip install --reinstall-package cdm-data-loaders \
+      "cdm-data-loaders @ git+https://github.com/kbase/cdm-data-loaders.git@develop"
+  fi
+  rc=0
+  cmd="$1"
+  shift
+  /usr/bin/tini -s -- uv run "$cmd" "$@" || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "Warning: pipeline '$cmd' exited with status $rc; exiting 0 to preserve output." >&2
+  fi
+  exit 0
 fi
 
 case "$cmd" in
