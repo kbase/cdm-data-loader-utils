@@ -43,6 +43,8 @@ ID_TRIGGERS_500_ERR = "GCF_500_ERROR"
 VALID_IDS = [ID_WITH_500_ANNOTS, ID_WITH_2K_ANNOTS]
 INVALID_ID = "invalid_id"
 ALL_IDS = [*VALID_IDS, INVALID_ID]
+
+
 @pytest.fixture(scope="module")
 def vcr_config() -> dict[str, Any]:
     """VCR config for tests that make HTTP requests."""
@@ -87,7 +89,6 @@ def reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     :type monkeypatch: pytest.MonkeyPatch
     """
     monkeypatch.setattr(ncbi_module, "PIPELINE_SETTINGS", None)
-
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:

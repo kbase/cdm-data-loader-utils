@@ -23,7 +23,6 @@ from cdm_data_loaders.pipelines.xsv.pipeline import (
     run_xsv_pipeline,
 )
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
-from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
 
 VALID_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
 

@@ -3,12 +3,12 @@
 import logging
 from typing import TYPE_CHECKING, Any, Final, Self
 
-from cdm_data_loaders.core.destination import PIPELINE_METADATA_NOT_LOCAL, is_local, normalise_dir
 from frozendict import frozendict
 from pydantic import AliasChoices, AliasPath, computed_field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsError
 
+from cdm_data_loaders.core.destination import PIPELINE_METADATA_NOT_LOCAL, is_local, normalise_dir
 from cdm_data_loaders.core.fields import (
     BUFFER_SIZE,
     DEFAULTS,

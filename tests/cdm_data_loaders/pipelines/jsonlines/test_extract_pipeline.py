@@ -5,7 +5,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
-from uuid import uuid4
 
 import dlt
 import pytest

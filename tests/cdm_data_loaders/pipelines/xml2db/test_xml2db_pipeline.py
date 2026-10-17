@@ -212,9 +212,7 @@ def test_run_xml2db_pipeline_pass_builds_model_with_settings_schema_and_short_na
     assert kwargs["model_config"] is None
 
 
-def test_run_xml2db_pipeline_pass_loads_model_config_from_xml2db_config_file(
-    tmp_path: Path, library_xsd: Path
-) -> None:
+def test_run_xml2db_pipeline_pass_loads_model_config_from_xml2db_config_file(tmp_path: Path, library_xsd: Path) -> None:
     """A settings.xml2db_config_file is loaded via xml2db.load_config and passed to the model."""
     config_file = tmp_path / "model_config.yaml"
     config_file.write_text("record_hash_size: 16\n", encoding="utf-8")
