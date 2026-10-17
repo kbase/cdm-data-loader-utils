@@ -21,7 +21,7 @@ from jsonschema.validators import validator_for
 from cdm_data_loaders.pipelines.core import run_cli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
-    run_registry,
+    run_registry_ingest,
 )
 from cdm_data_loaders.pipelines.jsonlines.base import (
     build_entity_resource as build_shared_entity_resource,
@@ -129,7 +129,7 @@ def run_jsonlines_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo 
     :rtype:  LoadInfo | None
     """
     table_to_schema = load_entity_schemas(settings.schema_files_module)
-    return run_registry(
+    return run_registry_ingest(
         settings,
         table_to_schema,
         build_resource=build_entity_resource,

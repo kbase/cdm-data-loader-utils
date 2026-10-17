@@ -40,7 +40,7 @@ from pydantic import BaseModel, ValidationError
 from cdm_data_loaders.pipelines.core import run_cli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
-    run_registry,
+    run_registry_ingest,
 )
 from cdm_data_loaders.pipelines.jsonlines.base import (
     build_entity_resource as build_shared_entity_resource,
@@ -124,7 +124,7 @@ def run_jsonlines_with_validation_pipeline(settings: JsonlPydanticIngestSettings
     :rtype: LoadInfo | None
     """
     entity_models = load_entity_models(settings.entity_models_module)
-    return run_registry(
+    return run_registry_ingest(
         settings,
         entity_models,
         build_resource=build_entity_resource,
