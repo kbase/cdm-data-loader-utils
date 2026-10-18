@@ -11,6 +11,7 @@ from requests import HTTPError
 
 from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines import ncbi_rest_api as ncbi_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.ncbi_rest_api import (
     ANNOTATION,
     DATASET,
@@ -92,12 +93,10 @@ def reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with NcbiRestApiSettings as the settings class."""
-    with patch.object(ncbi_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (NcbiRestApiSettings, run_ncbi_pipeline)
+    """Ensure that cli is a PipelineCli wired to NcbiRestApiSettings and run_ncbi_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is NcbiRestApiSettings
+    assert cli.pipeline_fn is run_ncbi_pipeline
 
 
 def check_dataset_report(dataset_report: dict[str, Any] | None, assembly_id: str) -> None:

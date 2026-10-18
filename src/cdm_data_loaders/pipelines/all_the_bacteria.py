@@ -33,7 +33,7 @@ from cdm_data_loaders.core.settings import (
     default_settings_with_shortcuts,
 )
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
 from cdm_data_loaders.utils.file_transfer.s3.streamer import stream_to_s3
@@ -303,9 +303,7 @@ def run_atb_pipeline(settings: AtbSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """CLI interface for the AllTheBacteria importer pipeline."""
-    return run_cli(AtbSettings, run_atb_pipeline)
+cli = PipelineCli(AtbSettings, run_atb_pipeline)
 
 
 if __name__ == "__main__":

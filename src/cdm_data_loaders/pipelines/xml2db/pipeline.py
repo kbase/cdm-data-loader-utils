@@ -12,7 +12,7 @@ from dlt.common.typing import TDataItems
 from xml2db import DataModel, load_config
 
 from cdm_data_loaders.core.fields import LOCAL_FS
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
 from cdm_data_loaders.pipelines.xml2db.compaction import compact_reused_tables
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model, process_xml_file_with_xml2db
@@ -108,9 +108,7 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
         logger.info("Post-load compaction removed duplicate rows: %s", removed)
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the xml2db pipeline."""
-    return run_cli(Xml2DbSettings, run_xml2db_pipeline)
+cli = PipelineCli(Xml2DbSettings, run_xml2db_pipeline)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ import pytest
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 
 import cdm_data_loaders.pipelines.xsv.pipeline as xsv_pipeline_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.xsv.pipeline import (
     REJECTED_SUFFIX,
     XsvWorkPaths,
@@ -193,13 +194,10 @@ def test_run_xsv_pipeline_pass_no_matching_files_loads_nothing(
 
 
 def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
-    """cli() delegates to run_cli with XsvIngestSettings and run_xsv_pipeline."""
-    with patch.object(xsv_pipeline_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (XsvIngestSettings, run_xsv_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Cli is a PipelineCli wired to XsvIngestSettings and run_xsv_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is XsvIngestSettings
+    assert cli.pipeline_fn is run_xsv_pipeline
 
 
 @pytest.mark.usefixtures("qsv_cmd")
@@ -249,7 +247,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         captured["load_info"] = pipeline.run(resource)
 
     with patch.object(xsv_pipeline_module, "run_pipeline", fake_run_pipeline):
-        cli()
+        cli.run()
 
     load_info = captured["load_info"]
     assert not load_info.has_failed_jobs

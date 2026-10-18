@@ -20,7 +20,7 @@ from cdm_data_loaders.parsers.uniprot.uniref import (
     parse_uniref_entry,
 )
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
 from cdm_data_loaders.readers.xml import build_xml_file_resource
@@ -106,12 +106,7 @@ def run_uniref_pipeline(settings: UnirefSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """CLI interface for the UniRef importer pipeline."""
-    return run_cli(
-        UnirefSettings,
-        run_uniref_pipeline,
-    )
+cli = PipelineCli(UnirefSettings, run_uniref_pipeline)
 
 
 if __name__ == "__main__":

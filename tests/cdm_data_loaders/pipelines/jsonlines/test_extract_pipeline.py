@@ -155,7 +155,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         return pipeline.run(resource)
 
     with patch.object(extract_pipeline_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli()
+        load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs

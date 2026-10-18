@@ -19,7 +19,7 @@ from dlt.common.schema.typing import TSchemaContractDict
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
 
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_cli, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_reader import read_validated_rows
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import CleanerValidatorArgs, ErrorRecord
@@ -181,9 +181,7 @@ def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
         )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the XSV pipeline."""
-    return run_cli(XsvIngestSettings, run_xsv_pipeline)
+cli = PipelineCli(XsvIngestSettings, run_xsv_pipeline)
 
 
 if __name__ == "__main__":

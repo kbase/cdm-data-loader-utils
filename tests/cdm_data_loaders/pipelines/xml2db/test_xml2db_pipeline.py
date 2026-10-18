@@ -15,6 +15,7 @@ from dlt.extract import DltResource
 from xml2db import DataModel
 
 import cdm_data_loaders.pipelines.xml2db.pipeline as xml2db_pipeline_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model
@@ -343,13 +344,10 @@ def test_maybe_compact_pass_logs_when_duplicates_removed(
 
 
 def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
-    """cli() delegates to run_cli with Xml2DbSettings and run_xml2db_pipeline."""
-    with patch.object(xml2db_pipeline_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (Xml2DbSettings, run_xml2db_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Cli is a PipelineCli wired to Xml2DbSettings and run_xml2db_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is Xml2DbSettings
+    assert cli.pipeline_fn is run_xml2db_pipeline
 
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(

@@ -37,7 +37,7 @@ from typing import Any
 from dlt.common.pipeline import LoadInfo
 from pydantic import BaseModel, ValidationError
 
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
     run_registry_ingest,
@@ -133,9 +133,7 @@ def run_jsonlines_with_validation_pipeline(settings: JsonlPydanticIngestSettings
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the JSONL validate-and-load pipeline."""
-    return run_cli(JsonlPydanticIngestSettings, run_jsonlines_with_validation_pipeline)
+cli = PipelineCli(JsonlPydanticIngestSettings, run_jsonlines_with_validation_pipeline)
 
 
 if __name__ == "__main__":

@@ -84,7 +84,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     ]
     monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli()
+    load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs

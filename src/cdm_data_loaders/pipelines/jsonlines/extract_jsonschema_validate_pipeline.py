@@ -18,7 +18,7 @@ from jsonschema import FormatChecker
 from jsonschema.exceptions import SchemaError
 from jsonschema.validators import validator_for
 
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
     run_registry_ingest,
@@ -138,9 +138,7 @@ def run_jsonlines_pipeline(settings: JsonlJsonschemaIngestSettings) -> LoadInfo 
     )
 
 
-def cli() -> LoadInfo | None:
-    """Run JSON Schema ingestion using the standard CTS command-line settings."""
-    return run_cli(JsonlJsonschemaIngestSettings, run_jsonlines_pipeline)
+cli = PipelineCli(JsonlJsonschemaIngestSettings, run_jsonlines_pipeline)
 
 
 if __name__ == "__main__":
