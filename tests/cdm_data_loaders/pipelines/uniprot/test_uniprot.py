@@ -7,6 +7,7 @@ import pytest
 
 from cdm_data_loaders.parsers.uniprot.uniprot_kb import ENTRY_XML_TAG
 from cdm_data_loaders.pipelines import uniprot_kb as uniprot_module
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.uniprot_kb import (
     UniProtSettings,
     cli,
@@ -16,13 +17,10 @@ from cdm_data_loaders.pipelines.uniprot_kb import (
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with UniProtSettings and the UniProt log_interval default."""
-    with patch.object(uniprot_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (UniProtSettings, run_uniprot_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Ensure that cli is a PipelineCli wired to UniProtSettings and run_uniprot_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is UniProtSettings
+    assert cli.pipeline_fn is run_uniprot_pipeline
 
 
 # Tests for running the pipeline itself
@@ -57,12 +55,12 @@ def test_run_uniprot_pipeline_sets_core_run_pipeline_args_correctly(
     # the return value of parse_uniprot(test_settings) is what gets passed to pipeline.run
     expected_resource = mock_parse_uniprot.return_value
 
-    mock_dlt.destination.assert_called_once_with(test_settings.use_destination, bucket_url=test_settings.output_dir)
+    mock_dlt.destination.assert_called_once_with(test_settings.use_destination)
     mock_dlt.pipeline.assert_called_once_with(
-        destination=mock_dlt.destination.return_value,
         pipeline_name="uniprot_kb",
         dataset_name="uniprot_kb",
     )
+    assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
     first_run, load_info_save_run = mock_dlt.pipeline.return_value.run.call_args_list
     assert first_run.args == (expected_resource,)
     assert first_run.kwargs == {}

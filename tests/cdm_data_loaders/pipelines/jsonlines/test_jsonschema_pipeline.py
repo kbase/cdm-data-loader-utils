@@ -17,7 +17,7 @@ from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline i
     _make_resolve_error,
     build_entity_resource,
     load_entity_schemas,
-    run_jsonlines_ingest_pipeline,
+    run_jsonlines_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlJsonschemaIngestSettings
 
@@ -260,13 +260,13 @@ def test_build_entity_resource_pass_no_files(
     assert list(build_entity_resource("widget", widget_schema, settings)) == []
 
 
-def test_run_jsonlines_ingest_pipeline_fail_unknown_tables(
+def test_run_jsonlines_pipeline_fail_unknown_tables(
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
 ) -> None:
     """Unknown tables fail before the shared runner creates pipeline state."""
     settings = schema_settings_factory(table_names=["unknown"])
     with pytest.raises(ValueError, match=r"Unknown table name\(s\) requested: \['unknown'\]"):
-        run_jsonlines_ingest_pipeline(settings)
+        run_jsonlines_pipeline(settings)
     assert list(Path(settings.output_dir).iterdir()) == []
 
 
@@ -287,7 +287,7 @@ def test_settings_pass_table_selection(
     """JSON Schema settings retain the shared table selection contract."""
     settings = schema_settings_factory(table_names=table_names)
     assert settings.table_names == expected
-    assert settings.model_config["cli_prog_name"] == "jsonlines_ingest_jsonschema_validator"
+    assert settings.model_config["cli_prog_name"] == "jsonlines_jsonschema_validator"
 
 
 @pytest.mark.parametrize("buffer_size", [0, -1], ids=["zero", "negative"])

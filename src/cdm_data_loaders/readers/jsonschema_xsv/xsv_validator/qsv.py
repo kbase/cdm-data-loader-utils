@@ -22,7 +22,7 @@ from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import (
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import ValidatedSchema
 
 
-def qsv_check() -> str | None:
+def qsv_check() -> str:
     """Check whether the qsv binary is available and whether it is functioning as expected."""
     # check for qsv
     qsv_cmd = shutil.which("qsv") or os.environ.get("QSV_BIN")
@@ -45,7 +45,7 @@ def qsv_check() -> str | None:
 
 
 @validate_call
-def clean_validate_file(args: CleanerValidatorArgs) -> None | str:
+def clean_validate_file(args: CleanerValidatorArgs) -> str | None:
     """Clean and validate an xSV file.
 
     Files undergo the following steps:

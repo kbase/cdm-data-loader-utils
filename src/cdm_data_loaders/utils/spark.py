@@ -131,8 +131,7 @@ def get_existing_table_save_dir(spark: SparkSession, catalog_db: str, table: str
 def write_table(
     spark: SparkSession, sdf: DataFrame, catalog_db: str, table: str, mode: str = DEFAULT_WRITE_MODE
 ) -> None:
-    """
-    Write data as database tables and register it in the catalog.
+    """Write data as database tables and register it in the catalog.
 
     :param spark: spark sesh
     :type spark: SparkSession
@@ -208,9 +207,7 @@ def write_table_to_file(
 
 
 def preview_or_skip(spark: SparkSession, catalog_db: str, table: str, limit: int = 20) -> None:
-    """
-    Preview table if it exists.
-    """
+    """Preview table if it exists."""
     catalog_db_table = f"{catalog_db}.{table}"
     if not spark.catalog.tableExists(catalog_db_table):
         logger.info("Table %s not found. Skipping preview.", catalog_db_table)

@@ -11,7 +11,6 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines import uniref as uniref_module
 from cdm_data_loaders.pipelines.uniref import (
     UNIREF_VARIANTS,
@@ -20,7 +19,7 @@ from cdm_data_loaders.pipelines.uniref import (
     parse_uniref,
 )
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.conftest import TEST_DATA_DIR
+from tests.conftest import LOCAL_FS, TEST_DATA_DIR
 
 TEST_DEFAULT_UNIREF_VARIANT = "50"
 
@@ -114,7 +113,7 @@ def test_integration_uniref_pipeline_entity_and_cluster_content(
 
     # entity_x_source_file must reference exactly the fixture file we loaded from
     source_files = {row[0] for row in _fetch_all(pipeline, "SELECT DISTINCT source_file FROM entity_x_source_file")}
-    assert source_files == {str(UNIREF_FIXTURE_DIR / UNIREF_FIXTURE_FILE)}
+    assert source_files == {str(UNIREF_FIXTURE_DIR.resolve() / UNIREF_FIXTURE_FILE)}
 
 
 def test_integration_cli_uniref_pipeline_output_validated(
@@ -122,12 +121,13 @@ def test_integration_cli_uniref_pipeline_output_validated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination."""
+    """Exercise the real ``cli.run()`` wiring end-to-end against a DuckDB destination."""
     captured: dict[str, Any] = {}
 
     def fake_run_cli(
         settings_cls: type[UnirefSettings],
         pipeline_fn: Callable[..., Any],
+        cli_args: list[str] | None = None,
         settings_kwargs: dict[str, Any] | None = None,
     ) -> Any:
         """Replacement for core.run_cli that dispatches to pipeline_fn with the fixture settings."""
@@ -143,7 +143,7 @@ def test_integration_cli_uniref_pipeline_output_validated(
         """Replacement for core.run_pipeline that runs the resource through DuckDB."""
         assert settings is duckdb_uniref_settings
         assert pipeline_kwargs == {
-            "pipeline_name": "uniprot_kb",
+            "pipeline_name": "uniref",
             "dataset_name": f"uniref_{duckdb_uniref_settings.variant}",
         }
         pipeline = duckdb_pipeline(
@@ -152,10 +152,10 @@ def test_integration_cli_uniref_pipeline_output_validated(
         captured["load_info"] = pipeline.run(resource)
         captured["pipeline"] = pipeline
 
-    monkeypatch.setattr(uniref_module, "run_cli", fake_run_cli)
+    monkeypatch.setattr("cdm_data_loaders.pipelines.core.run_cli", fake_run_cli)
     monkeypatch.setattr(uniref_module, "run_pipeline", fake_run_pipeline)
 
-    cli()
+    cli.run()
 
     load_info = captured["load_info"]
     pipeline = captured["pipeline"]

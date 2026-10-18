@@ -29,7 +29,7 @@ from cdm_data_loaders.ncbi_ftp.assembly import (
     download_assembly_to_local,
     parse_assembly_path,
 )
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.utils.file_transfer.ftp_client import ThreadLocalFTP
 from cdm_data_loaders.utils.file_transfer.s3.client import get_s3_client
 from cdm_data_loaders.utils.file_transfer.s3.object_utils import upload_file
@@ -229,11 +229,6 @@ def run_download(config: DownloadSettings) -> None:
         raise RuntimeError(msg)
 
 
-def cli() -> None:
-    """CLI entry point for ``ncbi_ftp_sync``."""
-    run_cli(DownloadSettings, run_download)  # pyright: ignore[reportArgumentType]
-
-
 # Notebook / interactive entry point
 
 
@@ -382,3 +377,10 @@ def download_and_stage(  #  noqa: PLR0913, PLR0915
         "staging_key_prefix": staging_key_prefix,
         "dry_run": dry_run,
     }
+
+
+cli = PipelineCli(DownloadSettings, run_download)  # pyright: ignore[reportArgumentType]
+
+
+if __name__ == "__main__":
+    cli()

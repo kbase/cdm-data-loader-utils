@@ -11,7 +11,6 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines import uniprot_kb as uniprot_module
 from cdm_data_loaders.pipelines.uniprot_kb import (
     UniProtSettings,
@@ -19,7 +18,7 @@ from cdm_data_loaders.pipelines.uniprot_kb import (
     parse_uniprot,
 )
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.conftest import TEST_DATA_DIR
+from tests.conftest import LOCAL_FS, TEST_DATA_DIR
 
 UNIPROT_FIXTURE_DIR = TEST_DATA_DIR / "uniprot" / "uniprot_kb" / "chunk_4"
 UNIPROT_FIXTURE_FILES = ("chunk_00001.xml", "chunk_00002.xml", "chunk_00003.xml", "chunk_00004.xml")
@@ -109,7 +108,7 @@ def test_integration_uniprot_pipeline_entity_and_source_file_content(
 
     # entity_x_source_file must reference exactly the fixture files we loaded from
     source_files = {row[0] for row in _fetch_all(pipeline, "SELECT DISTINCT source_file FROM entity_x_source_file")}
-    assert source_files == {str(UNIPROT_FIXTURE_DIR / name) for name in UNIPROT_FIXTURE_FILES}
+    assert source_files == {str(UNIPROT_FIXTURE_DIR.resolve() / name) for name in UNIPROT_FIXTURE_FILES}
 
 
 def test_integration_cli_uniprot_pipeline_output_validated(
@@ -117,12 +116,13 @@ def test_integration_cli_uniprot_pipeline_output_validated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exercise the real ``cli()`` wiring end-to-end against a DuckDB destination."""
+    """Exercise the real ``cli.run()`` wiring end-to-end against a DuckDB destination."""
     captured: dict[str, Any] = {}
 
     def fake_run_cli(
         settings_cls: type[UniProtSettings],
         pipeline_fn: Callable[..., Any],
+        cli_args: list[str] | None = None,
         settings_kwargs: dict[str, Any] | None = None,
     ) -> Any:
         """Replacement for core.run_cli that dispatches to pipeline_fn with the fixture settings."""
@@ -142,10 +142,10 @@ def test_integration_cli_uniprot_pipeline_output_validated(
         captured["load_info"] = pipeline.run(resource)
         captured["pipeline"] = pipeline
 
-    monkeypatch.setattr(uniprot_module, "run_cli", fake_run_cli)
+    monkeypatch.setattr("cdm_data_loaders.pipelines.core.run_cli", fake_run_cli)
     monkeypatch.setattr(uniprot_module, "run_pipeline", fake_run_pipeline)
 
-    cli()
+    cli.run()
 
     load_info = captured["load_info"]
     pipeline = captured["pipeline"]

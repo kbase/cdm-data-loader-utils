@@ -8,7 +8,7 @@ batch_001.txt, batch_002.txt, batch_003.txt.
 import os
 import re
 from collections.abc import Generator
-from functools import partial
+from functools import cached_property, partial
 from itertools import islice
 from logging import Logger, getLogger
 from pathlib import Path
@@ -24,14 +24,14 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from dlt.sources.helpers.rest_client.paginators import (
     JSONResponseCursorPaginator,
 )
-from pydantic import Field, field_validator
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import SettingsConfigDict
 from requests.exceptions import HTTPError
 
 from cdm_data_loaders.core.fields import SaveRawResponses
 from cdm_data_loaders.core.settings import CLI_SHORTCUTS, CtsSettings, default_settings_with_shortcuts
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
 from cdm_data_loaders.utils.batcher import NumericFileSequenceBatcher
@@ -83,6 +83,12 @@ class NcbiRestApiSettings(CtsSettings):
 
     save_raw_responses: SaveRawResponses
 
+    @computed_field
+    @cached_property
+    def raw_data_dir(self) -> Path:
+        """Directory to save downloaded raw data files to: ``<output_dir>/raw_data/<version>``."""
+        return self.output_dir / "raw_data" / "api_responses"
+
     @field_validator(QUERY_TYPE, mode="before")
     @classmethod
     def trim_lc_query_type(cls, v: str | None) -> str | None:
@@ -99,12 +105,13 @@ class NcbiRestApiSettings(CtsSettings):
 def generate_file_path_name_from_url(settings: NcbiRestApiSettings, url_string: str) -> Path:
     """Given an NCBI URL, generate a save directory and file name for the raw HTTP responses.
 
+    :param settings: settings object
+    :type  settings: NcbiRestApiSettings
     :param url_string: the URL
     :type url_string: str
     :return: path for the save dir
     :rtype: Path
     """
-    raw_data_dir = Path(settings.raw_data_dir) / "api_responses"  # type: ignore[reportArgumentType]
     url = urlparse(url_string)
     # retrieve the page token
     page_token = "".join(parse_qs(url.query).get("page_token", []))
@@ -114,7 +121,7 @@ def generate_file_path_name_from_url(settings: NcbiRestApiSettings, url_string: 
     # any subsequent parts are the specific data type being accessed
     save_parts = url.path.replace("/datasets/v2/", "").split("/")
     # make a directory for this ID
-    save_dir = raw_data_dir / save_parts[3] / save_parts[2]
+    save_dir = settings.raw_data_dir / save_parts[3] / save_parts[2]
     save_dir.mkdir(parents=True, exist_ok=True)
     # file name is the PID plus optional page token if this was a multi-request PID
     file_name = f"{save_parts[2]}__{page_token}.json" if page_token else f"{save_parts[2]}.json"
@@ -257,7 +264,7 @@ def get_assembly_reports(assembly_id_list: list[str]) -> dict[str, Any]:
     return output
 
 
-def get_dataset_reports(assembly_id_list: list[str]) -> dict[str, None | dict[str, Any]]:
+def get_dataset_reports(assembly_id_list: list[str]) -> dict[str, dict[str, Any] | None]:
     """Fetch the dataset report for a list of assemblies from the NCBI datasets REST API."""
     if not assembly_id_list:
         return {}
@@ -392,9 +399,7 @@ def run_ncbi_pipeline(settings: NcbiRestApiSettings) -> LoadInfo | None:
     )
 
 
-def cli() -> LoadInfo | None:
-    """CLI interface for the NCBI REST API importer pipeline."""
-    return run_cli(NcbiRestApiSettings, run_ncbi_pipeline)
+cli = PipelineCli(NcbiRestApiSettings, run_ncbi_pipeline)
 
 
 if __name__ == "__main__":

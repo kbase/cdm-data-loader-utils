@@ -4,7 +4,6 @@
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
             "stream": "ext://sys.stdout"
         },
         "file": {
@@ -14,7 +13,7 @@
     },
     "loggers": {
         "root": {
-            "level": "INFO",
+            "level": "WARNING",
             "handlers": [
                 "console",
                 "file"

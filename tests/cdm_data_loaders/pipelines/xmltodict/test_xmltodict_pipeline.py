@@ -1,4 +1,4 @@
-"""Unit tests for run_xml_ingest_pipeline and cli wiring."""
+"""Unit tests for run_xmltodict_pipeline and cli wiring."""
 
 import sys
 from collections.abc import Callable
@@ -12,11 +12,11 @@ import pytest
 from dlt.common.pipeline import LoadInfo
 from dlt.extract import DltResource
 
-import cdm_data_loaders.pipelines.xmltodict.pipeline as xmltodict_ingest_module
+import cdm_data_loaders.pipelines.xmltodict.pipeline as xmltodict_module
 from cdm_data_loaders.core.fields import LoaderFileFormatEnum
 from cdm_data_loaders.pipelines.xmltodict.pipeline import (
     cli,
-    run_xml_ingest_pipeline,
+    run_xmltodict_pipeline,
 )
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
@@ -24,15 +24,15 @@ from tests.xml_samples import TWO_BOOK_LIBRARY_XML
 
 
 @pytest.mark.parametrize("loader_file_format", list(LoaderFileFormatEnum), ids=str)
-def test_run_xml_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
+def test_run_xmltodict_pipeline_pass_sets_core_run_pipeline_args_correctly(
     settings_factory: Callable[..., XmlToDictSettings],
     loader_file_format: str,
 ) -> None:
-    """run_xml_ingest_pipeline builds the reader and delegates to run_pipeline with the correct args."""
+    """run_xmltodict_pipeline builds the reader and delegates to run_pipeline with the correct args."""
     settings = settings_factory(loader_file_format=loader_file_format)
 
-    with patch.object(xmltodict_ingest_module, "run_pipeline") as mock_run_pipeline:
-        run_xml_ingest_pipeline(settings)
+    with patch.object(xmltodict_module, "run_pipeline") as mock_run_pipeline:
+        run_xmltodict_pipeline(settings)
 
     assert mock_run_pipeline.call_count == 1
     _, kwargs = mock_run_pipeline.call_args
@@ -46,14 +46,14 @@ def test_run_xml_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
     assert isinstance(kwargs["resource"], DltResource)
 
 
-def test_run_xml_ingest_pipeline_pass_binds_reader_before_run_pipeline(
+def test_run_xmltodict_pipeline_pass_binds_reader_before_run_pipeline(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
     """The resource passed to run_pipeline is the bound reader piped into the filesystem source."""
     settings = settings_factory()
 
-    with patch.object(xmltodict_ingest_module, "run_pipeline") as mock_run_pipeline:
-        run_xml_ingest_pipeline(settings)
+    with patch.object(xmltodict_module, "run_pipeline") as mock_run_pipeline:
+        run_xmltodict_pipeline(settings)
 
     mock_run_pipeline.assert_called_once()
     resource = mock_run_pipeline.call_args.kwargs["resource"]
@@ -61,14 +61,14 @@ def test_run_xml_ingest_pipeline_pass_binds_reader_before_run_pipeline(
     assert resource._pipe.parent.name == "filesystem"  # noqa: SLF001
 
 
-def test_run_xml_ingest_pipeline_pass_resource_is_reader_piped_into_source(
+def test_run_xmltodict_pipeline_pass_resource_is_reader_piped_into_source(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
     """The resource passed to run_pipeline combines the filesystem source with the bound reader."""
     settings = settings_factory()
 
-    with patch.object(xmltodict_ingest_module, "run_pipeline") as mock_run_pipeline:
-        run_xml_ingest_pipeline(settings)
+    with patch.object(xmltodict_module, "run_pipeline") as mock_run_pipeline:
+        run_xmltodict_pipeline(settings)
 
     resource = mock_run_pipeline.call_args.kwargs["resource"]
     assert isinstance(resource, dlt.sources.DltResource)
@@ -78,7 +78,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """cli() reads command-line arguments and runs the pipeline via run_xml_ingest_pipeline.
+    """cli() reads command-line arguments and runs the pipeline via run_xmltodict_pipeline.
 
     The real XmlToDictSettings parses argv (seeded by the autouse dlt
     config isolation fixture), and core.run_pipeline is redirected to a real
@@ -93,11 +93,13 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict_ingest",
+        "xmltodict",
         "--input-dir",
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -108,7 +110,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "book",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
@@ -127,8 +129,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         pipeline = duckdb_pipeline(tmp_path, pipeline_name, "cli_dataset")
         return pipeline.run(resource)
 
-    with patch.object(xmltodict_ingest_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli()
+    with patch.object(xmltodict_module, "run_pipeline", fake_run_pipeline):
+        load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -156,11 +158,13 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict_ingest",
+        "xmltodict",
         "--input-dir",
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -171,7 +175,7 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
         "book",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
@@ -186,8 +190,8 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
         pipeline = duckdb_pipeline(tmp_path, pipeline_name, "cli_dataset")
         return pipeline.run(resource)
 
-    with patch.object(xmltodict_ingest_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli()
+    with patch.object(xmltodict_module, "run_pipeline", fake_run_pipeline):
+        load_info = cli.run()
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
@@ -219,7 +223,7 @@ def test_cli_fail_missing_required_args_raise(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict_ingest",
+        "xmltodict",
         "--input-dir",
         str(tmp_path / "input"),
         "--output-dir",
@@ -231,7 +235,7 @@ def test_cli_fail_missing_required_args_raise(
     monkeypatch.setattr(sys, "argv", argv)
 
     with (
-        patch.object(xmltodict_ingest_module, "run_pipeline") as mock_run_pipeline,
+        patch.object(xmltodict_module, "run_pipeline") as mock_run_pipeline,
         pytest.raises(Exception, match=expected_fragment),
     ):
         cli()

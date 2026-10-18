@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, call, patch
 
-import dlt.sources.helpers.requests
 import pytest
 from frozendict import frozendict
+from pydantic import ValidationError
 from requests.exceptions import HTTPError
 
-from cdm_data_loaders.core.fields import S3
 from cdm_data_loaders.pipelines import all_the_bacteria
 from cdm_data_loaders.pipelines.all_the_bacteria import (
     ALL_ATB_FILE_NAME,
@@ -25,9 +24,10 @@ from cdm_data_loaders.pipelines.all_the_bacteria import (
     osf_file_downloader,
     run_atb_pipeline,
 )
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.utils.file_transfer.core import NonRetryableDownloadError
 from tests.cdm_data_loaders.pipelines.conftest import VALID_DESTINATIONS
-from tests.conftest import DEFAULT_VCR_CONFIG
+from tests.conftest import DEFAULT_VCR_CONFIG, S3
 
 
 @pytest.fixture(scope="module")
@@ -48,12 +48,10 @@ def pattern_file(tmp_path: Path) -> Path:
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
-    """Ensure that cli() calls run_cli with AtbSettings and run_atb_pipeline."""
-    with patch.object(all_the_bacteria, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (AtbSettings, run_atb_pipeline)
+    """Ensure that cli is a PipelineCli wired to AtbSettings and run_atb_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is AtbSettings
+    assert cli.pipeline_fn is run_atb_pipeline
 
 
 def test_load_patterns_returns_compiled_pattern(pattern_file: Path) -> None:
@@ -156,19 +154,11 @@ def test_download_atb_index_tsv_vcr(test_settings: AtbSettings) -> None:
 @pytest.mark.default_cassette("test_download_atb_index_tsv_vcr.yaml")
 def test_download_atb_index_tsv_vcr_destination_s3(test_s3_settings: AtbSettings) -> None:
     """Ensure that the download_atb_index function fetches the correct file."""
-    mock_stream_to_s3 = MagicMock()
-    with (
-        patch("cdm_data_loaders.pipelines.all_the_bacteria.stream_to_s3", mock_stream_to_s3),
-    ):
-        output_file = download_atb_index_tsv(test_s3_settings)
-
-    download_url = "https://osf.io/download/r6gcp/"
-    mock_stream_to_s3.assert_called_once_with(
-        url=download_url,
-        s3_path=f"{test_s3_settings.raw_data_dir}/{ALL_ATB_FILE_NAME}",
-        requests=dlt.sources.helpers.requests,
-    )
-    assert output_file == Path(ALL_ATB_FILE_NAME)
+    output_file = download_atb_index_tsv(test_s3_settings)
+    raw_data_dir = Path(test_s3_settings.raw_data_dir)
+    assert raw_data_dir.is_dir()
+    assert output_file.exists()
+    assert output_file.parent == raw_data_dir
 
 
 @pytest.mark.vcr
@@ -180,24 +170,21 @@ def test_download_atb_index_tsv_error_404(test_settings: AtbSettings) -> None:
 
 @pytest.mark.vcr
 @pytest.mark.default_cassette("test_download_atb_index_tsv_vcr.yaml")
-def test_download_atb_index_s3_error_boom(test_s3_settings: AtbSettings, caplog: pytest.LogCaptureFixture) -> None:
-    """Ensure that an error in the s3 upload causes things to die unpleasantly."""
-    mock_stream_to_s3 = MagicMock(side_effect=ValueError("ZOMG!"))
+def test_download_atb_index_s3_error_boom(test_s3_settings: AtbSettings) -> None:
+    """Ensure that an error in the download causes things to die unpleasantly."""
+    mock_download_client = MagicMock()
+    mock_download_client.download.side_effect = ValueError("ZOMG!")
     with (
-        patch("cdm_data_loaders.pipelines.all_the_bacteria.stream_to_s3", mock_stream_to_s3),
+        patch("cdm_data_loaders.pipelines.all_the_bacteria.FileDownloader", return_value=mock_download_client),
         pytest.raises(ValueError, match="ZOMG!"),
     ):
         download_atb_index_tsv(test_s3_settings)
 
     download_url = "https://osf.io/download/r6gcp/"
-    mock_stream_to_s3.assert_called_once_with(
+    mock_download_client.download.assert_called_once_with(
         url=download_url,
-        s3_path=f"{test_s3_settings.raw_data_dir}/{ALL_ATB_FILE_NAME}",
-        requests=dlt.sources.helpers.requests,
+        destination=test_s3_settings.raw_data_dir / ALL_ATB_FILE_NAME,
     )
-    last_log_record = caplog.records.pop()
-    assert last_log_record.levelno == logging.ERROR
-    assert last_log_record.getMessage() == f"Could not transfer {ALL_ATB_FILE_NAME} to s3"
 
 
 @pytest.mark.vcr
@@ -207,11 +194,13 @@ def test_download_atv_index_tsv_error_missing_key(test_settings: AtbSettings) ->
         download_atb_index_tsv(test_settings)
 
 
-def test_download_atv_index_cannot_create_dir() -> None:
+def test_download_atv_index_cannot_create_dir(tmp_path: Path) -> None:
     """Ensure that the output raw_data_dir directory can be saved to."""
     # N.b. error message is OS specific -- may not work on Windows
-    with pytest.raises(OSError, match=r"(Read-only file system|Permission denied)"):
-        download_atb_index_tsv(AtbSettings(output_dir="/path/to/file"))  # pyright: ignore[reportCallIssue]
+    with pytest.raises(ValidationError, match=r"(Read-only file system|Permission denied)"):
+        download_atb_index_tsv(
+            AtbSettings(input_dir=str(tmp_path), output_dir="/path/to/file", use_destination="local_fs")  # pyright: ignore[reportCallIssue]
+        )
 
 
 @pytest.mark.vcr
@@ -249,7 +238,12 @@ def test_get_file_download_links_use_pattern_file(tmp_path: Path, pattern_lines:
     p = tmp_path / "patterns.txt"
     p.write_text(f"{pattern_lines}\n", encoding="utf-8")
 
-    settings = AtbSettings(input_dir=str(tmp_path), output_dir=str(tmp_path), pattern_file="patterns.txt")  # pyright: ignore[reportCallIssue]
+    settings = AtbSettings(
+        input_dir=str(tmp_path),
+        output_dir=str(tmp_path),
+        pattern_file="patterns.txt",
+        use_destination="local_fs",
+    )  # pyright: ignore[reportCallIssue]
     file_path = Path("tests") / "data" / "atb" / "all_atb_files.tsv"
     filtered_files = list(get_file_download_links(settings, file_path))
     # load the expected results
@@ -364,45 +358,27 @@ def test_osf_file_downloader_success(
         f["path"] = f"{settings.raw_data_dir}/{f['path']}"
 
     mock_download_client = MagicMock()
-    mock_stream_to_s3 = MagicMock()
-    mock_requests = MagicMock()
-    with (
-        patch(
-            "cdm_data_loaders.pipelines.all_the_bacteria.FileDownloader",
-            return_value=mock_download_client,
-        ),
-        patch("cdm_data_loaders.pipelines.all_the_bacteria.stream_to_s3", mock_stream_to_s3),
-        patch("dlt.sources.helpers.requests", mock_requests),
+    with patch(
+        "cdm_data_loaders.pipelines.all_the_bacteria.FileDownloader",
+        return_value=mock_download_client,
     ):
         # get the output from the generator
         output = list(osf_file_downloader(settings, atb_file_list))
 
     # should have a separate call for each file downloaded
-    if use_destination == S3:
-        mock_download_client.download.assert_not_called()
-        call_args = [c.kwargs for c in mock_stream_to_s3.call_args_list]
-        assert call_args == [
-            {
-                "url": f["url"],
-                "s3_path": f["path"],
-                "requests": mock_requests,
-            }
-            for f in atb_file_list
-        ]
-    else:
-        assert mock_download_client.download.call_count == len(atb_file_list)
+    assert mock_download_client.download.call_count == len(atb_file_list)
 
-        call_list = [c.kwargs for c in mock_download_client.download.call_args_list]
-        expected_calls = [
-            {
-                "url": f["url"],
-                "destination": Path(settings.raw_data_dir) / f["path"],
-                "expected_checksum": f["md5"],
-                "checksum_fn": "md5",
-            }
-            for f in atb_input
-        ]
-        assert call_list == expected_calls
+    call_list = [c.kwargs for c in mock_download_client.download.call_args_list]
+    expected_calls = [
+        {
+            "url": f["url"],
+            "destination": Path(settings.raw_data_dir) / f["path"],
+            "expected_checksum": f["md5"],
+            "checksum_fn": "md5",
+        }
+        for f in atb_input
+    ]
+    assert call_list == expected_calls
 
     # output from dlt.mark.with_table_name
     assert output[0].data == expected_output
@@ -484,34 +460,16 @@ def test_osf_file_downloader_error_handling(  # noqa: PLR0917
                 msg_0 = "Loser!"
                 raise RuntimeError(msg_0)
 
-    mock_requests = MagicMock()
     mock_download_client = MagicMock()
     mock_download_client.download.side_effect = file_downloader_boom
-    mock_stream_to_s3 = MagicMock(side_effect=file_downloader_boom)
 
-    with (
-        patch(
-            "cdm_data_loaders.pipelines.all_the_bacteria.FileDownloader",
-            return_value=mock_download_client,
-        ),
-        patch("cdm_data_loaders.pipelines.all_the_bacteria.stream_to_s3", mock_stream_to_s3),
-        patch("dlt.sources.helpers.requests", mock_requests),
+    with patch(
+        "cdm_data_loaders.pipelines.all_the_bacteria.FileDownloader",
+        return_value=mock_download_client,
     ):
         list(osf_file_downloader(settings, atb_file_list))
 
-    if use_destination == S3:
-        mock_download_client.download.assert_not_called()
-        call_args = [c.kwargs for c in mock_stream_to_s3.call_args_list]
-        assert call_args == [
-            {
-                "url": f["url"],
-                "s3_path": f"{settings.raw_data_dir}/{f['project'].replace('AllTheBacteria/', '')}/{f['filename']}",
-                "requests": mock_requests,
-            }
-            for f in atb_file_list
-        ]
-    else:
-        mock_stream_to_s3.assert_not_called()
+    assert mock_download_client.download.call_count == len(atb_file_list)
 
     expected_file_names = {
         "Two/good_file.txt": f"{settings.raw_data_dir}/One/Two/good_file.txt",
@@ -608,33 +566,32 @@ def test_run_atb_pipeline_pipeline_dir_present_or_absent(
     dlt_dev_mode: bool,
     mock_dlt: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Check that the appropriate args are passed as pipeline_kwargs."""
+    output_dir = tmp_path / "output"
     settings = AtbSettings(
-        output_dir="/my/output",
+        input_dir=str(tmp_path),
+        output_dir=str(output_dir),
         use_destination=VALID_DESTINATIONS[0],
         use_output_dir_for_pipeline_metadata=use_output_dir_for_pipeline_metadata,
         dlt_dev_mode=dlt_dev_mode,
     )  # pyright: ignore[reportCallIssue]
     mock_file_downloader = MagicMock(name="file_downloader")
     if use_output_dir_for_pipeline_metadata:
-        assert settings.pipeline_dir == "/my/output/.dlt_conf"
+        assert settings.pipeline_dir == output_dir.resolve() / ".dlt_conf"
     else:
         assert settings.pipeline_dir is None
 
     monkeypatch.setattr(all_the_bacteria, "atb_file_list", MagicMock())
     monkeypatch.setattr(all_the_bacteria, "file_downloader", mock_file_downloader)
-    mock_pipeline = mock_dlt.pipeline.return_value
-    # don't run the second pipeline to save the LoadInfo
-    mock_pipeline.run.return_value = None
 
     run_atb_pipeline(settings)
 
-    assert mock_dlt.destination.call_args_list == [
-        call(VALID_DESTINATIONS[0], bucket_url="/my/output", max_table_nesting=0)
-    ]
+    assert mock_dlt.destination.call_args_list == [call(VALID_DESTINATIONS[0], max_table_nesting=0)]
     mock_pipeline = mock_dlt.pipeline.return_value
-    assert mock_pipeline.run.call_args_list == [call(mock_file_downloader)]
+    assert mock_pipeline.destination == mock_dlt.destination.return_value
+    assert mock_pipeline.run.call_args_list[0] == call(mock_file_downloader)
 
     pipeline_kwargs: dict[str, Any] = {"pipeline_name": DATASET_NAME, "dataset_name": DATASET_NAME}
     if use_output_dir_for_pipeline_metadata:
@@ -642,4 +599,4 @@ def test_run_atb_pipeline_pipeline_dir_present_or_absent(
     if dlt_dev_mode:
         pipeline_kwargs["dev_mode"] = True
 
-    assert mock_dlt.pipeline.call_args_list == [call(destination=mock_dlt.destination.return_value, **pipeline_kwargs)]
+    assert mock_dlt.pipeline.call_args_list == [call(**pipeline_kwargs)]

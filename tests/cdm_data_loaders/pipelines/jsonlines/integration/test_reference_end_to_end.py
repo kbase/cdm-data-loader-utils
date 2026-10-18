@@ -22,7 +22,7 @@ pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, 
 
 
 @pytest.mark.parametrize("include_valid", [True, False], ids=["mixed", "all-invalid"])
-def test_jsonlines_ingest_fail_malformed_rows_preserve_provenance(
+def test_jsonlines_fail_malformed_rows_preserve_provenance(
     *,
     run_reference_pipeline: Callable[..., Any],
     pipeline_kind: str,
@@ -74,7 +74,7 @@ def test_jsonlines_ingest_fail_malformed_rows_preserve_provenance(
 
 
 @pytest.mark.parametrize("input_case", ["missing-entity", "empty-directory", "empty-file", "blank-lines"], ids=str)
-def test_jsonlines_ingest_pass_empty_inputs_produce_no_data(
+def test_jsonlines_pass_empty_inputs_produce_no_data(
     run_reference_pipeline: Callable[..., Any], tmp_path: Path, loader_file_format: str, input_case: str
 ) -> None:
     """Missing entity directories, no files, empty files, and whitespace yield no data rows."""
@@ -93,7 +93,7 @@ def test_jsonlines_ingest_pass_empty_inputs_produce_no_data(
     assert {name: rows for name, rows in tables.items() if not name.startswith("_dlt")} == {}
 
 
-def test_jsonlines_ingest_pass_duplicates_blanks_and_final_line_preserved(
+def test_jsonlines_pass_duplicates_blanks_and_final_line_preserved(
     *,
     run_reference_pipeline: Callable[..., Any],
     tmp_path: Path,
@@ -120,7 +120,7 @@ def test_jsonlines_ingest_pass_duplicates_blanks_and_final_line_preserved(
     assert [canonicalize_pipeline_entry(row) for row in reconstructed_entries(tables)] == [expected, expected]
 
 
-def test_jsonlines_ingest_pass_multiple_entities_and_file_glob(
+def test_jsonlines_pass_multiple_entities_and_file_glob(
     *,
     run_reference_pipeline: Callable[..., Any],
     pipeline_kind: str,
@@ -266,7 +266,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     """All real CLI entry points load the reference dataset from command-line settings."""
     log_config = tmp_path / "logging.json"
     log_config.write_text('{"version": 1}', encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
+    output_dir = tmp_path / "bucket"
     registry_flag, registry_module = {
         "extract": ("table-name", "dataset"),
         "extract_validate": (
@@ -279,7 +279,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
         ),
     }[pipeline_kind]
     argv = [
-        "jsonlines_ingest",
+        "jsonlines",
         "--input-dir",
         str(reference_data_dir / "chunk_52"),
         "--output-dir",
@@ -305,7 +305,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
         "extract_validate": validate_cli,
         "extract_jsonschema_validate": jsonschema_cli,
     }[pipeline_kind]
-    load_info = cli()
+    load_info = cli.run()
     assert load_info is not None
     assert not load_info.has_failed_jobs
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)

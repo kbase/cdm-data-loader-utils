@@ -59,7 +59,7 @@ def settings_factory(tmp_path: Path) -> Callable[..., XsvIngestSettings]:
             "input_dir": str(input_dir),
             "output_dir": str(output_dir),
             "file_glob": DEFAULTS["file_glob"],
-            "schema_file": "schema.json",
+            "schema_file": str(input_dir / "schema.json"),
         }
         kwargs.update(overrides)
         return XsvIngestSettings(**kwargs)
@@ -70,7 +70,7 @@ def settings_factory(tmp_path: Path) -> Callable[..., XsvIngestSettings]:
 """defaults and basic construction"""
 
 
-def test_xsv_ingest_settings_pass_defaults(settings_factory: Callable[..., XsvIngestSettings]) -> None:
+def test_xsv_settings_pass_defaults(settings_factory: Callable[..., XsvIngestSettings]) -> None:
     """file_glob, buffer_size, and log_interval default to the common CTS defaults."""
     settings = settings_factory()
     assert settings.file_glob == DEFAULTS["file_glob"]
@@ -79,7 +79,7 @@ def test_xsv_ingest_settings_pass_defaults(settings_factory: Callable[..., XsvIn
     assert settings.model_config["cli_prog_name"] == PIPELINE_NAME
 
 
-def test_xsv_ingest_settings_pass_loads_and_validates_schema(
+def test_xsv_settings_pass_loads_and_validates_schema(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """validated_schema exposes the parsed schema's required columns."""
@@ -87,9 +87,9 @@ def test_xsv_ingest_settings_pass_loads_and_validates_schema(
     assert settings.validated_schema.required_cols == COLUMNS
 
 
-def test_xsv_ingest_settings_fail_missing_schema_file(settings_factory: Callable[..., XsvIngestSettings]) -> None:
-    """A schema_file that does not exist on disk raises RuntimeError."""
-    with pytest.raises(RuntimeError, match="Could not load JSON Schema"):
+def test_xsv_settings_fail_missing_schema_file(settings_factory: Callable[..., XsvIngestSettings]) -> None:
+    """A schema_file that does not exist on disk raises ValidationError."""
+    with pytest.raises(ValidationError, match="Path does not point to a file"):
         settings_factory(schema=None, schema_file="does_not_exist.json")
 
 
@@ -101,7 +101,7 @@ def test_xsv_ingest_settings_fail_missing_schema_file(settings_factory: Callable
         pytest.param({"$schema": VALID_SCHEMA_URI, "required": []}, id="empty-required"),
     ],
 )
-def test_xsv_ingest_settings_fail_invalid_schema(
+def test_xsv_settings_fail_invalid_schema(
     settings_factory: Callable[..., XsvIngestSettings], invalid_schema: dict[str, Any]
 ) -> None:
     """A structurally invalid schema (missing $schema or required) raises RuntimeError."""
@@ -109,14 +109,14 @@ def test_xsv_ingest_settings_fail_invalid_schema(
         settings_factory(schema=invalid_schema)
 
 
-def test_xsv_ingest_settings_fail_empty_schema_file_name(settings_factory: Callable[..., XsvIngestSettings]) -> None:
+def test_xsv_settings_fail_empty_schema_file_name(settings_factory: Callable[..., XsvIngestSettings]) -> None:
     """An empty schema_file string is rejected by the NonEmptyStr constraint."""
     with pytest.raises(ValidationError):
         settings_factory(schema_file="")
 
 
 @pytest.mark.parametrize("field", ["buffer_size", "log_interval"])
-def test_xsv_ingest_settings_fail_non_positive_int_fields(
+def test_xsv_settings_fail_non_positive_int_fields(
     settings_factory: Callable[..., XsvIngestSettings], field: str
 ) -> None:
     """buffer_size and log_interval must be positive integers."""
@@ -127,7 +127,7 @@ def test_xsv_ingest_settings_fail_non_positive_int_fields(
 """derived properties: first_pass_schema and parsing_config"""
 
 
-def test_xsv_ingest_settings_pass_first_pass_schema_is_loose(
+def test_xsv_settings_pass_first_pass_schema_is_loose(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """first_pass_schema derives a loose schema typing every required column as string-or-null."""
@@ -137,7 +137,7 @@ def test_xsv_ingest_settings_pass_first_pass_schema_is_loose(
     assert all(first_pass.jsonschema["properties"][col]["type"] == ["string", "null"] for col in COLUMNS)
 
 
-def test_xsv_ingest_settings_pass_first_pass_schema_is_cached(
+def test_xsv_settings_pass_first_pass_schema_is_cached(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """first_pass_schema is computed once and reused on subsequent access."""
@@ -145,7 +145,7 @@ def test_xsv_ingest_settings_pass_first_pass_schema_is_cached(
     assert settings.first_pass_schema is settings.first_pass_schema
 
 
-def test_xsv_ingest_settings_pass_parsing_config_empty_without_xsv_config_block(
+def test_xsv_settings_pass_parsing_config_empty_without_xsv_config_block(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """parsing_config is empty when the schema carries no x-xsv-config block."""
@@ -153,7 +153,7 @@ def test_xsv_ingest_settings_pass_parsing_config_empty_without_xsv_config_block(
     assert settings.parsing_config == {}
 
 
-def test_xsv_ingest_settings_pass_parsing_config_resolved_from_xsv_config_block(
+def test_xsv_settings_pass_parsing_config_resolved_from_xsv_config_block(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """parsing_config resolves qsv kwargs from the schema's x-xsv-config block."""
@@ -162,13 +162,13 @@ def test_xsv_ingest_settings_pass_parsing_config_resolved_from_xsv_config_block(
     assert settings.parsing_config == {"delimiter": ",", "missing_header": False}
 
 
-def test_xsv_ingest_settings_pass_parsing_config_is_cached(settings_factory: Callable[..., XsvIngestSettings]) -> None:
+def test_xsv_settings_pass_parsing_config_is_cached(settings_factory: Callable[..., XsvIngestSettings]) -> None:
     """parsing_config is computed once and reused on subsequent access."""
     settings = settings_factory()
     assert settings.parsing_config is settings.parsing_config
 
 
-def test_xsv_ingest_settings_fail_validated_schema_unset_raises() -> None:
+def test_xsv_settings_fail_validated_schema_unset_raises() -> None:
     """Accessing validated_schema before it has been set raises RuntimeError."""
     settings = XsvIngestSettings.model_construct()
     with pytest.raises(RuntimeError, match="Schema has not been validated"):

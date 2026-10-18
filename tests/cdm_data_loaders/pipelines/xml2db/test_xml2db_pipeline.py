@@ -1,4 +1,4 @@
-"""Unit tests for run_xml2db_ingest_pipeline, _read_items, _maybe_compact, and cli wiring."""
+"""Unit tests for run_xml2db_pipeline, _read_items, _maybe_compact, and cli wiring."""
 
 import gzip
 import sys
@@ -15,7 +15,8 @@ from dlt.extract import DltResource
 from xml2db import DataModel
 
 import cdm_data_loaders.pipelines.xml2db.pipeline as xml2db_pipeline_module
-from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml2db_ingest_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli
+from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
@@ -153,18 +154,18 @@ def test_read_items_pass_gzip_files_are_decompressed(tmp_path: Path, library_mod
     assert len(book_rows) == 2  # noqa: PLR2004
 
 
-# run_xml2db_ingest_pipeline
+# run_xml2db_pipeline
 
 
 @pytest.mark.parametrize("loader_file_format", ["jsonl", "parquet"])
-def test_run_xml2db_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
+def test_run_xml2db_pipeline_pass_sets_core_run_pipeline_args_correctly(
     tmp_path: Path, library_xsd: Path, loader_file_format: str
 ) -> None:
-    """run_xml2db_ingest_pipeline builds the reader and delegates to run_pipeline with correct args."""
+    """run_xml2db_pipeline builds the reader and delegates to run_pipeline with correct args."""
     settings = fake_settings(tmp_path, library_xsd, loader_file_format=loader_file_format)
 
     with patch.object(xml2db_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     assert mock_run_pipeline.call_count == 1
     _, kwargs = mock_run_pipeline.call_args
@@ -178,12 +179,12 @@ def test_run_xml2db_ingest_pipeline_pass_sets_core_run_pipeline_args_correctly(
     assert isinstance(kwargs["resource"], DltResource)
 
 
-def test_run_xml2db_ingest_pipeline_pass_binds_reader_before_run_pipeline(tmp_path: Path, library_xsd: Path) -> None:
+def test_run_xml2db_pipeline_pass_binds_reader_before_run_pipeline(tmp_path: Path, library_xsd: Path) -> None:
     """The resource passed to run_pipeline is the bound reader piped into the filesystem source."""
     settings = fake_settings(tmp_path, library_xsd)
 
     with patch.object(xml2db_pipeline_module, "run_pipeline") as mock_run_pipeline:
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_run_pipeline.assert_called_once()
     resource = mock_run_pipeline.call_args.kwargs["resource"]
@@ -191,7 +192,7 @@ def test_run_xml2db_ingest_pipeline_pass_binds_reader_before_run_pipeline(tmp_pa
     assert resource._pipe.parent.name == "filesystem"  # noqa: SLF001
 
 
-def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_short_name(
+def test_run_xml2db_pipeline_pass_builds_model_with_settings_schema_and_short_name(
     tmp_path: Path, library_xsd: Path
 ) -> None:
     """The DataModel is built from settings.xsd_file and settings.short_name."""
@@ -203,7 +204,7 @@ def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_s
         ) as mock_build,
         patch.object(xml2db_pipeline_module, "run_pipeline"),
     ):
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_build.assert_called_once()
     args, kwargs = mock_build.call_args
@@ -212,9 +213,7 @@ def test_run_xml2db_ingest_pipeline_pass_builds_model_with_settings_schema_and_s
     assert kwargs["model_config"] is None
 
 
-def test_run_xml2db_ingest_pipeline_pass_loads_model_config_from_xml2db_config_file(
-    tmp_path: Path, library_xsd: Path
-) -> None:
+def test_run_xml2db_pipeline_pass_loads_model_config_from_xml2db_config_file(tmp_path: Path, library_xsd: Path) -> None:
     """A settings.xml2db_config_file is loaded via xml2db.load_config and passed to the model."""
     config_file = tmp_path / "model_config.yaml"
     config_file.write_text("record_hash_size: 16\n", encoding="utf-8")
@@ -226,7 +225,7 @@ def test_run_xml2db_ingest_pipeline_pass_loads_model_config_from_xml2db_config_f
         ) as mock_build,
         patch.object(xml2db_pipeline_module, "run_pipeline"),
     ):
-        run_xml2db_ingest_pipeline(settings)
+        run_xml2db_pipeline(settings)
 
     mock_build.assert_called_once()
     _, kwargs = mock_build.call_args
@@ -246,7 +245,7 @@ def make_load_info(dataset_name: str, has_failed_jobs: bool = False) -> LoadInfo
 
 def test_maybe_compact_pass_runs_when_chunked_and_enabled(tmp_path: Path, library_model: DataModel) -> None:
     """Compaction runs for a chunked, local_fs run with compact_reused_tables set."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
@@ -264,7 +263,7 @@ def test_maybe_compact_pass_runs_when_not_chunked_and_enabled(tmp_path: Path, li
 
     A multi-file unchunked run can leave the same kind of literal duplicate rows behind as a
     chunked one (one xml2db Document per file, same as one per chunk), so compaction is not
-    gated on chunk_element_tag being set.
+    gated on xml_tag being set.
     """
     settings = fake_settings(tmp_path, tmp_path / "library.xsd")
     load_info = make_load_info(settings.dataset_name)
@@ -281,7 +280,7 @@ def test_maybe_compact_pass_runs_when_not_chunked_and_enabled(tmp_path: Path, li
 
 def test_maybe_compact_pass_skipped_when_compact_reused_tables_false(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when compact_reused_tables is off, even for a chunked run."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book", compact_reused_tables=False)
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book", compact_reused_tables=False)
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
@@ -292,7 +291,7 @@ def test_maybe_compact_pass_skipped_when_compact_reused_tables_false(tmp_path: P
 
 def test_maybe_compact_pass_skipped_when_load_info_is_none(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when the pipeline run failed to start (load_info is None)."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
         xml2db_pipeline_module._maybe_compact(settings, library_model, None)  # noqa: SLF001
@@ -302,25 +301,8 @@ def test_maybe_compact_pass_skipped_when_load_info_is_none(tmp_path: Path, libra
 
 def test_maybe_compact_pass_skipped_when_run_has_failed_jobs(tmp_path: Path, library_model: DataModel) -> None:
     """No compaction when the load had failed jobs."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name, has_failed_jobs=True)
-
-    with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
-        xml2db_pipeline_module._maybe_compact(settings, library_model, load_info)  # noqa: SLF001
-
-    mock_compact.assert_not_called()
-
-
-def test_maybe_compact_pass_skipped_for_non_local_fs_destination(tmp_path: Path, library_model: DataModel) -> None:
-    """Compaction is skipped with a warning for non-local_fs destinations."""
-    settings = fake_settings(
-        tmp_path,
-        tmp_path / "library.xsd",
-        chunk_element_tag="book",
-        output_dir="s3://some-bucket/out",
-        use_destination="s3",
-    )
-    load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
         xml2db_pipeline_module._maybe_compact(settings, library_model, load_info)  # noqa: SLF001
@@ -332,7 +314,7 @@ def test_maybe_compact_pass_logs_when_duplicates_removed(
     tmp_path: Path, library_model: DataModel, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A non-empty compaction result is logged."""
-    settings = fake_settings(tmp_path, tmp_path / "library.xsd", chunk_element_tag="book")
+    settings = fake_settings(tmp_path, tmp_path / "library.xsd", xml_tag="book")
     load_info = make_load_info(settings.dataset_name)
 
     with patch.object(xml2db_pipeline_module, "compact_reused_tables", return_value={"book": 3}):
@@ -345,13 +327,10 @@ def test_maybe_compact_pass_logs_when_duplicates_removed(
 
 
 def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
-    """cli() delegates to run_cli with Xml2DbSettings and run_xml2db_ingest_pipeline."""
-    with patch.object(xml2db_pipeline_module, "run_cli") as mock_run_cli:
-        cli()
-
-    mock_run_cli.assert_called_once()
-    assert mock_run_cli.call_args[0] == (Xml2DbSettings, run_xml2db_ingest_pipeline)
-    assert mock_run_cli.call_args.kwargs == {}
+    """Cli is a PipelineCli wired to Xml2DbSettings and run_xml2db_pipeline."""
+    assert isinstance(cli, PipelineCli)
+    assert cli.settings_cls is Xml2DbSettings
+    assert cli.pipeline_fn is run_xml2db_pipeline
 
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
@@ -370,11 +349,13 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}', encoding="utf-8")
 
     argv = [
-        "xml2db_ingest",
+        "xml2db",
         "--input-dir",
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -383,7 +364,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(xsd_file),
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)

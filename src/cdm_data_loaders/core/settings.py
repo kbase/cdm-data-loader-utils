@@ -1,61 +1,38 @@
-"""Common defaults for running CDM data loading pipelines."""
+"""Settings classes for data loading and wrangling pipelines."""
 
-import logging
-from typing import TYPE_CHECKING, Any, Final, Self
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final
 
-from cdm_data_loaders.core.destination import PIPELINE_METADATA_NOT_LOCAL, is_local, normalise_dir
 from frozendict import frozendict
-from pydantic import AliasChoices, AliasPath, computed_field, field_validator, model_validator
+from pydantic import AliasChoices, AliasPath, computed_field
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsError
 
 from cdm_data_loaders.core.fields import (
-    BUFFER_SIZE,
-    DEFAULTS,
-    DLT_DEV_MODE,
     INPUT_DIR,
-    LOG_CONFIG_FILE,
-    LOG_INTERVAL,
+    LOADER_FILE_FORMAT,
     OUTPUT_DIR,
     USE_DESTINATION,
     USE_OUTPUT_DIR_FOR_PIPELINE_METADATA,
     BufferSize,
+    DatasetName,
     DltDevMode,
-    InputDir,
+    LoaderFileFormat,
     LogConfigFile,
     LogInterval,
-    OutputDir,
     UseDestination,
     UseOutputDirForPipelineMetadata,
 )
+from cdm_data_loaders.core.path_fields import LocalInputDir, LocalOutputDir
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-logger = logging.getLogger(__name__)
-
-
-DEFAULT_CTS_SETTINGS = frozendict(
-    {
-        k: DEFAULTS[k]
-        for k in [
-            BUFFER_SIZE,
-            DLT_DEV_MODE,
-            INPUT_DIR,
-            LOG_CONFIG_FILE,
-            LOG_INTERVAL,
-            OUTPUT_DIR,
-            USE_DESTINATION,
-            USE_OUTPUT_DIR_FOR_PIPELINE_METADATA,
-        ]
-    }
-)
 
 
 DEFAULT_SETTINGS_CONFIG_DICT = frozendict(
     {
         "cli_exit_on_error": False,
-        "cli_ignore_unknown_args": True,
+        "cli_ignore_unknown_args": False,
         "cli_kebab_case": True,
         "env_prefix": "CDL_",
         "str_strip_whitespace": True,
@@ -73,17 +50,8 @@ CLI_SHORTCUTS: frozendict[str, str] = frozendict(
 
 # argparse registers -h/--help on every parser; claiming either makes the parser fail to build
 RESERVED_CLI_NAMES: Final[frozenset[str]] = frozenset({"h", "help"})
-
-
-def _alias_names(alias: str | AliasChoices | AliasPath | None) -> set[str]:
-    """Top-level names introduced by a field alias or validation alias."""
-    if alias is None:
-        return set()
-    if isinstance(alias, str):
-        return {alias}
-    if isinstance(alias, AliasPath):
-        return {alias.path[0]} if isinstance(alias.path[0], str) else set()
-    return set().union(*(_alias_names(choice) for choice in alias.choices))
+# dir where dlt will put run metadata, schemas, etc.
+PIPELINE_DIR_NAME: Final[str] = ".dlt_conf"
 
 
 def default_settings_with_shortcuts(
@@ -100,6 +68,17 @@ def default_settings_with_shortcuts(
             field_name.replace("_", "-"): value for field_name, value in cli_shortcuts.items()
         }
     return SettingsConfigDict(**{**DEFAULT_SETTINGS_CONFIG_DICT, **extra_args})
+
+
+def _alias_names(alias: str | AliasChoices | AliasPath | None) -> set[str]:
+    """Top-level names introduced by a field alias or validation alias."""
+    if alias is None:
+        return set()
+    if isinstance(alias, str):
+        return {alias}
+    if isinstance(alias, AliasPath):
+        return {alias.path[0]} if isinstance(alias.path[0], str) else set()
+    return set().union(*(_alias_names(choice) for choice in alias.choices))
 
 
 class CdmDataLoadersBase(BaseSettings):
@@ -195,40 +174,17 @@ class LoggerSettings(CdmDataLoadersBase):
     log_config_file: LogConfigFile
 
 
-class InputOutputSettings(LoggerSettings):
-    """Configuration with basic input and output settings.
-
-    ``output_dir`` is None when not given. A blank value (e.g. ``CDL_OUTPUT_DIR=""``) also counts as not given.
-    """
+class LocalInputOutputSettings(LoggerSettings):
+    """Configuration for a DLT pipeline where both input and output directories are local."""
 
     model_config = default_settings_with_shortcuts(cli_shortcuts={INPUT_DIR: "i", OUTPUT_DIR: "o"})
 
-    input_dir: InputDir
-    output_dir: OutputDir
-
-    @field_validator(OUTPUT_DIR, mode="before")
-    @classmethod
-    def blank_output_dir_is_unset(cls, value: Any) -> Any:  # noqa: ANN401
-        """Treat a blank output_dir as unset, so it can fall back to the destination config."""
-        if isinstance(value, str) and not value.strip():
-            return None
-        return value
-
-    @field_validator(INPUT_DIR, OUTPUT_DIR, mode="after")
-    @classmethod
-    def validate_dir_path(cls, value: str | None) -> str | None:
-        """Remove any trailing slashes from directory paths."""
-        return None if value is None else normalise_dir(value)
+    input_dir: LocalInputDir
+    output_dir: LocalOutputDir
 
 
-class CtsSettings(InputOutputSettings):
-    """Configuration for running a basic DLT pipeline.
-
-    Building this class only parses the CLI and env vars; it never reads dlt.config. If
-    ``output_dir`` is not given, it stays None until
-    :func:`cdm_data_loaders.pipelines.core.resolve_cts_settings` fills it in from
-    ``destination.<use_destination>.bucket_url``. ``run_cli`` does this automatically.
-    """
+class CtsSettings(LocalInputOutputSettings):
+    """Configuration for running a basic DLT pipeline."""
 
     model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_shortcuts=CLI_SHORTCUTS)
 
@@ -238,45 +194,25 @@ class CtsSettings(InputOutputSettings):
     use_destination: UseDestination
     use_output_dir_for_pipeline_metadata: UseOutputDirForPipelineMetadata
 
-    @model_validator(mode="after")
-    def check_pipeline_metadata_location(self) -> Self:
-        """Fail early if an explicit output_dir is remote and pipeline metadata is meant to go there.
-
-        Output locations taken from the dlt config are checked during resolution instead.
-        """
-        if self.use_output_dir_for_pipeline_metadata and self.output_dir and not is_local(self.output_dir):
-            raise ValueError(PIPELINE_METADATA_NOT_LOCAL.format(url=self.output_dir))
-        return self
-
-    def _output_subdir(self, name: str) -> str | None:
-        if self.output_dir is None:
-            return None
-        separator = "" if self.output_dir.endswith("/") else "/"
-        return f"{self.output_dir}{separator}{name}"
-
     @computed_field
     @property
-    def output_is_local(self) -> bool | None:
-        """Whether output_dir is on the local filesystem; None until output_dir is resolved."""
-        return None if self.output_dir is None else is_local(self.output_dir)
-
-    @computed_field
-    @property
-    def raw_data_dir(self) -> str | None:
-        """Directory to save downloaded raw data files to: ``<output_dir>/raw_data``.
-
-        None until output_dir is resolved.
-        """
-        return self._output_subdir("raw_data")
-
-    @computed_field
-    @property
-    def pipeline_dir(self) -> str | None:
+    def pipeline_dir(self) -> Path | None:
         """Custom directory to save pipeline metadata to.
 
         If use_output_dir_for_pipeline_metadata is true, this is ``<output_dir>/.dlt_conf``;
         otherwise None, and dlt uses its default.
         """
         if self.use_output_dir_for_pipeline_metadata:
-            return self._output_subdir(".dlt_conf")
+            return self.output_dir / PIPELINE_DIR_NAME
         return None
+
+
+class FileFormatIngestSettings(CtsSettings):
+    """Configuration for DLT pipelines that import a particular file format."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_shortcuts={**CLI_SHORTCUTS, LOADER_FILE_FORMAT: "f"}
+    )
+
+    dataset_name: DatasetName
+    loader_file_format: LoaderFileFormat

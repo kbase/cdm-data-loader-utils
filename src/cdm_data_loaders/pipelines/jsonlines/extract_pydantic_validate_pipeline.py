@@ -37,7 +37,7 @@ from typing import Any
 from dlt.common.pipeline import LoadInfo
 from pydantic import BaseModel, ValidationError
 
-from cdm_data_loaders.pipelines.core import run_cli
+from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
     run_registry_ingest,
@@ -114,7 +114,7 @@ def build_entity_resource(table_name: str, model: type[BaseModel], settings: Jso
     )
 
 
-def run_jsonlines_ingest_with_validation_pipeline(settings: JsonlPydanticIngestSettings) -> LoadInfo | None:
+def run_jsonlines_with_validation_pipeline(settings: JsonlPydanticIngestSettings) -> LoadInfo | None:
     """Run the JSONL validate-and-load pipeline for every requested table.
 
     :param settings: pipeline configuration
@@ -133,9 +133,7 @@ def run_jsonlines_ingest_with_validation_pipeline(settings: JsonlPydanticIngestS
     )
 
 
-def cli() -> LoadInfo | None:
-    """Command-line entry point for the JSONL validate-and-load pipeline."""
-    return run_cli(JsonlPydanticIngestSettings, run_jsonlines_ingest_with_validation_pipeline)
+cli = PipelineCli(JsonlPydanticIngestSettings, run_jsonlines_with_validation_pipeline)
 
 
 if __name__ == "__main__":
