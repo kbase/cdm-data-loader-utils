@@ -15,6 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # add tini and git
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     git \
     libwayland-client0 \
     libxml2-utils \

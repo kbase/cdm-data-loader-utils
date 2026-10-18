@@ -51,20 +51,11 @@ INVALID_REQUIRED_LIST = [
 
 
 @pytest.fixture
-def valid_schema(tmp_path: Path) -> ValidatedSchema:
+def valid_schema() -> ValidatedSchema:
     """Minimal ValidatedSchema object."""
     return ValidatedSchema(
         jsonschema={"$schema": VALID_SCHEMA_URI, "required": COLUMNS},
-        path=tmp_path / "some_file.json",
     )
-
-
-# def schema_key_value(tmp_path: Path) -> ValidatedSchema:
-#     """Schema consisting of just the schema declaration."""
-#     return ValidatedSchema(
-#         jsonschema=SCHEMA_KEY_VALUE,
-#         path=tmp_path / "some_file.json",
-#     )
 
 
 """validate_jsonschema"""

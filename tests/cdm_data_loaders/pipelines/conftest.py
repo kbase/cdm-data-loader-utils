@@ -120,14 +120,6 @@ def mock_dlt(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     return mock
 
 
-# @pytest.fixture
-# def mock_build_destination(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-#     """Replace build_destination as called by run_pipeline."""
-#     mock = MagicMock()
-#     monkeypatch.setattr(core, "build_destination", mock)
-#     return mock
-
-
 def isolated_run(
     tmp_path: Path,
     dataset_prefix: str,
@@ -198,7 +190,9 @@ def restore_logging() -> Iterator[None]:
     root = logging.getLogger()
     handlers, level = root.handlers[:], root.level
     applied_key = cdm_logger.applied_key
+
     yield
+
     for handler in root.handlers[:]:
         root.removeHandler(handler)
     for handler in handlers:
