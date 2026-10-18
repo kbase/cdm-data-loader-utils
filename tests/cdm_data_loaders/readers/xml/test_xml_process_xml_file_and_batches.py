@@ -674,8 +674,9 @@ def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_file
     xsd_file = None
     if xsd_filename is not None:
         xsd_content = (test_data_dir / "xsd" / xsd_filename).read_text(encoding="utf-8")
-        (input_dir / xsd_filename).write_text(xsd_content, encoding="utf-8")
-        xsd_file = xsd_filename
+        xsd_path = input_dir / xsd_filename
+        xsd_path.write_text(xsd_content, encoding="utf-8")
+        xsd_file = str(xsd_path)
 
     return XmlToDictSettings(
         input_dir=str(input_dir),
