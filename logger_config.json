@@ -8,7 +8,8 @@
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "/output_dir/log_file.txt"
+            "filename": "/output_dir/log_file.txt",
+            "level": "WARNING"
         }
     },
     "loggers": {

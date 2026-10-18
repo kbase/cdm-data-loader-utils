@@ -200,16 +200,6 @@ def test_settings_missing_sync_attrs_pass_fixture_shape(
     assert not hasattr(settings_missing_sync_attrs, USE_DESTINATION)
 
 
-# build_destination
-# @pytest.mark.parametrize("use_destination", [LOCAL_FS, S3])
-# def test_build_destination_pass_named_destination_from_config(use_destination: str) -> None:
-#     """A destination with a configured destination_type is built as a named destination of that type."""
-#     destination = build_destination(use_destination)
-
-#     assert destination.destination_name == use_destination
-#     assert destination.destination_type == FILESYSTEM_DESTINATION_TYPE
-
-
 @pytest.mark.parametrize(
     ("config", "use_destination"),
     [

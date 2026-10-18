@@ -175,11 +175,6 @@ def entry_wrap(xml: str) -> str:
             [
                 ("A4_HUMAN", "UniProt entry name"),
                 ("HumanA4", "UniProt entry name"),
-                #   <cdAntigenName>CD143</cdAntigenName>
-                #   <allergenName>Ulo b 1</allergenName>
-                #   <allergenName>Alt a 1</allergenName>
-                #   <innName evidence="13">Tozuleristide</innName>
-                #   <innName>Glucarpidase</innName>
             ],
         ),
     ],
