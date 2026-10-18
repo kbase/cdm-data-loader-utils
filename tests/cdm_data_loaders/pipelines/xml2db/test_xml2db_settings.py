@@ -8,13 +8,14 @@ import pytest
 from pydantic import ValidationError
 from pydantic_settings import CliApp
 
-from cdm_data_loaders.core.fields import DEFAULTS, S3
+from cdm_data_loaders.core.fields import DEFAULTS
 from cdm_data_loaders.pipelines.xml2db.settings import (
     DEFAULT_XML2DB_CHUNK_SIZE,
     DEFAULT_XML2DB_SHORT_NAME,
     PIPELINE_NAME,
     Xml2DbSettings,
 )
+from tests.conftest import S3
 
 MINIMAL_SETTINGS_KWARGS: dict[str, object] = {
     "buffer_size": 100,
@@ -173,25 +174,17 @@ def test_xml2db_settings_pass_xml2db_config_file_accepted(
 def test_xml2db_settings_pass_local_destination_with_s3_output_dir_accepted_at_construction(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
-    """use_destination='local_fs' with an s3:// output_dir is accepted at construction.
-
-    The protocol check happens when output_dir is resolved against the dlt config, not at
-    construction time (see tests/cdm_data_loaders/core/test_destination.py).
-    """
-    settings = settings_factory(output_dir="s3://some-bucket/path")
-    assert settings.output_is_local is False
+    """An s3:// output_dir is rejected at construction because output_dir must be a local path."""
+    with pytest.raises(ValidationError):
+        settings_factory(output_dir="s3://some-bucket/path")
 
 
 def test_xml2db_settings_pass_s3_destination_with_local_output_dir_accepted_at_construction(
     settings_factory: Callable[..., Xml2DbSettings],
 ) -> None:
-    """use_destination='s3' with a local output_dir is accepted at construction.
-
-    The protocol check happens when output_dir is resolved against the dlt config, not at
-    construction time (see tests/cdm_data_loaders/core/test_destination.py).
-    """
+    """use_destination='s3' with a local output_dir is accepted at construction."""
     settings = settings_factory(use_destination=S3)
-    assert settings.output_is_local is True
+    assert settings.use_destination == S3
 
 
 def test_xml2db_settings_pass_unknown_use_destination_accepted_at_construction(
@@ -229,6 +222,8 @@ def test_xml2db_settings_pass_cli_shortcut_g_targets_file_glob(tmp_path: Path, t
             str(input_dir),
             "--output-dir",
             str(output_dir),
+            "--use-destination",
+            "local_fs",
             "--log-config-file",
             str(log_config_file),
             "--dataset-name",

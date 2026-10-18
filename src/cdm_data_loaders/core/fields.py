@@ -1,4 +1,4 @@
-"""Common defaults for running pipelines on the KBase CTS."""
+"""Common fields and defaults for data loading and wrangling pipelines."""
 
 from enum import StrEnum
 from typing import Annotated, Final
@@ -26,8 +26,7 @@ class LoaderFileFormatEnum(StrEnum):
 
 
 # destination config block names
-LOCAL_FS: Final[str] = "local_fs"
-S3: Final[str] = "s3"
+CTS: Final[str] = "cts"
 
 # field names
 BATCH_SIZE: Final[str] = "batch_size"
@@ -59,16 +58,13 @@ DEFAULTS = frozendict(
         DLT_DEV_MODE: False,
         DISABLE_OUTPUT_COMPRESSION: False,
         FILE_GLOB: "*",
-        INPUT_DIR: INPUT_MOUNT,
         LOADER_FILE_FORMAT: LoaderFileFormatEnum.PARQUET,
         LOG_CONFIG_FILE: None,
         LOG_INTERVAL: 1000,
         MAX_TABLE_NESTING: 0,
-        # None: use the bucket_url of the use_destination config block
-        OUTPUT_DIR: None,
         PRESERVE_TABLE_NESTING: False,
         SAVE_RAW_RESPONSES: False,
-        USE_DESTINATION: LOCAL_FS,
+        USE_DESTINATION: CTS,
         USE_OUTPUT_DIR_FOR_PIPELINE_METADATA: False,
     }
 )
@@ -108,7 +104,7 @@ FileGlob = Annotated[str, Field(default=DEFAULTS[FILE_GLOB], description="File g
 InputDir = Annotated[
     NonEmptyStr,
     Field(
-        default=DEFAULTS[INPUT_DIR],
+        # no default - value must be supplied
         description="Location of directory containing file(s) to import",
     ),
 ]
@@ -144,8 +140,7 @@ MaxTableNesting = Annotated[
 OutputDir = Annotated[
     NonEmptyStr | None,
     Field(
-        default=DEFAULTS[OUTPUT_DIR],
-        description="Location to save imported data to. Defaults to the bucket_url of the destination chosen by use_destination.",
+        description="Location to save raw data files and, if use_output_dir_for_pipeline_metadata is set, pipeline metadata to. Has no effect on where the dlt destination loads data.",
     ),
 ]
 PreserveTableNesting = Annotated[
@@ -162,18 +157,18 @@ SaveRawResponses = Annotated[
         description="Whether or not to save the raw responses from the API to the output directory.",
     ),
 ]
-TableName = Annotated[str, Field(description="The name of the table to export parsed data to")]
+TableName = Annotated[NonEmptyStr, Field(description="The name of the table to export parsed data to")]
 UseDestination = Annotated[
     NonEmptyStr,
     Field(
-        default=DEFAULTS[USE_DESTINATION],
-        description="Name of the dlt destination config block to use (credentials, endpoint, and default bucket_url). Must match a [destination.<name>] section in the dlt config. The output directory can be further specified using the 'output_dir' field.",
+        # no default - value must be supplied
+        description="Name of the dlt destination to load data into. The dlt config must set destination.<name>.destination_type; the destination's location and credentials also come from the dlt config.",
     ),
 ]
 UseOutputDirForPipelineMetadata = Annotated[
     bool,
     Field(
         default=DEFAULTS[USE_OUTPUT_DIR_FOR_PIPELINE_METADATA],
-        description="Store pipeline metadata in `<output_dir>/.dlt_conf`. output_dir must be on the local filesystem.",
+        description="Store pipeline metadata in `<output_dir>/.dlt_conf`. output_dir must be set and on the local filesystem.",
     ),
 ]

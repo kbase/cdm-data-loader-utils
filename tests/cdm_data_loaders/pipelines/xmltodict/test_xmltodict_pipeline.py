@@ -98,6 +98,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -108,7 +110,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "book",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
@@ -161,6 +163,8 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -171,7 +175,7 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
         "book",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)

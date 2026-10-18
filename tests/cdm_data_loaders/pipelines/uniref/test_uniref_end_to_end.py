@@ -11,7 +11,6 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines import uniref as uniref_module
 from cdm_data_loaders.pipelines.uniref import (
     UNIREF_VARIANTS,
@@ -20,7 +19,7 @@ from cdm_data_loaders.pipelines.uniref import (
     parse_uniref,
 )
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.conftest import TEST_DATA_DIR
+from tests.conftest import LOCAL_FS, TEST_DATA_DIR
 
 TEST_DEFAULT_UNIREF_VARIANT = "50"
 
@@ -114,7 +113,7 @@ def test_integration_uniref_pipeline_entity_and_cluster_content(
 
     # entity_x_source_file must reference exactly the fixture file we loaded from
     source_files = {row[0] for row in _fetch_all(pipeline, "SELECT DISTINCT source_file FROM entity_x_source_file")}
-    assert source_files == {str(UNIREF_FIXTURE_DIR / UNIREF_FIXTURE_FILE)}
+    assert source_files == {str(UNIREF_FIXTURE_DIR.resolve() / UNIREF_FIXTURE_FILE)}
 
 
 def test_integration_cli_uniref_pipeline_output_validated(

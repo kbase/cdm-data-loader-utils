@@ -26,7 +26,6 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from pydantic import Field, StringConstraints, computed_field, model_validator
 from pydantic_settings import SettingsConfigDict
 
-from cdm_data_loaders.core.fields import LOCAL_FS, S3
 from cdm_data_loaders.core.settings import (
     CLI_SHORTCUTS,
     CtsSettings,
@@ -36,7 +35,6 @@ from cdm_data_loaders.pipelines.core import (
     PipelineCli,
     run_pipeline,
 )
-from cdm_data_loaders.utils.file_transfer.s3.streamer import stream_to_s3
 from cdm_data_loaders.utils.file_transfer.sync_client import FileDownloader
 
 logger: Logger = getLogger(__name__)
@@ -89,14 +87,9 @@ class AtbSettings(CtsSettings):
 
     @computed_field
     @cached_property
-    def raw_data_dir(self) -> str:
-        """Directory in which to save the raw data files that are downloaded.
-
-        Set to the output directory / "raw_data" / version.
-        """
-        if self.use_destination == LOCAL_FS:
-            return str(Path(self.output_dir) / "raw_data" / self.version)
-        return f"{self.output_dir}/raw_data/{self.version}"
+    def raw_data_dir(self) -> Path:
+        """Directory to save downloaded raw data files to: ``<output_dir>/raw_data/<version>``."""
+        return self.output_dir / "raw_data" / self.version
 
     @computed_field
     @cached_property
@@ -108,7 +101,7 @@ class AtbSettings(CtsSettings):
         or does not contain any content, the default PROJECT_PART_REGEX will be used instead.
         """
         if self.pattern_file:
-            pattern_file = Path(self.input_dir) / self.pattern_file
+            pattern_file = self.input_dir / self.pattern_file
             regex = load_patterns(pattern_file)
             if regex is None:
                 err_msg = f"No patterns found in {pattern_file!s}"
@@ -149,9 +142,8 @@ def download_atb_index_tsv(settings: AtbSettings) -> Path:
     :return: path to the downloaded file
     :rtype: Path
     """
-    if settings.use_destination == LOCAL_FS:
-        # make sure that the directory structure to save the file in can be written to
-        Path(settings.raw_data_dir).mkdir(parents=True, exist_ok=True)
+    # make sure that the directory structure to save the file in can be written to
+    settings.raw_data_dir.mkdir(parents=True, exist_ok=True)
 
     # get the all_atb_files.tsv file info from the OSF API and retrieve the download link
     osf_client = RESTClient(
@@ -170,21 +162,10 @@ def download_atb_index_tsv(settings: AtbSettings) -> Path:
         err_msg = f"Could not find download URL in response from 'https://api.osf.io/v2/files/{ALL_FILES_TSV_FILE_ID}/'"
         raise RuntimeError(err_msg)
 
-    if settings.use_destination == S3:
-        # download to a local temp file and also copy the file to s3
-        save_path = f"{settings.raw_data_dir}/{ALL_ATB_FILE_NAME}"
-        try:
-            stream_to_s3(url=all_files_tsv_download, s3_path=save_path, requests=dlt.sources.helpers.requests)
-        except Exception:
-            logger.exception("Could not transfer %s to s3", ALL_ATB_FILE_NAME)
-            raise
-        # TODO: save as a temporary file, delete after pipeline has completed
-        # save a local copy of the file to current dir
-        atb_files_tsv = Path(ALL_ATB_FILE_NAME)
-    else:
-        atb_files_tsv = Path(settings.raw_data_dir) / ALL_ATB_FILE_NAME
+    atb_files_tsv = settings.raw_data_dir / ALL_ATB_FILE_NAME
 
     # download the file listing and save it
+    # TODO: for non-local destinations, the file should also be copied to the remote
     FileDownloader().download(url=all_files_tsv_download, destination=atb_files_tsv)
     logger.info("Downloaded TSV index file.")
     return atb_files_tsv
@@ -235,15 +216,9 @@ def osf_file_downloader(settings: AtbSettings, atb_file_list: list[dict[str, Any
     for f in atb_file_list:
         try:
             project_part = f["project"].removeprefix("AllTheBacteria").removeprefix("/").rstrip("/")
-            if settings.use_destination == S3:
-                if project_part:
-                    project_part = f"{project_part}/"
-                save_path = f"{settings.raw_data_dir}/{project_part}{f['filename']}"
-                stream_to_s3(url=f["url"], s3_path=save_path, requests=dlt.sources.helpers.requests)
-                logger.debug("Successfully transferred file from %s to %s", f["url"], save_path)
-            else:
-                save_path = Path(settings.raw_data_dir) / project_part / f["filename"]
-                client.download(url=f["url"], destination=save_path, expected_checksum=f["md5"], checksum_fn="md5")
+            # TODO: stream to non-local destinations
+            save_path = settings.raw_data_dir / project_part / f["filename"]
+            client.download(url=f["url"], destination=save_path, expected_checksum=f["md5"], checksum_fn="md5")
 
             f["path"] = str(save_path)
             successful_downloads.append(f)
@@ -304,7 +279,6 @@ def run_atb_pipeline(settings: AtbSettings) -> LoadInfo | None:
 
 
 cli = PipelineCli(AtbSettings, run_atb_pipeline)
-
 
 if __name__ == "__main__":
     cli()

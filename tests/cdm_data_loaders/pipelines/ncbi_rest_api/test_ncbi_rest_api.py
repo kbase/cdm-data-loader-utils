@@ -9,7 +9,6 @@ import pytest
 from dlt.extract.items import DataItemWithMeta
 from requests import HTTPError
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines import ncbi_rest_api as ncbi_module
 from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.ncbi_rest_api import (
@@ -28,8 +27,8 @@ from cdm_data_loaders.pipelines.ncbi_rest_api import (
     run_ncbi_pipeline,
     set_settings,
 )
-from tests.cdm_data_loaders.core.conftest import check_settings
-from tests.conftest import DEFAULT_VCR_CONFIG
+from tests.cdm_data_loaders.conftest import check_settings
+from tests.conftest import DEFAULT_VCR_CONFIG, LOCAL_FS
 
 
 @pytest.fixture(autouse=True)
@@ -76,10 +75,10 @@ def assembly_ids(valid_assembly_ids: list[str], invalid_assembly_id: str) -> lis
     return [*valid_assembly_ids, invalid_assembly_id]
 
 
-@pytest.fixture(scope="module")
-def test_settings() -> NcbiRestApiSettings:
+@pytest.fixture
+def test_settings(test_defaults: dict[str, Any]) -> NcbiRestApiSettings:
     """Generate a test settings class."""
-    return NcbiRestApiSettings()  # type: ignore[reportReturnType]
+    return NcbiRestApiSettings(**test_defaults)
 
 
 @pytest.fixture(autouse=True)
@@ -125,9 +124,11 @@ def check_annotation_report(annotation_report: list[dict[str, Any]] | None, asse
     assert all_row_ids == list(range(1, len(all_row_ids) + 1))
 
 
-def test_assembly_list_resource() -> None:
+def test_assembly_list_resource(test_defaults: dict[str, Any]) -> None:
     """Test that the assembly list resource yields the expected assembly IDs."""
-    settings: NcbiRestApiSettings = NcbiRestApiSettings(input_dir="tests/data/ncbi_rest_api/input")  # type: ignore[reportAssignmentType]
+    settings: NcbiRestApiSettings = NcbiRestApiSettings(
+        **{**test_defaults, "input_dir": "tests/data/ncbi_rest_api/input"}
+    )  # type: ignore[reportAssignmentType]
     set_settings(settings)
 
     ass_list = list(assembly_list())
@@ -150,6 +151,7 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
     use_pipeline_dir: bool | None,
     mock_dlt: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Ensure that run_ncbi_pipeline calls core.run_pipeline with the correct args."""
     mock_assembly_report_parser = MagicMock()
@@ -157,9 +159,12 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
     mock_assembly_list = MagicMock()
     monkeypatch.setattr(ncbi_module, "assembly_list", mock_assembly_list)
 
+    input_dir = Path("tests/data/ncbi_rest_api/input")
+    output_dir = tmp_path / "some_dir"
     base_settings: dict[str, str | bool] = {
-        "input_dir": "tests/data/ncbi_rest_api/input",
-        "output_dir": "/some/dir",
+        "input_dir": str(input_dir),
+        "output_dir": str(output_dir),
+        "use_destination": LOCAL_FS,
     }
     if dlt_dev_mode is not None:
         base_settings["dlt_dev_mode"] = dlt_dev_mode
@@ -167,6 +172,7 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
         base_settings["use_output_dir_for_pipeline_metadata"] = use_pipeline_dir
 
     settings: NcbiRestApiSettings = NcbiRestApiSettings(**base_settings)  # type: ignore[reportAssignmentType]
+    resolved_output_dir = output_dir.resolve()
 
     check_settings(
         settings,
@@ -174,14 +180,13 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
             "batch_size": MAX_IDS_PER_QUERY,
             "buffer_size": 100,
             "dlt_dev_mode": bool(dlt_dev_mode),
-            "input_dir": "tests/data/ncbi_rest_api/input",
+            "input_dir": input_dir.resolve(),
             "log_config_file": None,
             "log_interval": 1000,
-            "output_dir": "/some/dir",
-            "output_is_local": True,
-            "pipeline_dir": "/some/dir/.dlt_conf" if use_pipeline_dir else None,
+            "output_dir": resolved_output_dir,
+            "pipeline_dir": resolved_output_dir / ".dlt_conf" if use_pipeline_dir else None,
             "query_type": None,
-            "raw_data_dir": "/some/dir/raw_data",
+            "raw_data_dir": resolved_output_dir / "raw_data" / "api_responses",
             "use_destination": LOCAL_FS,
             "use_output_dir_for_pipeline_metadata": bool(use_pipeline_dir),
             "save_raw_responses": False,
@@ -190,15 +195,13 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
 
     run_ncbi_pipeline(settings)
 
-    mock_dlt.destination.assert_called_once_with(
-        settings.use_destination, bucket_url=settings.output_dir, max_table_nesting=0
-    )
+    mock_dlt.destination.assert_called_once_with(settings.use_destination, max_table_nesting=0)
     mock_dlt.destination.assert_called_once()
-    assert mock_dlt.destination.call_args_list[0].kwargs == {"bucket_url": settings.output_dir, "max_table_nesting": 0}
+    assert mock_dlt.destination.call_args_list[0].kwargs == {"max_table_nesting": 0}
     assert mock_dlt.destination.call_args_list[0].args == (LOCAL_FS,)
 
     mock_dlt.pipeline.assert_called_once()
-    assert mock_dlt.pipeline.call_args.kwargs["destination"] == mock_dlt.destination.return_value
+    assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
     assert mock_dlt.pipeline.call_args.kwargs["pipeline_name"] == DATASET_NAME
     assert mock_dlt.pipeline.call_args.kwargs["dataset_name"] == DATASET_NAME
     if dlt_dev_mode:  # truthy
@@ -206,7 +209,7 @@ def test_run_ncbi_pipeline_sets_core_run_pipeline_args_correctly(
     else:
         assert "dev_mode" not in mock_dlt.pipeline.call_args.kwargs
     if use_pipeline_dir:  # truthy
-        assert mock_dlt.pipeline.call_args.kwargs["pipelines_dir"] == f"{settings.output_dir}/.dlt_conf"  # type: ignore[reportArgumentType]
+        assert mock_dlt.pipeline.call_args.kwargs["pipelines_dir"] == settings.output_dir / ".dlt_conf"
     else:
         assert "pipelines_dir" not in mock_dlt.pipeline.call_args.kwargs
 
@@ -287,9 +290,11 @@ def test_get_assembly_reports(test_settings: NcbiRestApiSettings) -> None:
 
 
 @pytest.mark.parametrize("query_type", [None, DATASET, ANNOTATION])
-def test_get_assembly_reports_mock_subs(query_type: str | None, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_assembly_reports_mock_subs(
+    query_type: str | None, monkeypatch: pytest.MonkeyPatch, test_defaults: dict[str, Any]
+) -> None:
     """Ensure that the correct subs are called and the correct subs are not called with the query_type parameter."""
-    settings: NcbiRestApiSettings = NcbiRestApiSettings(query_type=query_type)  # type: ignore[reportAssignmentType]
+    settings: NcbiRestApiSettings = NcbiRestApiSettings(**{**test_defaults, "query_type": query_type})  # type: ignore[reportAssignmentType]
     set_settings(settings)
     mock_get_annotation_report = MagicMock(return_value={"this": "that"})
     mock_get_dataset_reports = MagicMock(return_value=dict.fromkeys(ALL_IDS, "blob"))

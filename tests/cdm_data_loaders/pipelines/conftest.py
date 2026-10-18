@@ -1,25 +1,28 @@
 """Shared fixtures for pipelines tests."""
 
 import copy
+import gzip
+import json
 import logging
 import os
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from itertools import count
 from pathlib import Path
 from typing import Any, Final
 from unittest.mock import MagicMock, patch
 
 import dlt
+import pyarrow.parquet as pq
 import pytest
 from dlt.common.pipeline import LoadInfo
 
-from cdm_data_loaders.core.fields import LOCAL_FS, S3
 from cdm_data_loaders.pipelines import core
 from cdm_data_loaders.pipelines.core import (
     DISABLE_COMPRESSION_ENV_VAR,
     LOAD_INFO_TABLE_NAME,
 )
 from cdm_data_loaders.utils import cdm_logger
+from tests.conftest import LOCAL_FS, S3
 
 DEFAULT_DLT_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", LOAD_INFO_TABLE_NAME}
 
@@ -27,14 +30,19 @@ HOOK_ENV_VAR: Final[str] = "RUNTIME__SLACK_INCOMING_HOOK"
 HOOK_PART_ENV_VARS: Final[tuple[str, ...]] = ("VARIABLE_B", "VARIABLE_T", "CHAR_STR")
 VALID_DESTINATIONS = [LOCAL_FS, S3]
 
-TEST_LOG_CONFIG_FILE: Final[Path] = Path("tests") / "data" / "pipelines" / "log_config.json"
+PIPELINE_TEST_DATA_DIR: Final[Path] = Path(__file__).parents[2] / "data" / "pipelines"
+UNIREF_DATA_DIR: Final[Path] = PIPELINE_TEST_DATA_DIR / "uniref"
+XMLTODICT_DATA_DIR: Final[Path] = PIPELINE_TEST_DATA_DIR / "xmltodict"
+GZIP_SUFFIX: Final[str] = ".gz"
 
 
 DLT_CONFIG: Final[dict[str, Any]] = {
     "destination": {
-        LOCAL_FS: {"bucket_url": "/configured/out/"},
-        "s3": {"bucket_url": "s3://bucket/prefix"},
-    }
+        LOCAL_FS: {"bucket_url": "/configured/out/", "destination_type": "filesystem"},
+        S3: {"bucket_url": "s3://bucket/prefix", "destination_type": "filesystem"},
+    },
+    f"destination.{LOCAL_FS}.destination_type": "filesystem",
+    f"destination.{S3}.destination_type": "filesystem",
 }
 
 
@@ -112,12 +120,12 @@ def mock_dlt(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     return mock
 
 
-@pytest.fixture
-def mock_build_destination(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Replace build_destination as called by run_pipeline."""
-    mock = MagicMock()
-    monkeypatch.setattr(core, "build_destination", mock)
-    return mock
+# @pytest.fixture
+# def mock_build_destination(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+#     """Replace build_destination as called by run_pipeline."""
+#     mock = MagicMock()
+#     monkeypatch.setattr(core, "build_destination", mock)
+#     return mock
 
 
 def isolated_run(
@@ -158,8 +166,10 @@ def isolated_run(
         }
         kwargs.update(overrides)
         settings_cls = kwargs.pop("settings_cls")
-        load_info = run_fn(settings_cls(**kwargs))
-        return load_info, output_dir
+        settings = settings_cls(**kwargs)
+        with dlt.config.values({"destination.local_fs.bucket_url": str(settings.output_dir)}):
+            load_info = run_fn(settings)
+        return load_info, settings.output_dir
 
     return _factory
 
@@ -177,6 +187,12 @@ def isolated_run_factory(tmp_path: Path) -> Callable[..., Callable[..., tuple[Lo
 
 
 @pytest.fixture
+def destination_bucket(tmp_path: Path, dlt_destination_config: str) -> Path:  # noqa: ARG001
+    """The bucket_url of the local_fs destination in dlt.config."""
+    return tmp_path / "bucket"
+
+
+@pytest.fixture
 def restore_logging() -> Iterator[None]:
     """Undo the global logging changes made by init_logger, so caplog and later tests are unaffected."""
     root = logging.getLogger()
@@ -189,3 +205,52 @@ def restore_logging() -> Iterator[None]:
         root.addHandler(handler)
     root.setLevel(level)
     cdm_logger.applied_key = applied_key
+
+
+def copy_test_files(source_dir: Path, file_names: Iterable[str], dest_dir: Path) -> Path:
+    """Copy test files into dest_dir, keeping relative paths. A name ending in .gz is a gzipped copy of the plain file.
+
+    :param source_dir: directory holding the test files
+    :type source_dir: Path
+    :param file_names: relative paths of the files to copy
+    :type file_names: Iterable[str]
+    :param dest_dir: directory to copy the files to; created if needed
+    :type dest_dir: Path
+    :return: dest_dir
+    :rtype: Path
+    """
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for name in file_names:
+        target = dest_dir / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if name.endswith(GZIP_SUFFIX):
+            content = (source_dir / name.removesuffix(GZIP_SUFFIX)).read_bytes()
+            with gzip.open(target, "wb") as f:
+                f.write(content)
+        else:
+            target.write_bytes((source_dir / name).read_bytes())
+    return dest_dir
+
+
+def read_destination_rows(base_dir: Path, table_name: str) -> list[dict[str, Any]]:
+    """Read the rows the filesystem destination wrote for table_name under base_dir, without dlt columns.
+
+    Handles parquet, jsonl and gzipped jsonl files. Returns an empty list if the table has no files.
+    """
+    rows: list[dict[str, Any]] = []
+    for data_file in sorted(base_dir.glob(f"**/{table_name}/*")):
+        if data_file.name.endswith(".parquet"):
+            rows.extend(pq.read_table(data_file).to_pylist())
+        elif ".jsonl" in data_file.name:
+            if data_file.name.endswith(GZIP_SUFFIX):
+                with gzip.open(data_file, "rt") as f:
+                    content = f.read()
+            else:
+                content = data_file.read_text()
+            rows.extend(json.loads(line) for line in content.splitlines() if line)
+    return [{key: value for key, value in row.items() if not key.startswith("_dlt")} for row in rows]
+
+
+def sort_rows(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sort rows into a stable order so that whole tables can be compared."""
+    return sorted(rows, key=lambda row: repr(sorted(row.items())))

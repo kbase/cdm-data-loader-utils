@@ -9,14 +9,14 @@ registry loader.
 
 from collections.abc import Callable, Generator
 from logging import Logger, getLogger
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TSchemaContractDict
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import filesystem_resource, run_pipeline
+from cdm_data_loaders.pipelines.core import run_pipeline
 from cdm_data_loaders.readers.jsonlines import stream_jsonl_lines
 from cdm_data_loaders.utils.buffer import ListBuffer
 
@@ -127,9 +127,9 @@ def build_entity_resource(  # noqa: PLR0913
     :return: resource yielding validated and rejected records for this entity
     :rtype: DltResource
     """
-    entity_dir = Path(settings.input_dir) / table_name
+    entity_dir = settings.input_dir / table_name
     if entity_dir.is_dir():
-        files = filesystem_resource(bucket_url=str(entity_dir), file_glob=settings.file_glob)
+        files = filesystem(bucket_url=str(entity_dir), file_glob=settings.file_glob)
     else:
         logger.warning("Entity directory does not exist, skipping: %s", entity_dir)
         files = dlt.resource([], name=f"{table_name}_files")

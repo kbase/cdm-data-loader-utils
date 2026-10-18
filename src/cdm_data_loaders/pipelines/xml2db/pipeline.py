@@ -9,10 +9,10 @@ import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 from xml2db import DataModel, load_config
 
-from cdm_data_loaders.core.fields import LOCAL_FS
-from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xml2db.compaction import compact_reused_tables
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model, process_xml_file_with_xml2db
@@ -52,7 +52,7 @@ def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
 
     reader = dlt.transformer(_read_items, name="xml2db_reader", parallelized=True)
 
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xml2db_resource: DltResource = files | reader(settings, model)
 
@@ -90,19 +90,10 @@ def _maybe_compact(settings: Xml2DbSettings, model: DataModel, load_info: LoadIn
     :param load_info: the result of `pipeline.run(...)`, or None if the run failed to start.
     :type load_info: LoadInfo | None
     """
-    if load_info is None or load_info.has_failed_jobs:
-        return
-    if not settings.compact_reused_tables:
-        return
-    if settings.use_destination != LOCAL_FS:
-        logger.warning(
-            "Skipping post-load compaction: only supported for the %r destination, got %r",
-            LOCAL_FS,
-            settings.use_destination,
-        )
+    if load_info is None or load_info.has_failed_jobs or not settings.compact_reused_tables:
         return
 
-    dataset_dir = Path(settings.output_dir) / load_info.dataset_name
+    dataset_dir = settings.output_dir / load_info.dataset_name
     removed = compact_reused_tables(dataset_dir, model, str(settings.loader_file_format))
     if removed:
         logger.info("Post-load compaction removed duplicate rows: %s", removed)

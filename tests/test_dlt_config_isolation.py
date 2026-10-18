@@ -6,8 +6,7 @@ import dlt
 from dlt.common.configuration.container import Container
 from dlt.common.pipeline import PipelineContext
 
-from cdm_data_loaders.core.fields import LOCAL_FS, S3
-from tests.conftest import _generate_dlt_config
+from tests.conftest import LOCAL_FS, S3, _generate_dlt_config
 from tests.dlt_config_isolation import deactivated_pipeline, dlt_config_unset, isolated_dlt_config
 
 SEED_CONFIG_KEY: str = "destination.local_fs.bucket_url"

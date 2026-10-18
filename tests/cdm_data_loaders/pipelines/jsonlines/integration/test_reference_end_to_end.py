@@ -266,7 +266,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     """All real CLI entry points load the reference dataset from command-line settings."""
     log_config = tmp_path / "logging.json"
     log_config.write_text('{"version": 1}', encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
+    output_dir = tmp_path / "bucket"
     registry_flag, registry_module = {
         "extract": ("table-name", "dataset"),
         "extract_validate": (

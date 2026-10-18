@@ -7,9 +7,9 @@ from typing import Any
 import dlt
 from pydantic import BaseModel
 
-from cdm_data_loaders.core.fields import LOCAL_FS
 from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline import build_entity_resource
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlPydanticIngestSettings
+from tests.conftest import LOCAL_FS
 
 
 def run_pipeline(table_name: str, model: type[BaseModel], settings: JsonlPydanticIngestSettings) -> Any:

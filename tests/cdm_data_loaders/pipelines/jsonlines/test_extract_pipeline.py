@@ -142,7 +142,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "widget",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)

@@ -211,6 +211,7 @@ def _table_and_data(items: Iterable[DataItemWithMeta]) -> list[tuple[str, Any]]:
     return result
 
 
+# FIXME: use a real settings class
 def fake_settings(
     buffer_size: int = DEFAULTS[BUFFER_SIZE],
     log_interval: int = DEFAULTS[LOG_INTERVAL],
@@ -227,10 +228,11 @@ def fake_settings(
     settings = MagicMock(spec=settings_class)
     settings.buffer_size = buffer_size
     settings.log_interval = log_interval
-    settings.input_dir = str(input_dir)
+    settings.input_dir = Path(input_dir)
     return settings
 
 
+# FIXME: use a real settings class
 def fake_xmltodict_settings(
     table_name: str = "people",
     xml_tag: str = "person",
@@ -687,6 +689,8 @@ def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_file
         xsd_file=xsd_file,
         buffer_size=100,
         log_interval=1000,
+        output_dir=tmp_path,
+        use_destination="whatever",
     )  # pyright: ignore[reportCallIssue]
 
 

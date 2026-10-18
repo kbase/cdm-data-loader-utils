@@ -9,8 +9,9 @@ import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from cdm_data_loaders.readers.xml import process_xml_file_to_dict
 
@@ -42,7 +43,7 @@ def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     """
     reader = dlt.transformer(_read_items, name="xmltodict_reader", parallelized=True)
 
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xmltodict_resource: DltResource = files | reader(settings)
 

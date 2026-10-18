@@ -18,8 +18,9 @@ from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TSchemaContractDict
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
+from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import PipelineCli, filesystem_resource, run_pipeline
+from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_reader import read_validated_rows
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import CleanerValidatorArgs, ErrorRecord
@@ -74,7 +75,7 @@ def _process_xsv_file(
     :yield: rows routed to table_name and/or ``{table_name}_rejected``
     :rtype: Generator[TDataItems, Any, Any]
     """
-    file_path = Path(settings.input_dir) / file_item["relative_path"]
+    file_path = settings.input_dir / file_item["relative_path"]
     args = CleanerValidatorArgs(
         qsv_cmd=work_paths.qsv_cmd,
         xsv_file_path=file_path,
@@ -150,7 +151,7 @@ def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
 
     xsv_reader = dlt.transformer(_read_items, name="xsv_reader", parallelized=True)
 
-    files = filesystem_resource(bucket_url=settings.input_dir, file_glob=settings.file_glob)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     with (
         TemporaryDirectory(prefix="xsv_tmp_") as tmp_dir,

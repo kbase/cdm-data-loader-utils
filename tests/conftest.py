@@ -22,12 +22,14 @@ from pyspark.sql import SparkSession
 from types_boto3_s3.client import S3Client
 
 import cdm_data_loaders.utils.file_transfer.s3.client as s3_client
-from cdm_data_loaders.core.fields import LOCAL_FS, S3
 from cdm_data_loaders.utils import cdm_logger
 from cdm_data_loaders.utils.file_transfer.s3.client import _client_config, reset_s3_client
 from tests.dlt_config_isolation import isolated_dlt_config
 
 pytest_plugins = ["tests.jsonlines_fixtures", "tests.jsonschema_fixtures"]
+
+LOCAL_FS: Final[str] = "local_fs"
+S3: Final[str] = "s3"
 
 SAVE_DIR: Final[str] = "spark.sql.warehouse.dir"
 

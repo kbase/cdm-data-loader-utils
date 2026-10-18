@@ -55,12 +55,12 @@ def test_run_uniref_pipeline_sets_core_run_pipeline_args_correctly(
     # the return value of parse_uniref(settings) is what gets passed to pipeline.run
     expected_resource = mock_parse_uniref.return_value
 
-    mock_dlt.destination.assert_called_once_with(test_settings.use_destination, bucket_url=test_settings.output_dir)
+    mock_dlt.destination.assert_called_once_with(test_settings.use_destination)
     mock_dlt.pipeline.assert_called_once_with(
-        destination=mock_dlt.destination.return_value,
         pipeline_name="uniref",
         dataset_name=f"uniref_{test_settings.variant}",
     )
+    assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
     first_run, load_info_save_run = mock_dlt.pipeline.return_value.run.call_args_list
     assert first_run.args == (expected_resource,)
     assert first_run.kwargs == {}
