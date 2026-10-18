@@ -19,10 +19,11 @@ UNIREF_LIKE_XSD: str = "uniref_like.xsd"
 
 
 def _copy_xsd_fixture(test_data_dir: Path, input_dir: Path, filename: str) -> str:
-    """Copy an XSD fixture from tests/data/xsd into input_dir; return its relative filename."""
+    """Copy an XSD fixture from tests/data/xsd into input_dir; return its path."""
     input_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(test_data_dir / "xsd" / filename, input_dir / filename)
-    return filename
+    dest = input_dir / filename
+    shutil.copy(test_data_dir / "xsd" / filename, dest)
+    return str(dest)
 
 
 def test_xmltodict_settings_pass_defaults(settings_factory: Callable[..., XmlToDictSettings]) -> None:
@@ -151,8 +152,8 @@ def test_xmltodict_settings_pass_xmltodict_args_is_cached(
 def test_xmltodict_settings_fail_xsd_file_not_found_raises_runtime_error(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
-    """A xsd_file that does not exist under input_dir raises RuntimeError, not the underlying OSError."""
-    with pytest.raises(RuntimeError, match="Could not generate parent-child relationships for schema"):
+    """An xsd_file that does not exist raises ValidationError at construction."""
+    with pytest.raises(ValidationError, match="Path does not point to a file"):
         settings_factory(xsd_file="does_not_exist.xsd")
 
 

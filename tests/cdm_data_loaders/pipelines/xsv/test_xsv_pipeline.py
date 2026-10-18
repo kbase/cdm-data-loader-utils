@@ -218,7 +218,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "--dataset-name",
         "cli_dataset",
         "--schema-file",
-        "schema.json",
+        str(settings.schema_file),
         "--table-name",
         "my_table",
         "--use-output-dir-for-pipeline-metadata",

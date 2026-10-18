@@ -1,43 +1,34 @@
 """Settings class for the XML to dictionary pipeline for the KBase CTS."""
 
 from functools import cached_property
-from logging import Logger, getLogger
-from pathlib import Path
 from typing import Annotated, Any, Final, Self
 
-from pydantic import Field, PrivateAttr, computed_field, model_validator
+from pydantic import Field, FilePath, PrivateAttr, computed_field, model_validator
 from pydantic_settings import SettingsConfigDict
 
 from cdm_data_loaders.core.fields import (
     DEFAULT_XML_FILE_GLOB,
     FILE_GLOB,
-    BufferSize,
-    DatasetName,
     FileGlob,
-    LoaderFileFormat,
-    LogInterval,
     NonEmptyStr,
     TableName,
 )
 from cdm_data_loaders.core.settings import (
-    CLI_SHORTCUTS,
-    CtsSettings,
+    FileFormatIngestSettings,
     default_settings_with_shortcuts,
 )
 from cdm_data_loaders.readers.xsd import find_list_and_single_child_paths, load_schema
 
 PIPELINE_NAME: Final[str] = "xmltodict"
 
-logger: Logger = getLogger(__name__)
 
-
-class XmlToDictSettings(CtsSettings):
+class XmlToDictSettings(FileFormatIngestSettings):
     """Settings for the XML ingestion pipeline."""
 
     model_config: SettingsConfigDict = default_settings_with_shortcuts(
         cli_prog_name=PIPELINE_NAME,
         cli_shortcuts={
-            **CLI_SHORTCUTS,
+            **FileFormatIngestSettings.model_config["cli_shortcuts"],
             FILE_GLOB: "g",
         },
     )
@@ -45,9 +36,6 @@ class XmlToDictSettings(CtsSettings):
     _paths: Annotated[dict[str, Any], Field(description="parent-child paths in the schema")] = PrivateAttr(
         default_factory=dict
     )
-
-    buffer_size: BufferSize
-    dataset_name: DatasetName
     file_glob: Annotated[
         FileGlob,
         Field(
@@ -55,8 +43,6 @@ class XmlToDictSettings(CtsSettings):
             description="Glob pattern for XML files inside each entity's input subdirectory.",
         ),
     ]
-    loader_file_format: LoaderFileFormat
-    log_interval: LogInterval
     table_name: TableName
     xml_tag: Annotated[
         NonEmptyStr,
@@ -65,10 +51,10 @@ class XmlToDictSettings(CtsSettings):
         ),
     ]
     xsd_file: Annotated[
-        NonEmptyStr | None,
+        FilePath | None,
         Field(
             None,
-            description="XSD schema file for the dataset; this should be a relative path from the input_dir. Including the schema will ensure that the appropriate relationships (1-to-1 vs 1-to-many) are created between parent and child elements.",
+            description="Path to the XSD file describing the XML documents to be imported. Including the schema will ensure that the appropriate relationships (1-to-1 vs 1-to-many) are created between parent and child elements.",
         ),
     ]
 
@@ -77,14 +63,12 @@ class XmlToDictSettings(CtsSettings):
         """Check whether the schema file is present and correct; if so, init self._paths."""
         if self.xsd_file:
             try:
-                schema_path = Path(self.input_dir) / self.xsd_file
-                schema = load_schema(schema_path)
+                schema = load_schema(self.xsd_file)
                 list_paths, single_paths = find_list_and_single_child_paths(schema)
                 self._paths = {"list": list_paths, "single": single_paths}
             except Exception as e:
                 err_msg = f"Could not generate parent-child relationships for schema: {e!s}"
-                logger.exception(err_msg)
-                raise RuntimeError(err_msg) from e
+                raise ValueError(err_msg) from e
 
         return self
 
