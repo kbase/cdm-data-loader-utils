@@ -8,6 +8,7 @@ from types import ModuleType
 from typing import Any
 from uuid import uuid4
 
+import dlt
 import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlJsonschemaIngestSettings
@@ -78,6 +79,8 @@ def schema_settings_factory(
             "schema_files_module": schema_module,
         }
         kwargs.update(overrides)
-        return JsonlJsonschemaIngestSettings(**kwargs)
+        settings = JsonlJsonschemaIngestSettings(**kwargs)
+        dlt.config["destination.local_fs.bucket_url"] = str(settings.output_dir)
+        return settings
 
     return _factory

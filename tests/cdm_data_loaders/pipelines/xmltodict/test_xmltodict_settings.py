@@ -8,9 +8,9 @@ import pytest
 from pydantic import ValidationError
 from pydantic_settings import CliApp
 
-from cdm_data_loaders.core.fields import DEFAULTS, S3
-from cdm_data_loaders.pipelines.core import resolve_cts_settings
+from cdm_data_loaders.core.fields import DEFAULTS
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
+from tests.conftest import S3
 
 # All schema-driven tests below use tests/data/xsd/uniref_like.xsd, which is already exercised
 # (and its list_paths/single_paths independently verified) by test_xsd.py:
@@ -92,32 +92,25 @@ def test_xmltodict_settings_fail_non_positive_log_interval(
 def test_xmltodict_settings_fail_local_destination_with_s3_output_dir(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
-    """A local_fs destination with an s3:// output_dir raises ValueError at resolution.
-
-    The check lives in resolve_output_dir and runs when run_cli resolves the
-    settings, so constructing them still succeeds.
-    """
-    settings = settings_factory(output_dir="s3://some-bucket/path", use_destination="local_fs")
-    with pytest.raises(ValueError, match="uses protocol 's3', but destination 'local_fs' is configured for 'file'"):
-        resolve_cts_settings(settings, {"destination": {"local_fs": {"bucket_url": "/out"}}})
+    """An s3:// output_dir raises ValidationError at construction because output_dir must be a local path."""
+    with pytest.raises(ValidationError):
+        settings_factory(output_dir="s3://some-bucket/path", use_destination="local_fs")
 
 
 def test_xmltodict_settings_fail_local_destination_with_s3_flag(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
-    """An s3 destination with a local output_dir raises ValueError at resolution."""
-    settings = settings_factory(output_dir="/local/out", use_destination=S3)
-    with pytest.raises(ValueError, match="uses protocol 'file', but destination 's3' is configured for 's3'"):
-        resolve_cts_settings(settings, {"destination": {"s3": {"bucket_url": "s3://bucket/prefix"}}})
+    """An s3 destination with a local output_dir is accepted at construction."""
+    settings = settings_factory(use_destination=S3)
+    assert settings.use_destination == S3
 
 
 def test_xmltodict_settings_pass_unknown_use_destination_rejected(
     settings_factory: Callable[..., XmlToDictSettings],
 ) -> None:
-    """use_destination not present in the dlt config raises ValueError at resolution."""
+    """use_destination not present in the dlt config is accepted at construction."""
     settings = settings_factory(use_destination="not_a_destination")
-    with pytest.raises(ValueError, match="use_destination must be one of"):
-        resolve_cts_settings(settings, {"destination": {"local_fs": {"bucket_url": "/out"}}})
+    assert settings.use_destination == "not_a_destination"
 
 
 def test_xmltodict_settings_pass_xmltodict_args_empty_without_xsd_file(
@@ -238,6 +231,8 @@ def test_xmltodict_settings_pass_xml_tag_shortcut(tmp_path: Path, file_glob_arg:
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         file_glob_arg,

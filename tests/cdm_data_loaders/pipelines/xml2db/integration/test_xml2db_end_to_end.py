@@ -115,8 +115,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     input_dir = tmp_path / "cli_input"
     input_dir.mkdir()
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
+    output_dir = tmp_path / "bucket"
+    output_dir.mkdir(exist_ok=True)
     log_config_file = tmp_path / "logging.json"
     log_config_file.write_text('{"version": 1}')
 
@@ -136,7 +136,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(library_xsd),
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)

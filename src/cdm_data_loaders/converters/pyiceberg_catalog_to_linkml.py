@@ -16,8 +16,8 @@ from cdm_data_loaders.converters.pyiceberg_to_linkml import table_to_linkml
 from cdm_data_loaders.core.fields import (
     OUTPUT_DIR,
     NonEmptyStr,
-    OutputDir,
 )
+from cdm_data_loaders.core.path_fields import LocalOutputDir
 from cdm_data_loaders.core.settings import (
     LoggerSettings,
     default_settings_with_shortcuts,
@@ -36,7 +36,7 @@ class IcebergToLinkMLSettings(LoggerSettings):
     )
 
     catalog: Annotated[NonEmptyStr, Field(description="Name of the catalog to retrieve schemas from")]
-    output_dir: OutputDir
+    output_dir: LocalOutputDir
     group_by_namespace: bool = Field(default=False, description="Export one LinkML schema per namespace")
 
 
@@ -65,8 +65,6 @@ def dump_catalog_schemas(settings: IcebergToLinkMLSettings) -> None:
     :param settings: Catalog name and output directory.
     :returns: None.
     """
-    out_path = Path(settings.output_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
     generated_at = datetime.now(UTC).isoformat()
     failures = 0
 
@@ -99,10 +97,12 @@ def dump_catalog_schemas(settings: IcebergToLinkMLSettings) -> None:
                     continue
 
                 if namespace_schema is None:
-                    _write_schema(schema_doc, out_path / (".".join(identifier) + ".schema.yaml"), generated_at)
+                    _write_schema(
+                        schema_doc, settings.output_dir / (".".join(identifier) + ".schema.yaml"), generated_at
+                    )
 
             if namespace_schema is not None and namespace_schema.classes:
-                _write_schema(namespace_schema, out_path / (namespace_name + ".schema.yaml"), generated_at)
+                _write_schema(namespace_schema, settings.output_dir / (namespace_name + ".schema.yaml"), generated_at)
 
     if failures:
         logger.warning("Completed with %d table(s) skipped due to conversion failures", failures)

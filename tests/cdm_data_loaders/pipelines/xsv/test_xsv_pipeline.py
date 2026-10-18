@@ -212,9 +212,11 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     argv = [
         "xsv",
         "--input-dir",
-        settings.input_dir,
+        str(settings.input_dir),
         "--output-dir",
-        settings.output_dir,
+        str(settings.output_dir),
+        "--use-destination",
+        "local_fs",
         "--dataset-name",
         "cli_dataset",
         "--schema-file",
@@ -223,7 +225,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "my_table",
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)

@@ -3,7 +3,6 @@
 import gzip
 import json
 from collections.abc import Callable
-from itertools import count
 from pathlib import Path
 from typing import Any
 
@@ -13,9 +12,7 @@ import xmltodict
 from dlt.common.pipeline import LoadInfo
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.xmltodict.pipeline import (
-    run_xmltodict_pipeline,
-)
+from cdm_data_loaders.pipelines.xmltodict.pipeline import run_xmltodict_pipeline
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from cdm_data_loaders.readers.xml import DEFAULT_XMLTODICT_ARGS
 from tests.conftest import N_REFERENCE_XML_ENTRIES, REFERENCE_XML_FIXTURE_DIR, REFERENCE_XML_TAG
@@ -160,42 +157,29 @@ def reference_xml_dataset(reference_xml_as_jsonl: Path) -> duckdb.DuckDBPyConnec
 
 @pytest.fixture
 def run_xmltodict_pipeline_fxt(
-    tmp_path: Path,
     reference_xml_data_dir: Path,
     dlt_destination_config: str,
+    isolated_run_factory: Callable[..., Callable[..., tuple[LoadInfo | None, Path]]],
 ) -> Callable[..., Any]:
     """Return a factory that runs the xmltodict pipeline on a chunk dir with full isolation.
 
     Each run gets a unique output_dir and dataset_name under tmp_path, so
     parallel-safe repeated runs never collide or accumulate rows.
     """
-    run_counter = count()
+    base_kwargs = {
+        **DEFAULT_XMLTODICT_SETTINGS,
+        "settings_cls": XmlToDictSettings,
+        "table_name": "entry",
+        "use_destination": dlt_destination_config,
+        "xml_tag": REFERENCE_XML_TAG,
+    }
+    runner = isolated_run_factory(
+        dataset_prefix="reference_run",
+        run_fn=run_xmltodict_pipeline,
+        base_kwargs=base_kwargs,
+    )
 
     def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:
-        run_index = next(run_counter)
-
-        output_dir = tmp_path / f"output_{run_index}"
-        output_dir.mkdir()
-        dataset_name = f"reference_run_{run_index}"
-        log_config_file = tmp_path / f"logging_{run_index}.conf"
-        log_config_file.touch()
-        kwargs = {
-            "buffer_size": 10,  # overrides.get("buffer_size", 10),
-            "dataset_name": dataset_name,
-            "dlt_dev_mode": False,
-            "file_glob": "*.xml*",
-            "input_dir": str(reference_xml_data_dir / chunk_dir),
-            "log_config_file": str(log_config_file),
-            "log_interval": 1000,  # overrides.get("log_interval", 1000),
-            "output_dir": str(output_dir),
-            "table_name": "entry",
-            "use_destination": dlt_destination_config,
-            "use_output_dir_for_pipeline_metadata": False,
-            "xml_tag": REFERENCE_XML_TAG,
-        }
-        kwargs.update(overrides)
-        settings = XmlToDictSettings(**kwargs)
-        load_info: LoadInfo | None = run_xmltodict_pipeline(settings)
-        return (load_info, output_dir)
+        return runner(input_dir=str(reference_xml_data_dir / chunk_dir), **overrides)
 
     return _factory

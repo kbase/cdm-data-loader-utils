@@ -58,7 +58,6 @@ class UnirefSettings(CtsSettings):
             description=f"Which UniRef variant to import. Choices: {UNIREF_VARIANTS}",
         ),
     ]
-
     log_interval: Annotated[
         LogInterval,
         Field(

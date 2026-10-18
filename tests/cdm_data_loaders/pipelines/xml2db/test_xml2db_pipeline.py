@@ -310,23 +310,6 @@ def test_maybe_compact_pass_skipped_when_run_has_failed_jobs(tmp_path: Path, lib
     mock_compact.assert_not_called()
 
 
-def test_maybe_compact_pass_skipped_for_non_local_fs_destination(tmp_path: Path, library_model: DataModel) -> None:
-    """Compaction is skipped with a warning for non-local_fs destinations."""
-    settings = fake_settings(
-        tmp_path,
-        tmp_path / "library.xsd",
-        xml_tag="book",
-        output_dir="s3://some-bucket/out",
-        use_destination="s3",
-    )
-    load_info = make_load_info(settings.dataset_name)
-
-    with patch.object(xml2db_pipeline_module, "compact_reused_tables") as mock_compact:
-        xml2db_pipeline_module._maybe_compact(settings, library_model, load_info)  # noqa: SLF001
-
-    mock_compact.assert_not_called()
-
-
 def test_maybe_compact_pass_logs_when_duplicates_removed(
     tmp_path: Path, library_model: DataModel, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -371,6 +354,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(input_dir),
         "--output-dir",
         str(output_dir),
+        "--use-destination",
+        "local_fs",
         "--log-config-file",
         str(log_config_file),
         "--dataset-name",
@@ -379,7 +364,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         str(xsd_file),
         "--use-output-dir-for-pipeline-metadata",
         "false",
-        "--dev-mode",
+        "--dlt-dev-mode",
         "false",
     ]
     monkeypatch.setattr(sys, "argv", argv)
