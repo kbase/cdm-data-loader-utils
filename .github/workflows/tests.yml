@@ -66,12 +66,11 @@ jobs:
           chmod 777 .
           docker run --rm -e NB_USER=runner -v .:/tmp/cdm ghcr.io/kbasedatalakehouse/spark_notebook:main /bin/bash /tmp/cdm/scripts/run_tests.sh ${{matrix.suite.args}}
 
-      - name: Send to Codecov
-        id: send_to_codecov
+      - name: Send coverage to Codecov
+        id: upload_coverage
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5
         with:
           files: coverage.xml
-          # fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   tests:
@@ -109,4 +108,12 @@ jobs:
       - name: Run local tests
         shell: bash
         continue-on-error: false
-        run: uv run pytest -m "not requires_spark and not requires_ceph" ${{matrix.suite.args}}
+        run: uv run pytest -m "not requires_spark and not requires_ceph" --cov --junitxml=junit.xml -o junit_family=legacy ${{matrix.suite.args}}
+
+      - name: Send test reports to Codecov
+        id: upload_test_reports
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
