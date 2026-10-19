@@ -95,4 +95,3 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "b", "c"]
     assert_pipeline_report_written(output_dir, load_info, metadata_moved=True)
-

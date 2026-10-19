@@ -1416,4 +1416,3 @@ def test_save_pipeline_metadata_fail_write_report_error_logged(
 
     error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert error_messages == ["Could not write pipeline report file: read-only filesystem"]
-

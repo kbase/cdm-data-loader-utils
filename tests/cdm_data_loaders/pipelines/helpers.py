@@ -131,9 +131,7 @@ def read_data_rows(dataset_dir: Path, file_format: str | None = None) -> dict[st
     }
 
 
-def assert_pipeline_report_written(
-    output_dir: Path, load_info: LoadInfo, *, metadata_moved: bool = False
-) -> None:
+def assert_pipeline_report_written(output_dir: Path, load_info: LoadInfo, *, metadata_moved: bool = False) -> None:
     """Assert that save_pipeline_metadata wrote the expected report file (and moved metadata if configured)."""
     report_files = list(output_dir.glob(f"report_{load_info.loads_ids[0]}_*.txt"))
     assert len(report_files) == 1

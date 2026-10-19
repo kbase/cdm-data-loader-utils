@@ -171,4 +171,3 @@ def test_cli_pass_loads_selected_entity(
     assert load_info.dataset_name == "schema_cli"
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {"gadget": [GADGET_RECORD]}
-

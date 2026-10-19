@@ -121,9 +121,7 @@ def save_pipeline_metadata(
     :type  err_msg: str | None
     """
     base_id = (
-        load_info.loads_ids[0]
-        if load_info and load_info.loads_ids
-        else str(pipeline.last_trace.started_at.timestamp())
+        load_info.loads_ids[0] if load_info and load_info.loads_ids else str(pipeline.last_trace.started_at.timestamp())
     )
     first_load_id = f"{base_id}_{create_load_id()}"
     start_time = load_info.started_at if load_info is not None else pipeline.last_trace.started_at
