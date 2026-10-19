@@ -16,6 +16,7 @@ from cdm_data_loaders.core.fields import LoaderFileFormatEnum
 from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import cli, run_jsonlines_pipeline
 from cdm_data_loaders.pipelines.jsonlines.settings import EXTRACT_PIPELINE_NAME, JsonlExtractSettings
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
+from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 
 SIMPLE_JSONL = """{"widget_id": "a", "count": 1}
 {"widget_id": "b", "count": 2}
@@ -75,6 +76,7 @@ def test_run_jsonlines_pipeline_pass_routes_lines_by_directory(
     assert not load_info.has_failed_jobs
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "b", "g"]
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
 
 def test_run_jsonlines_pipeline_pass_invalid_rows_routed_to_invalid_table(
@@ -95,6 +97,7 @@ def test_run_jsonlines_pipeline_pass_invalid_rows_routed_to_invalid_table(
     invalid_df = dataset.widget_invalid.df()
     assert len(invalid_df) == 1
     assert invalid_df.iloc[0]["raw_record"] == "{broken"
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
 
 def test_run_jsonlines_pipeline_pass_no_matching_files_yields_no_tables(
@@ -110,6 +113,7 @@ def test_run_jsonlines_pipeline_pass_no_matching_files_yields_no_tables(
     assert not load_info.has_failed_jobs
     dataset = load_info.pipeline.dataset()
     assert set(dataset.tables) == {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", "_load_info"}
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(

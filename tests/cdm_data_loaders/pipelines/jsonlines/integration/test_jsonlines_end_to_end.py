@@ -12,6 +12,7 @@ from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline imp
     run_jsonlines_with_validation_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import PYDANTIC_PIPELINE_NAME, JsonlPydanticIngestSettings
+from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 
 
 def test_run_jsonlines_pipeline_pass_writes_expected_parquet(
@@ -22,9 +23,11 @@ def test_run_jsonlines_pipeline_pass_writes_expected_parquet(
     settings = settings_factory(input_dir=scenario_input_dir("mixed"))
 
     load_info = run_jsonlines_with_validation_pipeline(settings)
+    assert load_info is not None
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "c"]
     assert len(dataset.widget_rejected.df()) == 2
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
     # get stats on tables
     # dataset.row_counts(table_names=dataset.tables).fetchall()
@@ -91,3 +94,4 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     assert load_info.pipeline.pipeline_name == PYDANTIC_PIPELINE_NAME
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "b", "c"]
+    assert_pipeline_report_written(output_dir, load_info, metadata_moved=True)

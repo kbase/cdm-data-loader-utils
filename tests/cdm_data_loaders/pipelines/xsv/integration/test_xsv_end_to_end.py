@@ -11,6 +11,7 @@ import pytest
 from cdm_data_loaders.pipelines.xsv.pipeline import cli, run_xsv_pipeline
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
+from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 from tests.cdm_data_loaders.pipelines.xsv.integration.conftest import (
     ALL_RAGGED_ROWS,
     COLUMNS,
@@ -45,6 +46,7 @@ def test_run_xsv_pipeline_pass_writes_expected_output(
         {"number": 2, "date": "2023-01-15", "float": "3.14", "boolean": True, "string": "key:value1"},
         {"number": 3, "date": "2023-02-20", "float": "1.11", "boolean": False, "string": "key:value2"},
     ]
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
 
 def test_run_xsv_pipeline_pass_multiple_files_loaded_together(
@@ -125,6 +127,7 @@ def test_run_xsv_pipeline_pass_no_matching_files_yields_no_data_table(
     assert load_info is not None
     assert load_info.has_failed_jobs is False
     assert set(load_info.pipeline.dataset().tables) == DEFAULT_DLT_TABLES
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
 
 def test_run_xsv_pipeline_pass_configured_null_regex_replaces_placeholder(
@@ -212,3 +215,4 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     assert load_info.has_failed_jobs is False
     df = load_info.pipeline.dataset().table("my_table").df()
     assert sorted(df["number"].tolist()) == [2, 3]
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)

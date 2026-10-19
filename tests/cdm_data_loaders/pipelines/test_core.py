@@ -5,6 +5,7 @@ import logging
 import sys
 from collections.abc import Callable, Iterator
 from dataclasses import FrozenInstanceError
+from datetime import UTC, datetime
 from json import loads
 from pathlib import Path
 from typing import Any, Final, cast
@@ -16,6 +17,7 @@ from dlt.common.destination.exceptions import DestinationTerminalException
 from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TTableSchema
 from dlt.common.typing import TDataItems
+from dlt.destinations.impl.filesystem.filesystem import FilesystemLoadJob
 from dlt.extract.resource import DltResource
 from pydantic import ValidationError
 from pydantic_settings import SettingsError
@@ -29,9 +31,12 @@ from cdm_data_loaders.pipelines.core import (
     NO_MESSAGE,
     WEBHOOK_NOT_CONFIGURED,
     PipelineCli,
+    PipelineReport,
     run_cli,
     run_pipeline,
+    save_pipeline_metadata,
     send_slack_message_carefully,
+    write_pipeline_report,
 )
 from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
 from tests.conftest import LOCAL_FS, S3
@@ -44,7 +49,8 @@ TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [
 TINY_PIPELINE_NAME: Final[str] = "test_core_tiny_pipeline"
 TINY_TABLE_NAME: Final[str] = "tiny"
 FILESYSTEM_DESTINATION_TYPE: Final[str] = "dlt.destinations.filesystem"
-WORK_COMPLETE: Final[str] = "Work complete!"
+ALL_JOBS_COMPLETED: Final[str] = "All pipeline jobs completed successfully"
+FAILED_JOBS_WARNING: Final[str] = "Pipeline contains failed jobs"
 LOAD_INFO_SAVE_FAILED: Final[str] = "Loading pipeline load info failed: "
 LOAD_INFO_SAVE_FAILED_JOBS: Final[str] = "Loading pipeline load info had failed jobs: "
 
@@ -114,9 +120,16 @@ def read_output_jsonl_records(base_dir: Path) -> list[dict[str, Any]]:
 def make_mock_pipeline(save_run_result: object, slack_hook: str | None = None) -> MagicMock:
     """A mock dlt pipeline: the first run returns an entity load info; the second returns or raises save_run_result."""
     pipeline = MagicMock()
+    pipeline.pipeline_name = TINY_PIPELINE_NAME
+    pipeline.dataset_name = "test_dataset"
     pipeline.runtime_config.slack_incoming_hook = slack_hook
+    pipeline.last_trace.started_at = datetime(2025, 1, 2, 3, 4, 0, tzinfo=UTC)
+    pipeline.last_trace.finished_at = datetime(2025, 1, 2, 3, 4, 10, tzinfo=UTC)
     entity_load_info = MagicMock()
     entity_load_info.has_failed_jobs = False
+    entity_load_info.loads_ids = ["1.0"]
+    entity_load_info.started_at = datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC)
+    entity_load_info.load_packages = []
     entity_load_info.asdict.return_value = {"loads_ids": ["1.0"]}
     pipeline.run.side_effect = [entity_load_info, save_run_result]
     return pipeline
@@ -214,7 +227,7 @@ def test_run_pipeline_fail_invalid_destination_config(
     config: dict[str, Any], use_destination: str, tmp_path: Path
 ) -> None:
     """Invalid destination configs cause the pipeline to fail with an 'Invalid destination config' message."""
-    settings = CtsSettings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)
+    settings = CtsSettings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)  # pyright: ignore[reportCallIssue]
 
     with (
         isolated_dlt_config(config),
@@ -229,16 +242,19 @@ def test_run_pipeline_fail_invalid_destination_config(
         pytest.param({}, "filesystem", id="built-in-type-name-not-configured"),
     ],
 )
-def test_run_pipeline_fail_invalid_destination_config_fails_at_pipeline_run(
-    config: dict[str, Any], use_destination: str, tmp_path: Path
+def test_run_pipeline_invalid_destination_config_fails_at_pipeline_run(
+    config: dict[str, Any], use_destination: str, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """An under-specified destination config fails at pipeline.run."""
-    settings = CtsSettings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)
-    with (
-        isolated_dlt_config(config),
-        # pytest.raises(ValueError, match=f"Invalid destination configuration for {use_destination}"),
-    ):
-        run_pipeline(settings, [])
+    settings = CtsSettings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)  # pyright: ignore[reportCallIssue]
+    with isolated_dlt_config(config):
+        load_info = run_pipeline(settings, [])
+    assert load_info is None
+    error_records = [record for record in caplog.records if record.levelno == logging.ERROR]
+    assert error_records
+    err_msg = error_records[-1].getMessage()
+    assert err_msg.startswith("Pipeline failed: ")
+    assert "Missing 1 field(s) in configuration `FilesystemDestinationClientConfiguration`: `bucket_url`" in err_msg
 
 
 # tests for run_cli()
@@ -439,7 +455,7 @@ def test_run_pipeline_fail_destination_not_configured(mock_dlt: MagicMock, tmp_p
     mock_dlt.destination.side_effect = ValueError("not configured")
     settings = make_cts_settings(input_dir=tmp_path, output_dir=tmp_path, use_destination="missing_dest")
 
-    with pytest.raises(ValueError, match="^Invalid destination configuration for missing_dest$"):
+    with pytest.raises(ValueError, match=r"^Invalid destination configuration for missing_dest$"):
         run_pipeline(settings, MagicMock())
 
     mock_dlt.destination.assert_called_once_with("missing_dest")
@@ -493,14 +509,31 @@ def test_run_pipeline_pass_destination_kwargs_bucket_url_override(
 def test_run_pipeline_returns_none_on_pipeline_run_failure(
     dlt_test_settings: CtsSettings, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A resource that raises mid-extraction is caught: run_pipeline logs and returns None."""
+    """A resource that raises mid-extraction is caught: run_pipeline logs, writes an error report, and returns None."""
     load_info = run_pipeline(dlt_test_settings, failing_resource())
 
     assert load_info is None
     assert caplog.records[-1].levelno == logging.ERROR
-    assert caplog.records[-1].getMessage().startswith("Pipeline failed: ")
-    for record in caplog.records:
-        assert not record.getMessage().startswith(WORK_COMPLETE)
+    err_msg = caplog.records[-1].getMessage()
+    assert err_msg.startswith("Pipeline failed: ")
+    assert ALL_JOBS_COMPLETED not in caplog.messages
+    assert FAILED_JOBS_WARNING not in caplog.messages
+
+    report_files = list(Path(dlt_test_settings.output_dir).glob("report_*.txt"))
+    assert len(report_files) == 1
+    pipeline_e2e_id = report_files[0].stem.removeprefix("report_")
+    assert (Path(dlt_test_settings.output_dir) / pipeline_e2e_id).is_dir()
+    report_lines = report_files[0].read_text(encoding="utf-8").splitlines()
+    assert report_lines[0].startswith("Pipeline: ")
+    assert report_lines[1].startswith("Dataset: ")
+    assert report_lines[2].startswith("Started: ")
+    assert report_lines[3].startswith("Finished: ")
+    started_at = datetime.fromisoformat(report_lines[2].removeprefix("Started: "))
+    finished_at = datetime.fromisoformat(report_lines[3].removeprefix("Finished: "))
+    assert started_at <= finished_at
+    assert pipeline_e2e_id == f"{started_at.timestamp()}__{finished_at}"
+    assert report_lines[4] == "Status: error"
+    assert "\n".join(report_lines[5:]) == err_msg
 
 
 @pytest.mark.parametrize("slack_configured", [True, False])
@@ -529,8 +562,7 @@ def test_run_pipeline_slack_configured(
     else:
         slack_mock.assert_not_called()
         assert f"No Slack alerts will be sent: {WEBHOOK_NOT_CONFIGURED}" in caplog.messages
-    assert caplog.records[-1].levelno == logging.INFO
-    assert caplog.records[-1].getMessage() == WORK_COMPLETE
+    assert ALL_JOBS_COMPLETED in caplog.messages
 
 
 @pytest.mark.parametrize("slack_configured", [True, False])
@@ -562,14 +594,20 @@ def test_run_pipeline_slack_configured_on_failure(
 
 
 def test_run_pipeline_pipelines_dir_used_for_pipeline_metadata(dlt_test_settings: CtsSettings) -> None:
-    """The pipeline metadata directory is the settings pipeline_dir, not the default ~/.dlt."""
+    """The pipeline metadata directory is moved from settings.pipeline_dir to output_dir/<pipeline_e2e_id>."""
     assert dlt_test_settings.pipeline_dir is not None
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
-    pipeline_state_files = list(Path(dlt_test_settings.pipeline_dir).glob("**/*.json"))
-    assert pipeline_state_files
+    assert not Path(dlt_test_settings.pipeline_dir).exists()
+    report_files = list(Path(dlt_test_settings.output_dir).glob(f"report_{load_info.loads_ids[0]}__*.txt"))
+    assert len(report_files) == 1
+    pipeline_e2e_id = report_files[0].stem.removeprefix("report_")
+    moved_pipeline_dir = Path(dlt_test_settings.output_dir) / pipeline_e2e_id
+    assert moved_pipeline_dir.is_dir()
+    pipeline_state_files = list(moved_pipeline_dir.glob("**/*.json"))
+    assert any(p.name == "state.json" for p in pipeline_state_files)
 
 
 def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
@@ -580,6 +618,8 @@ def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: 
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
+    # dataset_name is `dlt_pipeline_dataset_\d+`, where \d+ is YYYYMMDDHHMMSS
+    assert load_info.dataset_name.startswith(f"{load_info.pipeline.pipeline_name}_dataset_")
     assert load_info.dataset_name != f"{load_info.pipeline.pipeline_name}_dataset"
     assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
 
@@ -750,7 +790,12 @@ def test_run_pipeline_load_info_save_resource_error_still_returns_load_info(
     assert read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME) == []
     error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
     assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}load info save failed"]
-    assert caplog.records[-1].getMessage() == WORK_COMPLETE
+    assert ALL_JOBS_COMPLETED in caplog.messages
+    report_files = list(Path(dlt_test_settings.output_dir).glob(f"report_{load_info.loads_ids[0]}__*.txt"))
+    assert len(report_files) == 1
+    assert report_files[0].read_text(encoding="utf-8").splitlines()[-1] == (
+        f"Pipeline load info not saved: {LOAD_INFO_SAVE_FAILED}load info save failed"
+    )
 
 
 @pytest.mark.parametrize("slack_configured", [True, False])
@@ -762,6 +807,8 @@ def test_run_pipeline_load_info_save_run_error_still_returns_load_info(
     slack_configured: bool,
 ) -> None:
     """A failure in the save run is logged; the entity load_info is returned and only the success slack is sent."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
     slack_hook = SLACK_HOOK if slack_configured else None
     mock_pipeline = make_mock_pipeline(RuntimeError("save pipeline boom"), slack_hook)
     with patch.object(core.dlt, "pipeline", return_value=mock_pipeline):
@@ -771,7 +818,12 @@ def test_run_pipeline_load_info_save_run_error_still_returns_load_info(
     assert load_info.asdict.return_value == {"loads_ids": ["1.0"]}
     error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
     assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}save pipeline boom"]
-    assert caplog.records[-1].getMessage() == WORK_COMPLETE
+    assert ALL_JOBS_COMPLETED in caplog.messages
+    report_files = list(Path(dlt_test_settings.output_dir).glob("report_1.0__*.txt"))
+    assert len(report_files) == 1
+    assert report_files[0].read_text(encoding="utf-8").splitlines()[-1] == (
+        f"Pipeline load info not saved: {LOAD_INFO_SAVE_FAILED}save pipeline boom"
+    )
     if slack_configured:
         careful_slack_mock.assert_called_once_with(SLACK_HOOK, "Pipeline completed successfully!")
     else:
@@ -783,6 +835,8 @@ def test_run_pipeline_load_info_save_failed_jobs_logged(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Failed jobs in the save run are logged as an error; the entity load_info is still returned."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
     save_info = MagicMock()
     save_info.has_failed_jobs = True
     save_info.__str__.return_value = "save info with failed jobs"
@@ -795,7 +849,12 @@ def test_run_pipeline_load_info_save_failed_jobs_logged(
     assert load_info.asdict.return_value == {"loads_ids": ["1.0"]}
     error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
     assert error_messages == [f"{LOAD_INFO_SAVE_FAILED_JOBS}save info with failed jobs"]
-    assert caplog.records[-1].getMessage() == WORK_COMPLETE
+    assert ALL_JOBS_COMPLETED in caplog.messages
+    report_files = list(Path(dlt_test_settings.output_dir).glob("report_1.0__*.txt"))
+    assert len(report_files) == 1
+    assert report_files[0].read_text(encoding="utf-8").splitlines()[-1] == (
+        f"Pipeline load info not saved: {LOAD_INFO_SAVE_FAILED_JOBS}save info with failed jobs"
+    )
 
 
 def test_run_pipeline_load_info_save_run_mock_shape(
@@ -968,3 +1027,580 @@ def test_run_pipeline_pass_failed_jobs_reported(
     # the load info is saved to the same failing sink, so saving it fails too; the run is still returned
     assert len(core_errors) == 1
     assert core_errors[0].startswith((LOAD_INFO_SAVE_FAILED_JOBS, LOAD_INFO_SAVE_FAILED))
+
+
+def test_run_pipeline_pass_partial_load_worker_failure_filesystem(
+    dlt_test_settings: CtsSettings,
+    bucket_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    slack_mock: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When one load worker thread fails and others succeed with raise_on_failed_jobs=False, surviving tables and _load_info are written."""
+    monkeypatch.setenv("LOAD__RAISE_ON_FAILED_JOBS", "false")
+    monkeypatch.setenv("DATA_WRITER__FILE_MAX_ITEMS", "1")
+    monkeypatch.setenv(HOOK_ENV_VAR, SLACK_HOOK)
+
+    real_run = FilesystemLoadJob.run
+
+    def fail_second_tiny_record(self: FilesystemLoadJob) -> None:
+        if self.load_table_name == TINY_TABLE_NAME:
+            with gzip.open(self._file_path, "rt") as f:
+                if "tiny:two" in f.read():
+                    raise DestinationTerminalException(SINK_ERROR)
+        real_run(self)
+
+    monkeypatch.setattr(FilesystemLoadJob, "run", fail_second_tiny_record)
+
+    load_info = run_pipeline(
+        dlt_test_settings,
+        tiny_resource(),
+        pipeline_kwargs={"pipeline_name": TINY_PIPELINE_NAME},
+    )
+
+    assert load_info is not None
+    assert load_info.has_failed_jobs
+    assert slack_mock.call_args_list == [
+        call(SLACK_HOOK, "Pipeline completed with errors", False),  # noqa: FBT003
+    ]
+
+    # The record from the succeeding worker thread is in the tiny table; the failed worker's record is missing
+    assert read_output_jsonl_records(bucket_dir) == [TINY_RESOURCE_DATA[0]]
+
+    # Both the partially-failed data load and the _load_info metadata load are recorded in _dlt_loads as status 0
+    dlt_loads = read_jsonl_rows(bucket_dir, "_dlt_loads")
+    assert [row["status"] for row in dlt_loads] == [0, 0]
+    assert len(read_jsonl_rows(bucket_dir, "_dlt_pipeline_state")) == 1
+
+    # _load_info is saved to the filesystem destination and records both completed and failed worker jobs
+    load_info_rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    assert len(load_info_rows) == 1
+    package = load_info_rows[0]["load_packages"][0]
+    assert package["state"] == "loaded"
+    failed_jobs = [job for job in package["jobs"] if job["state"] == "failed_jobs"]
+    completed_jobs = [job for job in package["jobs"] if job["state"] == "completed_jobs"]
+    assert len(failed_jobs) == 1
+    assert SINK_ERROR in failed_jobs[0]["failed_message"]
+    assert [job["failed_message"] for job in completed_jobs] == [None, None]
+
+    assert FAILED_JOBS_WARNING in caplog.messages
+    assert [r for r in caplog.records if r.name == core.__name__ and r.levelno == logging.ERROR] == []
+    report_files = list(Path(dlt_test_settings.output_dir).glob(f"report_{load_info.loads_ids[0]}__*.txt"))
+    assert len(report_files) == 1
+    pipeline_e2e_id = report_files[0].stem.removeprefix("report_")
+    report_text = report_files[0].read_text(encoding="utf-8")
+    report_lines = report_text.splitlines()
+    started_line = report_lines[2]
+    finished_line = report_lines[3]
+    assert started_line.startswith("Started: ")
+    assert finished_line.startswith("Finished: ")
+    started_at = datetime.fromisoformat(started_line.removeprefix("Started: "))
+    finished_at = datetime.fromisoformat(finished_line.removeprefix("Finished: "))
+    assert pipeline_e2e_id == f"{load_info.loads_ids[0]}__{finished_at}"
+    assert started_at <= load_info.started_at <= finished_at
+    if load_info.finished_at is not None:
+        assert load_info.started_at <= load_info.finished_at <= finished_at
+    assert (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        f"Dataset: {load_info.dataset_name}\n"
+        f"Started: {started_at}\n"
+        f"Finished: {finished_at}\n"
+        "Status: completed with errors\n"
+        f"Completed loads: {', '.join(load_info.loads_ids)}\n"
+    ) in report_text
+    assert SINK_ERROR in report_text
+    assert report_text.endswith("Pipeline load info saved\n")
+
+
+def test_run_pipeline_fail_partial_extract_worker_failure_filesystem(
+    dlt_test_settings: CtsSettings,
+    bucket_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    slack_mock: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When one parallel extract worker thread fails and others succeed, extract aborts and writes no tables even with raise_on_failed_jobs=False."""
+    monkeypatch.setenv("RAISE_ON_FAILED_JOBS", "false")
+    monkeypatch.setenv("LOAD__RAISE_ON_FAILED_JOBS", "false")
+    monkeypatch.setenv(HOOK_ENV_VAR, SLACK_HOOK)
+
+    @dlt.resource
+    def seeds() -> Iterator[dict[str, Any]]:
+        yield from TINY_RESOURCE_DATA
+
+    @dlt.transformer(data_from=seeds, name=TINY_TABLE_NAME, parallelized=True)
+    def parallel_transform(item: dict[str, Any]) -> dict[str, Any]:
+        if item["entity_id"] == "tiny:two":
+            raise RuntimeError(SINK_ERROR)
+        return item
+
+    load_info = run_pipeline(
+        dlt_test_settings,
+        parallel_transform(),
+        pipeline_kwargs={"pipeline_name": TINY_PIPELINE_NAME},
+    )
+
+    assert load_info is None
+    assert list(bucket_dir.iterdir()) == []
+    assert read_jsonl_rows(bucket_dir, TINY_TABLE_NAME) == []
+    assert read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME) == []
+    assert caplog.records[-1].levelno == logging.ERROR
+    assert caplog.records[-1].getMessage().startswith("Pipeline failed: ")
+    assert SINK_ERROR in caplog.records[-1].getMessage()
+    assert slack_mock.call_args.args[0] == SLACK_HOOK
+    assert slack_mock.call_args.args[1].startswith("Pipeline failed: ")
+    report_files = list(Path(dlt_test_settings.output_dir).glob("report_*.txt"))
+    assert len(report_files) == 1
+    report_text = report_files[0].read_text(encoding="utf-8")
+    assert "Status: error\nPipeline failed: " in report_text
+    assert SINK_ERROR in report_text
+
+
+# save_pipeline_metadata unit tests
+
+MOCK_START_TIME: Final[datetime] = datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC)
+MOCK_LOAD_START_TIME: Final[datetime] = datetime(2025, 1, 2, 3, 4, 10, tzinfo=UTC)
+MOCK_FINISH_TIME: Final[datetime] = datetime(2025, 1, 2, 3, 5, 6, tzinfo=UTC)
+MOCK_SAVE_START_TIME: Final[datetime] = datetime(2025, 1, 2, 3, 6, 0, tzinfo=UTC)
+MOCK_SAVE_FINISH_TIME: Final[datetime] = datetime(2025, 1, 2, 3, 6, 5, tzinfo=UTC)
+
+
+def make_metadata_pipeline_and_load_info(
+    *,
+    has_failed_jobs: bool = False,
+    loads_ids: list[str] | None = None,
+    failed_messages: list[str | None] | None = None,
+    save_run_result: object = None,
+) -> tuple[MagicMock, MagicMock]:
+    """Build a mock dlt.Pipeline and LoadInfo for testing save_pipeline_metadata."""
+    pipeline = MagicMock()
+    pipeline.pipeline_name = TINY_PIPELINE_NAME
+    pipeline.dataset_name = "test_dataset"
+    pipeline.last_trace.started_at = MOCK_START_TIME
+    pipeline.last_trace.finished_at = MOCK_FINISH_TIME
+
+    if save_run_result is None:
+        default_save_info = MagicMock()
+        default_save_info.has_failed_jobs = False
+        pipeline.run.return_value = default_save_info
+    elif isinstance(save_run_result, Exception):
+        pipeline.run.side_effect = save_run_result
+    else:
+        pipeline.run.return_value = save_run_result
+
+    load_info = MagicMock()
+    load_info.has_failed_jobs = has_failed_jobs
+    load_info.loads_ids = ["1700000000.123"] if loads_ids is None else loads_ids
+    load_info.started_at = MOCK_LOAD_START_TIME
+    load_info.asdict.return_value = {"loads_ids": load_info.loads_ids}
+
+    if failed_messages:
+        failed_jobs = []
+        for msg in failed_messages:
+            job = MagicMock()
+            job.failed_message = msg
+            failed_jobs.append(job)
+        package = MagicMock()
+        package.jobs = {"failed_jobs": failed_jobs}
+        load_info.load_packages = [package]
+    else:
+        load_info.load_packages = []
+
+    return pipeline, load_info
+
+
+def test_save_pipeline_metadata_pass_completed_no_errors(
+    dlt_test_settings: CtsSettings,
+) -> None:
+    """When load_info has no failed jobs and saving it succeeds, the pipeline dir is moved and report says completed."""
+    assert dlt_test_settings.pipeline_dir is not None
+    pipeline_dir = Path(dlt_test_settings.pipeline_dir)
+    pipeline_dir.mkdir(parents=True, exist_ok=True)
+    (pipeline_dir / "state.json").write_text("{}", encoding="utf-8")
+
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    expected_e2e_id = f"1700000000.123__{MOCK_FINISH_TIME}"
+    assert not pipeline_dir.exists()
+    assert (Path(dlt_test_settings.output_dir) / expected_e2e_id / "state.json").is_file()
+
+    report_file = Path(dlt_test_settings.output_dir) / f"report_{expected_e2e_id}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed\n"
+        "Completed loads: 1700000000.123\n"
+        "Pipeline load info saved\n"
+    )
+
+
+def test_save_pipeline_metadata_pass_uses_initial_trace_timestamps_before_save_run(
+    dlt_test_settings: CtsSettings,
+) -> None:
+    """When saving load_info replaces pipeline.last_trace, Started, Finished, and pipeline_e2e_id use the initial trace."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+    pipeline.last_trace.started_at = MOCK_START_TIME
+    pipeline.last_trace.finished_at = MOCK_FINISH_TIME
+
+    def update_trace_on_save(*_args: object, **_kwargs: object) -> MagicMock:
+        post_save_trace = MagicMock()
+        post_save_trace.started_at = MOCK_SAVE_START_TIME
+        post_save_trace.finished_at = MOCK_SAVE_FINISH_TIME
+        pipeline.last_trace = post_save_trace
+        save_info = MagicMock()
+        save_info.has_failed_jobs = False
+        return save_info
+
+    pipeline.run.side_effect = update_trace_on_save
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    expected_e2e_id = f"1700000000.123__{MOCK_FINISH_TIME}"
+    report_file = Path(dlt_test_settings.output_dir) / f"report_{expected_e2e_id}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed\n"
+        "Completed loads: 1700000000.123\n"
+        "Pipeline load info saved\n"
+    )
+
+
+def test_save_pipeline_metadata_pass_completed_with_errors(
+    dlt_test_settings: CtsSettings,
+) -> None:
+    """When load_info has failed jobs, all non-empty failed_message values are included in the report."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    pipeline, load_info = make_metadata_pipeline_and_load_info(
+        has_failed_jobs=True,
+        loads_ids=["1700000000.1", "1700000000.2"],
+        failed_messages=["first job failed", None, "", "second job failed"],
+    )
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    expected_e2e_id = f"1700000000.1__{MOCK_FINISH_TIME}"
+    report_file = Path(dlt_test_settings.output_dir) / f"report_{expected_e2e_id}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed with errors\n"
+        "Completed loads: 1700000000.1, 1700000000.2\n"
+        "first job failed\n"
+        "second job failed\n"
+        "Pipeline load info saved\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("err_msg", "expected_extra_line"),
+    [
+        pytest.param("Pipeline failed: step boom", "Pipeline failed: step boom\n", id="with-err-msg"),
+        pytest.param(None, "", id="no-err-msg"),
+        pytest.param("", "", id="empty-err-msg"),
+    ],
+)
+def test_save_pipeline_metadata_pass_load_info_none(
+    dlt_test_settings: CtsSettings,
+    err_msg: str | None,
+    expected_extra_line: str,
+) -> None:
+    """When load_info is None, last_trace.started_at is used for the ID and start time, and Status is error."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    pipeline, _ = make_metadata_pipeline_and_load_info()
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, None, err_msg)
+
+    pipeline.run.assert_not_called()
+    expected_e2e_id = f"{MOCK_START_TIME.timestamp()}__{MOCK_FINISH_TIME}"
+    assert (Path(dlt_test_settings.output_dir) / expected_e2e_id).is_dir()
+
+    report_file = Path(dlt_test_settings.output_dir) / f"report_{expected_e2e_id}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: error\n"
+        f"{expected_extra_line}"
+    )
+
+
+def test_save_pipeline_metadata_pass_empty_loads_ids_uses_last_trace_timestamp(
+    dlt_test_settings: CtsSettings,
+) -> None:
+    """When load_info.loads_ids is empty, base_id falls back to pipeline.last_trace.started_at.timestamp()."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    pipeline, load_info = make_metadata_pipeline_and_load_info(loads_ids=[])
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    expected_e2e_id = f"{MOCK_START_TIME.timestamp()}__{MOCK_FINISH_TIME}"
+    report_file = Path(dlt_test_settings.output_dir) / f"report_{expected_e2e_id}.txt"
+    assert report_file.is_file()
+
+
+def test_save_pipeline_metadata_pass_unique_pipeline_e2e_id(
+    dlt_test_settings: CtsSettings,
+) -> None:
+    """Two runs with the same load_info.loads_ids[0] and different finished_at get distinct pipeline_e2e_ids."""
+    settings = dlt_test_settings.model_copy(update={"use_output_dir_for_pipeline_metadata": False})
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+    finish_times = (MOCK_FINISH_TIME, MOCK_SAVE_FINISH_TIME)
+    for finish_time in finish_times:
+        pipeline.last_trace.finished_at = finish_time
+        save_pipeline_metadata(settings, pipeline, load_info, None)
+
+    report_files = list(Path(settings.output_dir).glob("report_1700000000.123__*.txt"))
+    assert len(report_files) == len(finish_times)
+
+
+def test_save_pipeline_metadata_fail_load_info_save_raises_exception(
+    dlt_test_settings: CtsSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When saving load_info raises an exception, it is logged and recorded in the report."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    pipeline, load_info = make_metadata_pipeline_and_load_info(save_run_result=RuntimeError("db unreachable"))
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}db unreachable"]
+
+    report_file = Path(dlt_test_settings.output_dir) / f"report_1700000000.123__{MOCK_FINISH_TIME}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed\n"
+        "Completed loads: 1700000000.123\n"
+        f"Pipeline load info not saved: {LOAD_INFO_SAVE_FAILED}db unreachable\n"
+    )
+
+
+def test_save_pipeline_metadata_fail_load_info_save_has_failed_jobs(
+    dlt_test_settings: CtsSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When saving load_info returns failed jobs, an error is logged and recorded in the report."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    save_info = MagicMock()
+    save_info.has_failed_jobs = True
+    save_info.__str__.return_value = "save job failed"
+    pipeline, load_info = make_metadata_pipeline_and_load_info(save_run_result=save_info)
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_messages == [f"{LOAD_INFO_SAVE_FAILED_JOBS}save job failed"]
+
+    report_file = Path(dlt_test_settings.output_dir) / f"report_1700000000.123__{MOCK_FINISH_TIME}.txt"
+    assert report_file.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed\n"
+        "Completed loads: 1700000000.123\n"
+        f"Pipeline load info not saved: {LOAD_INFO_SAVE_FAILED_JOBS}save job failed\n"
+    )
+
+
+def test_save_pipeline_metadata_pass_use_output_dir_false_skips_move(
+    dlt_test_settings: CtsSettings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When use_output_dir_for_pipeline_metadata is False, move is not called."""
+    settings = dlt_test_settings.model_copy(update={"use_output_dir_for_pipeline_metadata": False})
+    move_mock = MagicMock()
+    monkeypatch.setattr(core, "move", move_mock)
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+
+    save_pipeline_metadata(settings, pipeline, load_info, None)
+
+    move_mock.assert_not_called()
+    report_file = Path(settings.output_dir) / f"report_1700000000.123__{MOCK_FINISH_TIME}.txt"
+    assert report_file.is_file()
+
+
+def test_save_pipeline_metadata_fail_move_pipeline_dir_oserror_logged(
+    dlt_test_settings: CtsSettings,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If moving settings.pipeline_dir raises OSError, the exception is logged and the report is still written."""
+    monkeypatch.setattr(core, "move", MagicMock(side_effect=OSError("permission denied")))
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_messages == ["Could not move pipelines dir: permission denied"]
+
+    report_file = Path(dlt_test_settings.output_dir) / f"report_1700000000.123__{MOCK_FINISH_TIME}.txt"
+    assert report_file.is_file()
+
+
+def test_save_pipeline_metadata_fail_write_report_error_logged(
+    dlt_test_settings: CtsSettings,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If writing the report file fails, an exception is logged with 'Could not write pipeline report file: <err>'."""
+    assert dlt_test_settings.pipeline_dir is not None
+    Path(dlt_test_settings.pipeline_dir).mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(Path, "write_text", MagicMock(side_effect=OSError("read-only filesystem")))
+    pipeline, load_info = make_metadata_pipeline_and_load_info()
+
+    save_pipeline_metadata(dlt_test_settings, pipeline, load_info, None)
+
+    error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_messages == ["Could not write pipeline report file: read-only filesystem"]
+
+
+# write_pipeline_report unit tests
+
+
+def test_pipeline_report_frozen() -> None:
+    """PipelineReport instances are frozen and cannot be mutated."""
+    report = PipelineReport(
+        pipeline_name=TINY_PIPELINE_NAME,
+        dataset_name="test_dataset",
+        started_at=MOCK_START_TIME,
+        finished_at=MOCK_FINISH_TIME,
+    )
+    with pytest.raises(FrozenInstanceError):
+        report.pipeline_name = "other"  # type: ignore[misc]
+
+
+def test_write_pipeline_report_pass_completed_no_errors(tmp_path: Path) -> None:
+    """write_pipeline_report writes completed status and 'Pipeline load info saved' when there are no errors."""
+    report_path = tmp_path / "report_1.0.txt"
+    report = PipelineReport(
+        pipeline_name=TINY_PIPELINE_NAME,
+        dataset_name="test_dataset",
+        started_at=MOCK_START_TIME,
+        finished_at=MOCK_FINISH_TIME,
+        loads_ids=["1700000000.123"],
+    )
+
+    write_pipeline_report(report_path, report)
+
+    assert report_path.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed\n"
+        "Completed loads: 1700000000.123\n"
+        "Pipeline load info saved\n"
+    )
+
+
+def test_write_pipeline_report_pass_completed_with_errors_and_unsaved_info(tmp_path: Path) -> None:
+    """write_pipeline_report includes failed job messages and info_load_err_msg when present."""
+    report_path = tmp_path / "report_1.0.txt"
+    report = PipelineReport(
+        pipeline_name=TINY_PIPELINE_NAME,
+        dataset_name="test_dataset",
+        started_at=MOCK_START_TIME,
+        finished_at=MOCK_FINISH_TIME,
+        loads_ids=["1.0", "2.0"],
+        failed_messages=["job 1 failed", "", "job 2 failed"],
+        info_load_err_msg="Loading pipeline load info failed: boom",
+    )
+
+    write_pipeline_report(report_path, report)
+
+    assert report_path.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: completed with errors\n"
+        "Completed loads: 1.0, 2.0\n"
+        "job 1 failed\n"
+        "job 2 failed\n"
+        "Pipeline load info not saved: Loading pipeline load info failed: boom\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("err_msg", "expected_extra_line"),
+    [
+        pytest.param("Pipeline failed: step boom", "Pipeline failed: step boom\n", id="with-err-msg"),
+        pytest.param(None, "", id="no-err-msg"),
+        pytest.param("", "", id="empty-err-msg"),
+    ],
+)
+def test_write_pipeline_report_pass_load_info_none(
+    tmp_path: Path,
+    err_msg: str | None,
+    expected_extra_line: str,
+) -> None:
+    """write_pipeline_report writes Status: error when loads_ids is None."""
+    report_path = tmp_path / "report_err.txt"
+    report = PipelineReport(
+        pipeline_name=TINY_PIPELINE_NAME,
+        dataset_name="test_dataset",
+        started_at=MOCK_START_TIME,
+        finished_at=MOCK_FINISH_TIME,
+        err_msg=err_msg,
+    )
+
+    write_pipeline_report(report_path, report)
+
+    assert report_path.read_text(encoding="utf-8") == (
+        f"Pipeline: {TINY_PIPELINE_NAME}\n"
+        "Dataset: test_dataset\n"
+        f"Started: {MOCK_START_TIME}\n"
+        f"Finished: {MOCK_FINISH_TIME}\n"
+        "Status: error\n"
+        f"{expected_extra_line}"
+    )
+
+
+def test_write_pipeline_report_fail_oserror_logged(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """write_pipeline_report logs an exception when writing the report file fails."""
+    report_path = tmp_path / "report_err.txt"
+    report = PipelineReport(
+        pipeline_name=TINY_PIPELINE_NAME,
+        dataset_name="test_dataset",
+        started_at=MOCK_START_TIME,
+        finished_at=MOCK_FINISH_TIME,
+        loads_ids=["1700000000.123"],
+    )
+    monkeypatch.setattr(Path, "write_text", MagicMock(side_effect=OSError("disk full")))
+
+    write_pipeline_report(report_path, report)
+
+    error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_messages == ["Could not write pipeline report file: disk full"]
