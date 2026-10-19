@@ -1,6 +1,6 @@
 [project]
 name = "cdm-data-loaders"
-version = "0.1.10"
+version = "0.1.11"
 description = "Data loaders and wranglers for the CDM."
 requires-python = ">= 3.13"
 readme = "README.md"
