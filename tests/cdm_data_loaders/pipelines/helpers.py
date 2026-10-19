@@ -131,6 +131,24 @@ def read_data_rows(dataset_dir: Path, file_format: str | None = None) -> dict[st
     }
 
 
+def assert_pipeline_report_written(
+    output_dir: Path, load_info: LoadInfo, *, metadata_moved: bool = False
+) -> None:
+    """Assert that save_pipeline_metadata wrote the expected report file (and moved metadata if configured)."""
+    report_files = list(output_dir.glob(f"report_{load_info.loads_ids[0]}_*.txt"))
+    assert len(report_files) == 1
+    first_load_id = report_files[0].stem.removeprefix("report_")
+    if metadata_moved:
+        assert (output_dir / first_load_id).is_dir()
+    assert report_files[0].read_text(encoding="utf-8") == (
+        f"Pipeline {load_info.pipeline.pipeline_name} dataset {load_info.dataset_name}\n"
+        f"Started: {load_info.started_at}\n"
+        "Status: completed\n"
+        f"Completed loads: {', '.join(load_info.loads_ids)}\n"
+        "Pipeline load info saved\n"
+    )
+
+
 def run_and_read(
     run_pipeline: Any,
     chunk_dir: str,
@@ -140,6 +158,7 @@ def run_and_read(
     (load_info, output_dir) = run_pipeline(chunk_dir, **overrides)
     assert load_info is not None
     assert not load_info.has_failed_jobs
+    assert_pipeline_report_written(output_dir, load_info)
     return (load_info, output_dir)
 
 

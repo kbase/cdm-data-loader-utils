@@ -14,7 +14,12 @@ from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline i
     run_jsonlines_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JSONSCHEMA_PIPELINE_NAME, JsonlJsonschemaIngestSettings
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, parse_json_string, read_data_rows
+from tests.cdm_data_loaders.pipelines.helpers import (
+    LOADER_FILE_FORMATS,
+    assert_pipeline_report_written,
+    parse_json_string,
+    read_data_rows,
+)
 
 pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
 
@@ -68,6 +73,7 @@ def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
     assert not load_info.has_failed_jobs
     assert load_info.pipeline.pipeline_name == JSONSCHEMA_PIPELINE_NAME
     assert load_info.dataset_name == "schema_test"
+    assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     tables = read_data_tables(settings, load_info.dataset_name)
     assert set(tables) == {"widget", "widget_rejected", "gadget"}
     assert [{key: parse_json_string(value) for key, value in row.items()} for row in tables["widget"]] == [
@@ -110,6 +116,7 @@ def test_run_jsonlines_pipeline_pass_all_invalid(
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
+    assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {
         "widget_rejected": [
             {"source_file": "invalid.jsonl", "line_no": 1, "raw_record": MALFORMED_RAW, "error_detail": PARSE_ERROR},
@@ -162,4 +169,6 @@ def test_cli_pass_loads_selected_entity(
     assert load_info is not None
     assert not load_info.has_failed_jobs
     assert load_info.dataset_name == "schema_cli"
+    assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {"gadget": [GADGET_RECORD]}
+

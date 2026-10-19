@@ -11,6 +11,7 @@ from pandas import DataFrame
 from cdm_data_loaders.pipelines.xml2db.pipeline import cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
+from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
 EXPECTED_BOOK_COUNT = 3
@@ -43,6 +44,7 @@ def test_run_xml2db_pipeline_pass_writes_expected_output(
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
     assert sorted(book_df["title"].tolist()) == ["The Shining", "The Stand", "The Tommyknockers"]
+    assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
 
 
 def test_run_xml2db_pipeline_pass_gzip_files_are_loaded(
@@ -83,6 +85,7 @@ def test_run_xml2db_pipeline_pass_no_matching_files_yields_no_data_table(
     dataset = load_info.pipeline.dataset()
     # only dlt's own metadata tables exist; the data tables are never created
     assert set(dataset.tables) == DEFAULT_DLT_TABLES
+    assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
 
 
 def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
@@ -145,3 +148,4 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
+    assert_pipeline_report_written(output_dir, load_info)

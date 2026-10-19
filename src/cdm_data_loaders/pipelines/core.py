@@ -3,11 +3,13 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from logging import Logger, getLogger
+from shutil import move
 from typing import Any, Final
 
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.runtime.slack import send_slack_message
+from dlt.common.storages.load_package import create_load_id
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
 from pydantic import ValidationError
@@ -102,6 +104,84 @@ def run_cli(
     return pipeline_fn(settings)
 
 
+def save_pipeline_metadata(
+    settings: CtsSettings, pipeline: dlt.Pipeline, load_info: LoadInfo | None, err_msg: str | None
+) -> None:
+    """Save the pipeline metadata to a unique directory in settings.output_dir.
+
+    Writes a brief report of the pipeline state and saves it to report_<unique pipeline load id>.txt.
+
+    :param settings: settings for this pipeline
+    :type  settings: CtsSettings
+    :param pipeline: dlt pipeline instance
+    :type  pipeline: dlt.Pipeline
+    :param load_info: pipeline load info, or None if the pipeline did not complete successfully
+    :type  load_info: LoadInfo | None
+    :param err_msg: error message indicating why pipeline failed, or None if the pipeline was successful
+    :type  err_msg: str | None
+    """
+    base_id = (
+        load_info.loads_ids[0]
+        if load_info and load_info.loads_ids
+        else str(pipeline.last_trace.started_at.timestamp())
+    )
+    first_load_id = f"{base_id}_{create_load_id()}"
+    start_time = load_info.started_at if load_info is not None else pipeline.last_trace.started_at
+
+    info_load_err_msg: str | None = None
+    if load_info is not None:
+        try:
+            # save the load info as JSONL in the same destination as the ingested data
+            load_info_resource: DltResource = dlt.resource(
+                [load_info.asdict()], name=LOAD_INFO_TABLE_NAME, max_table_nesting=0
+            )
+            load_info_save_info: LoadInfo = pipeline.run(load_info_resource, loader_file_format=str(JSONL))
+            if load_info_save_info.has_failed_jobs:
+                info_load_err_msg = f"Loading pipeline load info had failed jobs: {load_info_save_info}"
+                logger.error(info_load_err_msg)
+        except Exception as e:
+            info_load_err_msg = f"Loading pipeline load info failed: {e!s}"
+            logger.exception(info_load_err_msg)
+
+    if settings.use_output_dir_for_pipeline_metadata and settings.pipeline_dir is not None:
+        # copy the pipeline directory so that it is named according to the first load_id
+        try:
+            move(settings.pipeline_dir, settings.output_dir / first_load_id)
+        except OSError as e:
+            move_err_msg = f"Could not move pipelines dir: {e!s}"
+            logger.exception(move_err_msg)
+
+    # write a summary and save it to the output directory
+    lines = [
+        f"Pipeline {pipeline.pipeline_name} dataset {pipeline.dataset_name}",
+        f"Started: {start_time}",
+    ]
+    if load_info is None:
+        lines.append("Status: error")
+        if err_msg:
+            lines.append(err_msg)
+    else:
+        status = "completed with errors" if load_info.has_failed_jobs else "completed"
+        lines.append(f"Status: {status}")
+        lines.append(f"Completed loads: {', '.join(load_info.loads_ids)}")
+        lines.extend(
+            failed_job.failed_message
+            for load_package in load_info.load_packages
+            for failed_job in load_package.jobs["failed_jobs"]
+            if failed_job.failed_message
+        )
+        if info_load_err_msg is None:
+            lines.append("Pipeline load info saved")
+        else:
+            lines.append(f"Pipeline load info not saved: {info_load_err_msg!s}")
+
+    try:
+        (settings.output_dir / f"report_{first_load_id}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception as err:
+        report_err_msg = f"Could not write pipeline report file: {err!s}"
+        logger.exception(report_err_msg)
+
+
 def run_pipeline(
     settings: CtsSettings,
     resource: DltResource | list[DltResource],
@@ -128,7 +208,7 @@ def run_pipeline(
     pipeline_kwargs = dict(pipeline_kwargs or {})
 
     # set the output directory for all the pipeline gubbins
-    if settings.pipeline_dir:
+    if settings.use_output_dir_for_pipeline_metadata:
         pipeline_kwargs["pipelines_dir"] = settings.pipeline_dir
 
     # update dev mode
@@ -149,36 +229,26 @@ def run_pipeline(
     if not slack_hook:
         logger.info("No Slack alerts will be sent: %s", WEBHOOK_NOT_CONFIGURED)
 
+    load_info: LoadInfo | None = None
+    err_msg: str | None = None
     try:
-        load_info: LoadInfo = pipeline.run(resource, **(pipeline_run_kwargs or {}))
+        load_info = pipeline.run(resource, **(pipeline_run_kwargs or {}))
     except PipelineStepFailed as e:
         # errors raise PipelineStepFailed
         err_msg = f"Pipeline failed: {e!s}"
         logger.exception(err_msg)
-        if slack_hook:
-            send_slack_message_carefully(slack_hook, err_msg)
-        return None
 
-    logger.info(load_info)
-    if load_info.has_failed_jobs:
-        logger.warning("")
+    if load_info:
+        logger.info(load_info)
+        if load_info.has_failed_jobs:
+            logger.warning("Pipeline contains failed jobs")
+        else:
+            logger.info("All pipeline jobs completed successfully")
 
-    try:
-        # save the load info as JSONL in the same destination as the ingested data
-        load_info_resource: DltResource = dlt.resource(
-            [load_info.asdict()], name=LOAD_INFO_TABLE_NAME, max_table_nesting=0
-        )
-        load_info_save_info: LoadInfo = pipeline.run(load_info_resource, loader_file_format=JSONL)
-        if load_info_save_info.has_failed_jobs:
-            logger.error("Loading pipeline load info had failed jobs: %s", load_info_save_info)
-    except Exception as e:
-        err_msg = f"Loading pipeline load info failed: {e!s}"
-        logger.exception(err_msg)
+    save_pipeline_metadata(settings, pipeline, load_info, err_msg)
 
-    logger.info("Work complete!")
     if slack_hook:
-        send_slack_message_carefully(
-            slack_hook, f"Pipeline completed {'with errors' if load_info.has_failed_jobs else 'successfully!'}"
-        )
+        msg = err_msg or f"Pipeline completed {'with errors' if load_info.has_failed_jobs else 'successfully!'}"
+        send_slack_message_carefully(slack_hook, msg)
 
     return load_info

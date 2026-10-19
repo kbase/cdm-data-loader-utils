@@ -14,10 +14,7 @@ def test_uniprot_settings_all_params_set(
     test_uniprot_settings: frozendict[str, Any],
     test_uniprot_settings_reconciled: frozendict[str, Any],
 ) -> None:
-    """Ensure that settings are set correctly when all args are specified.
-
-    Note that test_uniprot_settings includes a value for pipeline_dir.
-    """
+    """Ensure that settings are set correctly when all args are specified."""
     s = UniProtSettings(**test_uniprot_settings)  # type: ignore[reportReturnType]
     check_settings(s, test_uniprot_settings_reconciled)
 
