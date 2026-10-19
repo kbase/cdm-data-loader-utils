@@ -2,14 +2,15 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from logging import Logger, getLogger
+from pathlib import Path
 from shutil import move
 from typing import Any, Final
 
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.runtime.slack import send_slack_message
-from dlt.common.storages.load_package import create_load_id
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
 from pydantic import ValidationError
@@ -44,6 +45,20 @@ class PipelineCli[S: LoggerSettings]:
     def run(self, cli_args: list[str] | None = None, **settings_kwargs: Any) -> LoadInfo | None:
         """Parse ``cli_args`` (default ``sys.argv[1:]``), run the pipeline and return its LoadInfo."""
         return run_cli(self.settings_cls, self.pipeline_fn, settings_kwargs, cli_args)
+
+
+@dataclass(frozen=True, slots=True)
+class PipelineReport:
+    """Summary information for a pipeline run report."""
+
+    pipeline_name: str
+    dataset_name: str
+    started_at: datetime
+    finished_at: datetime
+    loads_ids: list[str] | None = None
+    failed_messages: list[str] | None = None
+    err_msg: str | None = None
+    info_load_err_msg: str | None = None
 
 
 def send_slack_message_carefully(
@@ -104,6 +119,45 @@ def run_cli(
     return pipeline_fn(settings)
 
 
+def write_pipeline_report(
+    report_path: Path,
+    report: PipelineReport,
+) -> None:
+    """Write a summary report of a pipeline run to ``report_path``.
+
+    :param report_path: path to the report file to write
+    :type  report_path: Path
+    :param report: pipeline report information to write
+    :type  report: PipelineReport
+    """
+    lines = [
+        f"Pipeline: {report.pipeline_name}",
+        f"Dataset: {report.dataset_name}",
+        f"Started: {report.started_at}",
+        f"Finished: {report.finished_at}",
+    ]
+    if report.loads_ids is None:
+        lines.append("Status: error")
+        if report.err_msg:
+            lines.append(report.err_msg)
+    else:
+        failed_messages = [msg for msg in (report.failed_messages or []) if msg]
+        status = "completed with errors" if failed_messages else "completed"
+        lines.append(f"Status: {status}")
+        lines.append(f"Completed loads: {', '.join(report.loads_ids)}")
+        lines.extend(failed_messages)
+        if report.info_load_err_msg is None:
+            lines.append("Pipeline load info saved")
+        else:
+            lines.append(f"Pipeline load info not saved: {report.info_load_err_msg!s}")
+
+    try:
+        report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception as err:
+        report_err_msg = f"Could not write pipeline report file: {err!s}"
+        logger.exception(report_err_msg)
+
+
 def save_pipeline_metadata(
     settings: CtsSettings, pipeline: dlt.Pipeline, load_info: LoadInfo | None, err_msg: str | None
 ) -> None:
@@ -120,11 +174,10 @@ def save_pipeline_metadata(
     :param err_msg: error message indicating why pipeline failed, or None if the pipeline was successful
     :type  err_msg: str | None
     """
-    base_id = (
-        load_info.loads_ids[0] if load_info and load_info.loads_ids else str(pipeline.last_trace.started_at.timestamp())
-    )
-    first_load_id = f"{base_id}_{create_load_id()}"
-    start_time = load_info.started_at if load_info is not None else pipeline.last_trace.started_at
+    started_at = pipeline.last_trace.started_at
+    base_id = load_info.loads_ids[0] if load_info and load_info.loads_ids else str(started_at.timestamp())
+    finished_at = pipeline.last_trace.finished_at
+    pipeline_e2e_id = f"{base_id}__{finished_at}"
 
     info_load_err_msg: str | None = None
     if load_info is not None:
@@ -144,40 +197,37 @@ def save_pipeline_metadata(
     if settings.use_output_dir_for_pipeline_metadata and settings.pipeline_dir is not None:
         # copy the pipeline directory so that it is named according to the first load_id
         try:
-            move(settings.pipeline_dir, settings.output_dir / first_load_id)
+            move(settings.pipeline_dir, settings.output_dir / pipeline_e2e_id)
         except OSError as e:
             move_err_msg = f"Could not move pipelines dir: {e!s}"
             logger.exception(move_err_msg)
 
     # write a summary and save it to the output directory
-    lines = [
-        f"Pipeline {pipeline.pipeline_name} dataset {pipeline.dataset_name}",
-        f"Started: {start_time}",
-    ]
     if load_info is None:
-        lines.append("Status: error")
-        if err_msg:
-            lines.append(err_msg)
-    else:
-        status = "completed with errors" if load_info.has_failed_jobs else "completed"
-        lines.append(f"Status: {status}")
-        lines.append(f"Completed loads: {', '.join(load_info.loads_ids)}")
-        lines.extend(
-            failed_job.failed_message
-            for load_package in load_info.load_packages
-            for failed_job in load_package.jobs["failed_jobs"]
-            if failed_job.failed_message
+        report = PipelineReport(
+            pipeline_name=pipeline.pipeline_name,
+            dataset_name=pipeline.dataset_name,
+            started_at=started_at,
+            finished_at=finished_at,
+            err_msg=err_msg,
         )
-        if info_load_err_msg is None:
-            lines.append("Pipeline load info saved")
-        else:
-            lines.append(f"Pipeline load info not saved: {info_load_err_msg!s}")
-
-    try:
-        (settings.output_dir / f"report_{first_load_id}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    except Exception as err:
-        report_err_msg = f"Could not write pipeline report file: {err!s}"
-        logger.exception(report_err_msg)
+    else:
+        report = PipelineReport(
+            pipeline_name=pipeline.pipeline_name,
+            dataset_name=pipeline.dataset_name,
+            started_at=started_at,
+            finished_at=finished_at,
+            err_msg=err_msg,
+            loads_ids=load_info.loads_ids,
+            failed_messages=[
+                failed_job.failed_message
+                for load_package in load_info.load_packages
+                for failed_job in load_package.jobs["failed_jobs"]
+                if failed_job.failed_message
+            ],
+            info_load_err_msg=info_load_err_msg,
+        )
+    write_pipeline_report(settings.output_dir / f"report_{pipeline_e2e_id}.txt", report)
 
 
 def run_pipeline(

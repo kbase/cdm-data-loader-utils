@@ -16,6 +16,8 @@ from unittest.mock import patch
 import boto3
 import dlt
 import pytest
+from dlt.common.configuration.container import Container
+from dlt.common.pipeline import PipelineContext
 from frozendict import frozendict
 from moto import mock_aws
 from pyspark.sql import SparkSession
@@ -124,6 +126,18 @@ def logging_setup(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @pytest.fixture(autouse=True)
+def isolate_dlt_pipelines_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[None, Any]:
+    """Set the DLT_DATA_DIR (where dlt stores pipeline metadata) to the test temporary directory.
+
+    Prevents accumulation of dlt pipeline artefacts in the user ~/.dlt directory.
+    """
+    monkeypatch.setenv("DLT_DATA_DIR", str(tmp_path))
+    yield
+    if Container()[PipelineContext].is_active():
+        Container()[PipelineContext].deactivate()
+
+
+@pytest.fixture(autouse=True)
 def _isolated_cli_and_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     """Clear sys.argv and the environment to prevent test-to-test pollution."""
     monkeypatch.setattr(sys, "argv", ["pytest"])
@@ -138,7 +152,7 @@ def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
     """Generate a local spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
     logger = logging.getLogger(__name__)
     try:
-        from berdl_notebook_utils.setup_spark_session import get_spark_session  # pyright: ignore[reportMissingImports]  # noqa: PLC0415
+        from berdl_notebook_utils.setup_spark_session import get_spark_session  # pyright: ignore[reportMissingImports]  # noqa: I001, PLC0415
     except ModuleNotFoundError:
         logger.exception("berdl_notebook_utils not available: cannot create a spark session")
         raise
