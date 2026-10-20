@@ -16,7 +16,11 @@ from cdm_data_loaders.core.fields import LoaderFileFormatEnum
 from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import cli, run_jsonlines_pipeline
 from cdm_data_loaders.pipelines.jsonlines.settings import EXTRACT_PIPELINE_NAME, JsonlExtractSettings
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
+from tests.cdm_data_loaders.pipelines.helpers import (
+    assert_pipeline_report_written,
+    assert_run_ok,
+    settings_to_argv,
+)
 
 SIMPLE_JSONL = """{"widget_id": "a", "count": 1}
 {"widget_id": "b", "count": 2}
@@ -70,10 +74,8 @@ def test_run_jsonlines_pipeline_pass_routes_lines_by_directory(
     (input_dir / "gadget").mkdir()
     (input_dir / "gadget" / "data.jsonl").write_text('{"widget_id": "g", "count": 0}\n', encoding="utf-8")
 
-    load_info = run_jsonlines_pipeline(settings)
+    load_info = assert_run_ok(run_jsonlines_pipeline(settings))
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a", "b", "g"]
     assert_pipeline_report_written(Path(settings.output_dir), load_info)
@@ -88,10 +90,8 @@ def test_run_jsonlines_pipeline_pass_invalid_rows_routed_to_invalid_table(
     (input_dir / "widget").mkdir(parents=True)
     (input_dir / "widget" / "data.jsonl").write_text('{"widget_id": "a"}\n{broken\n', encoding="utf-8")
 
-    load_info = run_jsonlines_pipeline(settings)
+    load_info = assert_run_ok(run_jsonlines_pipeline(settings))
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     dataset = load_info.pipeline.dataset()
     assert sorted(dataset.widget.df()["widget_id"].tolist()) == ["a"]
     invalid_df = dataset.widget_invalid.df()
@@ -107,10 +107,8 @@ def test_run_jsonlines_pipeline_pass_no_matching_files_yields_no_tables(
     settings = extract_settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = run_jsonlines_pipeline(settings)
+    load_info = assert_run_ok(run_jsonlines_pipeline(settings))
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     dataset = load_info.pipeline.dataset()
     assert set(dataset.tables) == {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", "_load_info"}
     assert_pipeline_report_written(Path(settings.output_dir), load_info)
@@ -122,34 +120,9 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
-    settings = extract_settings_factory()
-    input_dir = Path(settings.input_dir)
-    (input_dir / "data.jsonl").write_text(SIMPLE_JSONL, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-
-    argv = [
-        EXTRACT_PIPELINE_NAME,
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--log-config-file",
-        str(log_config_file),
-        "--use-destination",
-        str(settings.use_destination),
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "widget",
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-    monkeypatch.setattr(sys, "argv", argv)
+    settings = extract_settings_factory(dataset_name="cli_dataset", dlt_dev_mode=False)
+    (Path(settings.input_dir) / "data.jsonl").write_text(SIMPLE_JSONL, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", [EXTRACT_PIPELINE_NAME, *settings_to_argv(settings)])
 
     def fake_run_pipeline(
         *, resource: DltResource, pipeline_kwargs: dict[str, Any], **_: dict[str, Any]
@@ -159,10 +132,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         return pipeline.run(resource)
 
     with patch.object(extract_pipeline_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli.run()
+        load_info = assert_run_ok(cli.run())
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     # n.b. no _load_info due to this being a monkeypatched pipeline
     assert set(load_info.pipeline.dataset().tables) == {"widget", "_dlt_version", "_dlt_loads", "_dlt_pipeline_state"}
     assert sorted(load_info.pipeline.dataset().widget.df()["widget_id"].tolist()) == ["a", "b"]

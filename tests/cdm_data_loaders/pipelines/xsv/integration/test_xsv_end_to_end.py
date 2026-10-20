@@ -10,7 +10,11 @@ import pytest
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
-from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
+from tests.cdm_data_loaders.pipelines.helpers import (
+    assert_pipeline_report_written,
+    assert_run_ok,
+    settings_to_argv,
+)
 from tests.cdm_data_loaders.pipelines.xsv.conftest import (
     ALL_RAGGED_ROWS,
     COLUMNS,
@@ -34,10 +38,8 @@ def test_run_xsv_pipeline_pass_writes_expected_output(
     settings = settings_factory()
     write_xsv_file(settings, "data.csv", rows_to_csv(VALID_ROWS))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
     assert {"my_table", *DEFAULT_DLT_TABLES} == set(dataset.tables)
 
@@ -59,10 +61,8 @@ def test_run_xsv_pipeline_pass_multiple_files_loaded_together(
     write_xsv_file(settings, "part_1.csv", rows_to_csv([VALID_ROWS[0]]))
     write_xsv_file(settings, "part_2.csv", rows_to_csv([VALID_ROWS[1]]))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     df = load_info.pipeline.dataset().table("my_table").df()
     assert sorted(df["number"].tolist()) == [2, 3]
 
@@ -81,10 +81,8 @@ def test_run_xsv_pipeline_pass_partial_ragged_file_recovers_valid_rows(
     settings = settings_factory()
     write_xsv_file(settings, "data.csv", rows_to_csv(PARTIAL_RAGGED_ROWS))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
     assert {"my_table", REJECTED_TABLE, *DEFAULT_DLT_TABLES} == set(dataset.tables)
 
@@ -106,10 +104,8 @@ def test_run_xsv_pipeline_pass_fully_ragged_file_is_entirely_rejected(
     settings = settings_factory()
     write_xsv_file(settings, "bad.csv", rows_to_csv(ALL_RAGGED_ROWS))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
     assert set(dataset.tables) == {REJECTED_TABLE, *DEFAULT_DLT_TABLES}
 
@@ -126,10 +122,8 @@ def test_run_xsv_pipeline_pass_no_matching_files_yields_no_data_table(
     """An input dir with no matching data files does not fail the run and creates no data table."""
     settings = settings_factory()
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     assert set(load_info.pipeline.dataset().tables) == DEFAULT_DLT_TABLES
     assert_pipeline_report_written(Path(settings.output_dir), load_info)
 
@@ -153,10 +147,8 @@ def test_run_xsv_pipeline_pass_configured_null_regex_replaces_placeholder(
         ),
     )
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     df = load_info.pipeline.dataset().table("my_table").df().sort_values("number")
     floats = df["float"].tolist()
     assert pd.isna(floats[0])
@@ -177,10 +169,8 @@ def test_run_xsv_pipeline_pass_parquet_format_loads_expected_row_count(
     settings = settings_factory(loader_file_format="parquet")
     write_xsv_file(settings, "data.csv", rows_to_csv(VALID_ROWS))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
 
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     df = load_info.pipeline.dataset().table("my_table").df()
     assert len(df) == len(VALID_ROWS)
 
@@ -191,33 +181,11 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
-    settings = settings_factory(dataset_name=f"cli_dataset_{uuid4().hex}")
+    settings = settings_factory(dataset_name=f"cli_dataset_{uuid4().hex}", dlt_dev_mode=False)
     write_xsv_file(settings, "data.csv", rows_to_csv(VALID_ROWS))
 
-    argv: list[str] = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(settings.input_dir),
-        "--output-dir",
-        str(settings.output_dir),
-        "--use-destination",
-        settings.use_destination,
-        "--dataset-name",
-        settings.dataset_name,
-        "--schema-file",
-        str(settings.schema_file),
-        "--table-name",
-        "my_table",
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, cli_args=settings_to_argv(settings)))
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, cli_args=argv[1:])
-
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
     df = load_info.pipeline.dataset().table("my_table").df()
     assert sorted(df["number"].tolist()) == [2, 3]
     assert_pipeline_report_written(Path(settings.output_dir), load_info)

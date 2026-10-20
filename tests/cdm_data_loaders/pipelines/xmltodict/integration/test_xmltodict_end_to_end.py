@@ -10,14 +10,18 @@ from pandas import DataFrame
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, assert_pipeline_report_written
+from tests.cdm_data_loaders.pipelines.helpers import (
+    LOADER_FILE_FORMATS,
+    assert_pipeline_report_written,
+    assert_run_ok,
+    settings_to_argv,
+)
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
 
 def check_book_list_results(load_info: LoadInfo | None, table_name: str | None = None) -> DataFrame:
     """Check over the output of parsing SIMPLE_LIBRARY_XML."""
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
+    load_info = assert_run_ok(load_info)
     dataset = load_info.pipeline.dataset()
     table_name = table_name or "book"
     assert set(dataset.tables) == {table_name, *DEFAULT_DLT_TABLES}
@@ -70,9 +74,7 @@ def test_run_xmltodict_pipeline_pass_no_matching_files_yields_no_data_table(
     settings = settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
     dataset = load_info.pipeline.dataset()
     # only dlt's own metadata tables exist; the data table is never created
     assert set(dataset.tables) == DEFAULT_DLT_TABLES
@@ -96,42 +98,16 @@ def test_run_xmltodict_pipeline_pass_custom_table_name_is_respected(
 
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
-    tmp_path: Path,
-    dlt_destination_config: str,
+    settings_factory: Callable[..., XmlToDictSettings],
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
-    input_dir = tmp_path / "cli_input"
-    input_dir.mkdir()
+    settings = settings_factory(dataset_name="cli_dataset")
+    input_dir = Path(settings.input_dir)
+    input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
 
-    argv = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--log-config-file",
-        str(log_config_file),
-        "--use-destination",
-        dlt_destination_config,
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "book",
-        "--xml-tag",
-        "book",
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-
-    load_info = pipeline_runner.run(PIPELINE_NAME, cli_args=argv[1:])
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, cli_args=settings_to_argv(settings)))
     book_df = check_book_list_results(load_info)
     assert sorted(book_df["book___id"].tolist()) == ["1", "2", "3"]
-    assert_pipeline_report_written(output_dir, load_info)
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)

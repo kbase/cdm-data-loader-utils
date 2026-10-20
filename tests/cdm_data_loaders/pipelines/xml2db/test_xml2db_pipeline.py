@@ -7,10 +7,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-import pendulum
 import pytest
 from dlt.common.pipeline import LoadInfo
-from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.extract import DltResource
 from xml2db import DataModel
 
@@ -20,7 +18,13 @@ from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.cdm_data_loaders.pipelines.helpers import (
+    assert_run_ok,
+    fetch_all_duckdb,
+    make_cts_settings,
+    make_file_item,
+    settings_to_argv,
+)
 
 SIMPLE_LIBRARY_XML = """<?xml version="1.0"?>
 <library>
@@ -61,20 +65,6 @@ def library_xsd(tmp_path: Path) -> Path:
 def library_model(library_xsd: Path) -> DataModel:
     """Build the xml2db DataModel from library.xsd."""
     return build_xml2db_model(library_xsd, short_name="library_test")
-
-
-def make_file_item(file_path: Path) -> FileItemDict:
-    """Build a dlt FileItemDict for a local file, as the filesystem source would."""
-    return FileItemDict(
-        {
-            "file_url": file_path.as_uri(),
-            "file_name": file_path.name,
-            "relative_path": file_path.name,
-            "mime_type": "application/xml",
-            "modification_date": pendulum.now(),
-            "size_in_bytes": file_path.stat().st_size,
-        }
-    )
 
 
 def fake_settings(
@@ -321,39 +311,13 @@ def test_cli_pass_calls_run_cli_with_settings_class_and_pipeline_fn() -> None:
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     tmp_path: Path,
+    library_xsd: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cli() reads command-line arguments and loads rows via a real DuckDB pipeline."""
-    input_dir = tmp_path / "cli_input"
-    input_dir.mkdir()
-    (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
-    xsd_file = tmp_path / "library.xsd"
-    xsd_file.write_text(LIBRARY_XSD, encoding="utf-8")
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}', encoding="utf-8")
-
-    argv = [
-        "xml2db",
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--use-destination",
-        "local_fs",
-        "--log-config-file",
-        str(log_config_file),
-        "--dataset-name",
-        "cli_dataset",
-        "--xsd-file",
-        str(xsd_file),
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-    monkeypatch.setattr(sys, "argv", argv)
+    settings = fake_settings(tmp_path, library_xsd, dataset_name="cli_dataset")
+    (Path(settings.input_dir) / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["xml2db", *settings_to_argv(settings)])
 
     # unique pipeline name: the duckdb database file is derived from it, so
     # repeated runs of the suite do not see rows from previous runs
@@ -373,13 +337,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     with patch.object(xml2db_pipeline_module, "run_pipeline", fake_run_pipeline):
         cli()
 
-    load_info = captured["load_info"]
-    assert not load_info.has_failed_jobs
+    assert_run_ok(captured["load_info"])
 
     pipeline = duckdb_pipeline(tmp_path, pipeline_name, "cli_dataset")
-    with (
-        pipeline.sql_client() as client,
-        client.execute_query("SELECT COUNT(*) FROM book") as cur,
-    ):
-        (row_count,) = cur.fetchone()
+    ((row_count,),) = fetch_all_duckdb(pipeline, "SELECT COUNT(*) FROM book")
     assert row_count == 2  # noqa: PLR2004

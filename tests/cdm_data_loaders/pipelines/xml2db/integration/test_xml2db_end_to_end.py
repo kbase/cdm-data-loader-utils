@@ -9,7 +9,11 @@ from pandas import DataFrame
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
-from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
+from tests.cdm_data_loaders.pipelines.helpers import (
+    assert_pipeline_report_written,
+    assert_run_ok,
+    settings_to_argv,
+)
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
 EXPECTED_BOOK_COUNT = 3
@@ -18,8 +22,7 @@ EXPECTED_LIBRARY_ROOT_COUNT_TWO_FILES = 2
 
 def check_book_list_results(load_info: LoadInfo | None) -> tuple[DataFrame, DataFrame]:
     """Check over the output of parsing SIMPLE_LIBRARY_XML: one root row, three book rows."""
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
+    load_info = assert_run_ok(load_info)
     dataset = load_info.pipeline.dataset()
     assert {"library", "book", "library_book", *DEFAULT_DLT_TABLES} == set(dataset.tables)
     book_df = dataset.table("book").df()
@@ -80,9 +83,7 @@ def test_run_xml2db_pipeline_pass_no_matching_files_yields_no_data_table(
     settings = settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
-    assert load_info is not None
-    assert load_info.has_failed_jobs is False
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=settings))
     dataset = load_info.pipeline.dataset()
     # only dlt's own metadata tables exist; the data tables are never created
     assert set(dataset.tables) == DEFAULT_DLT_TABLES
@@ -111,42 +112,17 @@ def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
 
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
-    tmp_path: Path,
-    dlt_destination_config: str,
-    library_xsd: Path,
+    settings_factory: Callable[..., Xml2DbSettings],
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
-    input_dir = tmp_path / "cli_input"
-    input_dir.mkdir()
+    settings = settings_factory(dataset_name="cli_dataset", use_output_dir_for_pipeline_metadata=False)
+    input_dir = Path(settings.input_dir)
+    input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "bucket"
-    output_dir.mkdir(exist_ok=True)
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
 
-    argv = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--log-config-file",
-        str(log_config_file),
-        "--use-destination",
-        dlt_destination_config,
-        "--dataset-name",
-        "cli_dataset",
-        "--xsd-file",
-        str(library_xsd),
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-
-    load_info = pipeline_runner.run(PIPELINE_NAME, cli_args=argv[1:])
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, cli_args=settings_to_argv(settings)))
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
-    assert_pipeline_report_written(output_dir, load_info)
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)

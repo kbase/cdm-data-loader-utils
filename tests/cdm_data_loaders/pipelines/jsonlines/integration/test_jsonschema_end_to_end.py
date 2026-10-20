@@ -13,6 +13,7 @@ from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
     assert_pipeline_report_written,
+    assert_run_ok,
     parse_json_string,
     read_data_rows,
 )
@@ -64,10 +65,7 @@ def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
         input_dir=str(schema_input_dir), loader_file_format=loader_file_format, buffer_size=buffer_size
     )
 
-    load_info = pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings)
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings))
     assert load_info.pipeline.pipeline_name == JSONSCHEMA_PIPELINE_NAME
     assert load_info.dataset_name == "schema_test"
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
@@ -111,10 +109,7 @@ def test_run_jsonlines_pipeline_pass_all_invalid(
     table_dir.mkdir()
     (table_dir / "invalid.jsonl").write_text(f"{MALFORMED_RAW}\n{TYPE_ERROR_RAW}", encoding="utf-8")
 
-    load_info = pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings)
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings))
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {
         "widget_rejected": [
@@ -138,32 +133,31 @@ def test_cli_pass_loads_selected_entity(
     """The real CTS CLI accepts a registry shortcut, table selection, and the requested file format."""
     settings = schema_settings_factory(input_dir=str(schema_input_dir), loader_file_format=loader_file_format)
 
-    load_info = pipeline_runner.run(
-        JSONSCHEMA_PIPELINE_NAME,
-        cli_args=[
-            "--input-dir",
-            str(settings.input_dir),
-            "--output-dir",
-            str(settings.output_dir),
-            "--log-config-file",
-            str(settings.log_config_file),
-            "--use-destination",
-            str(settings.use_destination),
-            "--use-output-dir-for-pipeline-metadata",
-            "true",
-            "--loader-file-format",
-            loader_file_format,
-            "--dataset-name",
-            "schema_cli",
-            "-m",
-            settings.schema_files_module,
-            "--table-names",
-            "gadget",
-        ],
+    load_info = assert_run_ok(
+        pipeline_runner.run(
+            JSONSCHEMA_PIPELINE_NAME,
+            cli_args=[
+                "--input-dir",
+                str(settings.input_dir),
+                "--output-dir",
+                str(settings.output_dir),
+                "--log-config-file",
+                str(settings.log_config_file),
+                "--use-destination",
+                str(settings.use_destination),
+                "--use-output-dir-for-pipeline-metadata",
+                "true",
+                "--loader-file-format",
+                loader_file_format,
+                "--dataset-name",
+                "schema_cli",
+                "-m",
+                settings.schema_files_module,
+                "--table-names",
+                "gadget",
+            ],
+        )
     )
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     assert load_info.dataset_name == "schema_cli"
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {"gadget": [GADGET_RECORD]}

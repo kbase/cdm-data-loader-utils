@@ -13,7 +13,12 @@ from cdm_data_loaders.pipelines.jsonlines.settings import (
     PYDANTIC_PIPELINE_NAME,
 )
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, read_pipeline_tables, run_and_read
+from tests.cdm_data_loaders.pipelines.helpers import (
+    LOADER_FILE_FORMATS,
+    assert_run_ok,
+    read_pipeline_tables,
+    run_and_read,
+)
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
     canonicalize_pipeline_entry,
     canonicalize_reference_entry,
@@ -303,9 +308,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     ]
     if registry_flag:
         argv.extend([f"--{registry_flag}", registry_module])
-    load_info = pipeline_runner.run(pipeline_kind, cli_args=argv[1:])
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(pipeline_kind, cli_args=argv[1:]))
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     assert (
         sorted(
