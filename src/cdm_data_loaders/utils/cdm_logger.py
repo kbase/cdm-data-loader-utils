@@ -1,28 +1,31 @@
-"""
-Provides structured logging with contextual metadata for CDM data import pipelines.
-"""
+# cdm_data_loaders/utils/cdm_logger.py
+"""Provides structured logging with contextual metadata for CDM data import pipelines."""
 
+import copy
 import json
 import logging
 import logging.config
+import sys
 from pathlib import Path
-from typing import Any, Final
+from types import TracebackType
+from typing import Any
 
 import yaml
-from dlt.common.runtime.json_logging import config_root_logger
-from frozendict import frozendict
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings
+from dlt.common.runtime.json_logging import JSONLogFormatter
 
-ROOT_LOGGER_CONFIGURED: bool = False
+from cdm_data_loaders.core.settings import LoggerSettings
+
+DLT_LOGGER_NAME = "dlt"
+JSON_FORMATTER_NAME = "dlt_json"
+FALLBACK_KEY = ("<built-in>", 0)
+applied_key: tuple[str, int] | None = None
 
 
-# no default logger config file -- falls back to LOGGING_CONFIG if file not found.
-DEFAULT_LOG_CONFIG_FILE: Final = None
-
-# Immutable fallback config used when no external config file can be found
-LOGGING_CONFIG = frozendict(
-    {
+# There is no default logger config file (see cdm_data_loaders.core.fields.DEFAULTS[LOG_CONFIG_FILE])
+# so the logger falls back to this config if an external config file is not found.
+def _default_config() -> dict[str, Any]:
+    """Default config for the logger: logs WARNING and above to STDOUT."""
+    return {
         "version": 1,
         "handlers": {
             "console": {
@@ -30,90 +33,101 @@ LOGGING_CONFIG = frozendict(
                 "stream": "ext://sys.stdout",
             },
         },
-        "loggers": {"root": {"level": "INFO", "handlers": ["console"]}},
+        "root": {"level": "WARNING", "handlers": ["console"]},
         "disable_existing_loggers": False,
     }
-)
-
-ARG_ALIASES = ["--log-config-file", "--log_config_file"]
-
-
-class LoggerSettings(BaseSettings):
-    """Configuration for a class with a logger config."""
-
-    log_config_file: str | None = Field(
-        default=DEFAULT_LOG_CONFIG_FILE,
-        description="Location of configuration file for the logger",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in ARG_ALIASES]),
-    )
 
 
 def _load_config_from_path(path: str | Path) -> dict[str, Any]:
     """Attempt to load and parse a logging config from the given path.
 
     :param path: path to a JSON or YAML logging config file
-    :type path: str | Path
+    :type  path: str | Path
     :return: parsed config dict
-    :rtype: dict[str, Any]
+    :rtype : dict[str, Any]
     """
-    if not isinstance(path, Path):
-        path = Path(path)
+    path = Path(path)
 
     suffix = path.suffix.lower()
 
     if suffix in (".yml", ".yaml"):
         with path.open() as f:
-            return yaml.safe_load(f)
-
-    if suffix == ".json":
+            config = yaml.safe_load(f)
+    elif suffix == ".json":
         with path.open() as f:
-            return json.load(f)
-
-    err_msg = f"Unsupported config file format: {path.name}"
-    raise ValueError(err_msg)
-
-
-def get_cdm_logger(logger_name: str, settings: LoggerSettings | None = None) -> logging.Logger:
-    """Retrieve the default CDM logger, initialising it if necessary.
-
-    :return: initialised logger
-    :rtype: logging.Logger
-    """
-    init_logger(settings)
-    return logging.getLogger(logger_name)
-
-
-def init_logger(settings: LoggerSettings | None = None) -> None:
-    """Initialise logger configuration."""
-    if not settings:
-        # init settings (pulling in log_config_file from cmd line args / env vars) if not provided
-        settings = LoggerSettings()
-
-    if settings and settings.log_config_file:
-        config = _load_config_from_path(settings.log_config_file)
+            config = json.load(f)
     else:
-        logging.getLogger(__name__).warning("No logging config file found. Falling back to built-in config.")
-        config = dict(LOGGING_CONFIG)
+        err_msg = f"Unsupported config file format: {path.name}"
+        raise ValueError(err_msg)
 
-    # make sure there's nothing too crazy going on
-    config["disable_existing_loggers"] = False
-    logging.config.dictConfig(config)
+    if not isinstance(config, dict):
+        err_msg = f"Logging config in {path.name} must be a mapping, not {type(config).__name__}"
+        raise TypeError(err_msg)
 
-    configure_root_logger_from_dlt()
+    return config
 
 
-def configure_root_logger_from_dlt() -> None:
-    """Configure the root logger using settings from the dlt logger.
+def _enforce_json_formatter(config: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of ``config`` in which every handler uses dlt's JSONLogFormatter.
 
-    Copies over the log formatter used by the dlt logger.
+    :param config: logger config
+    :type  config: dict[str, Any]
+    :return: config copy with formatters set to dlt's JSONLogFormatter
+    :rtype : dict[str, Any]
     """
-    global ROOT_LOGGER_CONFIGURED  # noqa: PLW0603
-    if ROOT_LOGGER_CONFIGURED is False and "dlt" in logging.Logger.manager.loggerDict:
-        dlt_logger = logging.getLogger("dlt")
-        # this passes dlt's formatter up to the root logger
-        config_root_logger()
-        # pass messages from the dlt logger up to the root
-        dlt_logger.propagate = True
-        # clear the dlt logger handlers and let everything be handled by the root logger instead.
-        dlt_logger.handlers.clear()
-        ROOT_LOGGER_CONFIGURED = True
+    config = copy.deepcopy(config)
+    # dictConfig accepts a callable for the "()" factory key
+    config.setdefault("formatters", {})[JSON_FORMATTER_NAME] = {"()": JSONLogFormatter}
+    for handler_cfg in config.get("handlers", {}).values():
+        handler_cfg["formatter"] = JSON_FORMATTER_NAME
+    config["disable_existing_loggers"] = False
+    return config
+
+
+def adopt_dlt_logger() -> None:
+    """Route dlt's logger through the root logger's (JSON-formatted) handlers.
+
+    Safe to call repeatedly.
+    """
+    dlt_logger = logging.getLogger(DLT_LOGGER_NAME)
+    # pass messages from the dlt logger up to the root
+    dlt_logger.propagate = True
+    # clear the dlt logger handlers and let everything be handled by the root logger instead.
+    dlt_logger.handlers.clear()
+
+
+def init_logger(settings: LoggerSettings | None = None, *, force: bool = False) -> None:
+    """Initialise JSON logging; repeat calls are skipped unless the config file changes.
+
+    :param settings: settings for the logger, defaults to None
+    :type  settings: LoggerSettings | None, optional
+    :param force: force the logger to be reconfigured, defaults to False
+    :type  force: bool, optional
+    """
+    global applied_key  # noqa: PLW0603
+
+    if settings is None:
+        settings = LoggerSettings()  # pyright: ignore[reportCallIssue]
+
+    path = Path(settings.log_config_file).resolve() if settings.log_config_file else None
+    key = (str(path), path.stat().st_mtime_ns) if path else FALLBACK_KEY
+
+    if force or key != applied_key:
+        config = _load_config_from_path(path) if path else _default_config()
+        logging.config.dictConfig(_enforce_json_formatter(config))
+        applied_key = key
+        if path is None:
+            logging.getLogger(__name__).warning("No logging config file found. Falling back to built-in config.")
+
+    adopt_dlt_logger()
+
+
+def log_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
+    """Log uncaught exceptions using the exception handler."""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logging.getLogger().error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = log_exception

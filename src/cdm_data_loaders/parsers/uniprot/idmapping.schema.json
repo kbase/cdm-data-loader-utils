@@ -1,0 +1,34 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON Schema for the UniProt ID mapping files, which map UniProt IDs to IDs in other databases. The schema defines the expected structure and data types for the fields in the ID mapping files.",
+    "properties": {
+        "uniprot_id": {
+            "description": "Identifier for the protein in the UniProt database.",
+            "minLength": 6,
+            "type": [
+                "string"
+            ]
+        },
+        "db": {
+            "description": "Abbreviation for the database from which the internal ID in the `xref` column is derived.",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        },
+        "xref": {
+            "description": "Internal ID at the database in the `db` column.",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        }
+    },
+    "required": [
+        "uniprot_id",
+        "db",
+        "xref"
+    ],
+    "title": "JSON Schema for UniProt ID mapping files",
+    "type": "object"
+}

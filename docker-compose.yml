@@ -8,12 +8,19 @@ services:
     ports:
       - "9000:8080"
       - "9001:8443"
+    tmpfs:
+      - /var/lib/ceph
+    restart: on-failure
     healthcheck:
-      # Mark healthy only when the RGW/S3 HTTP endpoint is reachable.
-      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ >/dev/null || wget -q -O- http://127.0.0.1:8080/ >/dev/null" ]
+      # Two-part check:
+      # 1. ceph osd stat: verifies at least one OSD has joined the cluster.
+      # 2. curl: confirms the RGW HTTP listener is accepting connections.
+      # NOTE: ceph health is NOT used here — this image permanently sits at HEALTH_WARN due to
+      # AUTH_INSECURE_GLOBAL_ID_RECLAIM_ALLOWED and MON_MSGR2_NOT_ENABLED, so it never passes.
+      test: [ "CMD-SHELL", "ceph osd stat 2>/dev/null | grep -qE '[1-9][0-9]* up' && curl -s http://127.0.0.1:8080/ >/dev/null 2>&1" ]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 10
       start_period: 30s
 
   integration-tests:

@@ -1,0 +1,41 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON Schema for TSV/CSV validation tests",
+    "properties": {
+        "number": {
+            "minimum": 0,
+            "maximum": 4,
+            "type": [
+                "integer"
+            ]
+        },
+        "date": {
+            "type": [
+                "string"
+            ],
+            "format": "date"
+        },
+        "float": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "boolean": {
+            "type": "boolean"
+        },
+        "string": {
+            "type": "string",
+            "pattern": "^\\w+:.+$"
+        }
+    },
+    "required": [
+        "number",
+        "date",
+        "float",
+        "boolean",
+        "string"
+    ],
+    "title": "JSON Schema for TSV/CSV tests",
+    "type": "object"
+}

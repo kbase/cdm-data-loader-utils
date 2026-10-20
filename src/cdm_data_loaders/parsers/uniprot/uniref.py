@@ -24,7 +24,6 @@ ENTRY_XML_TAG = f"{{{UNIREF_URL}}}entry"
 NS = "ns"
 UNIREF_NS = {NS: UNIREF_URL, "": UNIREF_URL}
 UNIREF = "UniRef"
-UNIREF_VARIANTS = ["100", "90", "50"]
 ENTITY_ID = "entity_id"
 
 PREFIX_TRANSLATION = {

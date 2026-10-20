@@ -1,0 +1,575 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jsonschema:annotationreportresponse.json",
+  "title": "AnnotationReportResponse",
+  "$ref": "#/$defs/v2reportsGenomeAnnotationReportPage",
+  "$defs": {
+    "v2reportsGenomeAnnotationReportPage": {
+      "type": "object",
+      "properties": {
+        "reports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsGenomeAnnotationReportMatch"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsMessage"
+          }
+        },
+        "total_count": {
+          "type": "integer",
+          "title": "The total count of available genes (ignoring the page_size parameter)."
+        },
+        "next_page_token": {
+          "type": "string",
+          "title": "A token that can be sent as `page_token` to retrieve the next page. If this field is omitted, there are no subsequent pages."
+        }
+      }
+    },
+    "v2reportsGenomeAnnotationReportMatch": {
+      "type": "object",
+      "properties": {
+        "annotation": {
+          "$ref": "#/$defs/v2reportsGenomeAnnotation"
+        },
+        "query": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warning": {
+          "$ref": "#/$defs/v2reportsWarning"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsError"
+          }
+        },
+        "row_id": {
+          "type": "string"
+        }
+      }
+    },
+    "v2reportsMessage": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/v2reportsError"
+        },
+        "warning": {
+          "$ref": "#/$defs/v2reportsWarning"
+        }
+      }
+    },
+    "v2reportsGenomeAnnotation": {
+      "type": "object",
+      "properties": {
+        "gene_id": {
+          "type": "string",
+          "format": "uint64",
+          "title": "NCBI GeneID"
+        },
+        "symbol": {
+          "type": "string",
+          "title": "Gene symbol"
+        },
+        "description": {
+          "type": "string",
+          "title": "Gene name"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tax_id": {
+          "type": "string",
+          "format": "uint64",
+          "title": "NCBI Taxonomy ID for the organism"
+        },
+        "taxname": {
+          "type": "string",
+          "title": "Taxonomic name of the organism"
+        },
+        "common_name": {
+          "type": "string",
+          "title": "Common name of the organism"
+        },
+        "type": {
+          "$ref": "#/$defs/v2reportsGeneType",
+          "title": "Deprecated"
+        },
+        "gene_type": {
+          "type": "string",
+          "title": "Gene locus type"
+        },
+        "rna_type": {
+          "$ref": "#/$defs/v2reportsRnaType"
+        },
+        "orientation": {
+          "$ref": "#/$defs/v2reportsOrientation"
+        },
+        "locus_tag": {
+          "type": "string"
+        },
+        "reference_standards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsGenomicRegion"
+          }
+        },
+        "genomic_regions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsGenomicRegion"
+          }
+        },
+        "transcripts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsTranscript"
+          }
+        },
+        "proteins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsProtein"
+          }
+        },
+        "chromosomes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "swiss_prot_accessions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ensembl_gene_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "omim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "synonyms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsAnnotation"
+          }
+        }
+      }
+    },
+    "v2reportsWarning": {
+      "type": "object",
+      "properties": {
+        "gene_warning_code": {
+          "$ref": "#/$defs/v2reportsWarningGeneWarningCode"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "replaced_id": {
+          "$ref": "#/$defs/v2reportsWarningReplacedId"
+        },
+        "unrecognized_identifier": {
+          "type": "string"
+        }
+      }
+    },
+    "v2reportsError": {
+      "type": "object",
+      "properties": {
+        "assembly_error_code": {
+          "$ref": "#/$defs/v2reportsErrorAssemblyErrorCode"
+        },
+        "gene_error_code": {
+          "$ref": "#/$defs/v2reportsErrorGeneErrorCode"
+        },
+        "organelle_error_code": {
+          "$ref": "#/$defs/v2reportsErrorOrganelleErrorCode"
+        },
+        "virus_error_code": {
+          "$ref": "#/$defs/v2reportsErrorVirusErrorCode"
+        },
+        "taxonomy_error_code": {
+          "$ref": "#/$defs/v2reportsErrorTaxonomyErrorCode"
+        },
+        "sequence_error_code": {
+          "$ref": "#/$defs/v2reportsErrorSequenceErrorCode"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "invalid_identifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v2reportsGeneType": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "tRNA",
+        "rRNA",
+        "snRNA",
+        "scRNA",
+        "snoRNA",
+        "PROTEIN_CODING",
+        "PSEUDO",
+        "TRANSPOSON",
+        "miscRNA",
+        "ncRNA",
+        "BIOLOGICAL_REGION",
+        "OTHER"
+      ],
+      "default": "UNKNOWN",
+      "title": "NB: GeneType values match Entrez Gene"
+    },
+    "v2reportsRnaType": {
+      "type": "string",
+      "enum": [
+        "rna_UNKNOWN",
+        "premsg",
+        "tmRna"
+      ],
+      "default": "rna_UNKNOWN"
+    },
+    "v2reportsOrientation": {
+      "type": "string",
+      "enum": [
+        "none",
+        "plus",
+        "minus"
+      ],
+      "default": "none"
+    },
+    "v2reportsGenomicRegion": {
+      "type": "object",
+      "properties": {
+        "gene_range": {
+          "$ref": "#/$defs/v2reportsSeqRangeSet",
+          "title": "The range of this Gene record on this genomic region."
+        },
+        "type": {
+          "$ref": "#/$defs/v2reportsGenomicRegionGenomicRegionType",
+          "title": "Type of genomic region"
+        }
+      }
+    },
+    "v2reportsTranscript": {
+      "type": "object",
+      "properties": {
+        "accession_version": {
+          "type": "string",
+          "title": "RefSeq transcript accession with version"
+        },
+        "name": {
+          "type": "string",
+          "title": "RefSeq transcript name"
+        },
+        "length": {
+          "type": "integer",
+          "title": "RefSeq transcript length in nucleotides"
+        },
+        "cds": {
+          "$ref": "#/$defs/v2reportsSeqRangeSet"
+        },
+        "genomic_locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsGenomicLocation"
+          }
+        },
+        "ensembl_transcript": {
+          "type": "string",
+          "title": "Ensembl transcript accession with version"
+        },
+        "protein": {
+          "$ref": "#/$defs/v2reportsProtein"
+        },
+        "type": {
+          "$ref": "#/$defs/v2reportsTranscriptTranscriptType",
+          "title": "Indicates transcript protein-coding potential and whether it was computationally predicted"
+        },
+        "select_category": {
+          "$ref": "#/$defs/v2reportsTranscriptSelectCategory"
+        }
+      }
+    },
+    "v2reportsProtein": {
+      "type": "object",
+      "properties": {
+        "accession_version": {
+          "type": "string",
+          "title": "RefSeq protein accession with version"
+        },
+        "name": {
+          "type": "string",
+          "title": "Protein name"
+        },
+        "length": {
+          "type": "integer",
+          "title": "Protein length in amino acids"
+        },
+        "isoform_name": {
+          "type": "string",
+          "title": "Protein isoform name"
+        },
+        "ensembl_protein": {
+          "type": "string",
+          "title": "Ensembl protein accession with version"
+        },
+        "mature_peptides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsMaturePeptide"
+          }
+        }
+      }
+    },
+    "v2reportsAnnotation": {
+      "type": "object",
+      "properties": {
+        "assembly_accession": {
+          "type": "string",
+          "title": "Genome assembly accession"
+        },
+        "assembly_name": {
+          "type": "string",
+          "title": "Genome assembly name"
+        },
+        "annotation_name": {
+          "type": "string",
+          "title": "Genome annotation name"
+        },
+        "annotation_release_date": {
+          "type": "string",
+          "title": "Genome annotation release date"
+        },
+        "genomic_locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsGenomicLocation"
+          }
+        }
+      }
+    },
+    "v2reportsWarningGeneWarningCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_GENE_WARNING_CODE",
+        "ACCESSION_VERSION_MISMATCH",
+        "REPLACED_GENE_ID",
+        "DISCONTINUED_GENE_ID",
+        "UNRECOGNIZED_GENE_ID",
+        "UNRECOGNIZED_GENE_SYMBOL",
+        "UNRECOGNIZED_ACCESSION",
+        "UNRECOGNIZED_TAX_TOKEN",
+        "NO_GENE_ANNOTATION_FOUND",
+        "ABOVE_SPECIES_TAXON"
+      ],
+      "default": "UNKNOWN_GENE_WARNING_CODE"
+    },
+    "v2reportsWarningReplacedId": {
+      "type": "object",
+      "properties": {
+        "requested": {
+          "type": "string"
+        },
+        "returned": {
+          "type": "string"
+        }
+      }
+    },
+    "v2reportsErrorAssemblyErrorCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_ASSEMBLY_ERROR_CODE",
+        "INVALID_BIOPROJECT_IDS",
+        "NO_ASSEMBLIES_FOR_BIOPROJECTS",
+        "INVALID_TAXON",
+        "MISSING_SEARCH_FIELD",
+        "INVALID_BIOSAMPLE_IDS",
+        "NO_ASSEMBLIES_FOR_BIOSAMPLE_IDS",
+        "NO_ASSEMBLIES_FOR_ASSEMBLY_NAMES",
+        "INVALID_WGS_ACCESSIONS",
+        "NO_ASSEMBLIES_FOR_WGS_ACCESSIONS"
+      ],
+      "default": "UNKNOWN_ASSEMBLY_ERROR_CODE"
+    },
+    "v2reportsErrorGeneErrorCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_GENE_ERROR_CODE",
+        "INCOMPLETE_LOOKUP_SYMBOL",
+        "INVALID_TAXON_GENE_ARGUMENT"
+      ],
+      "default": "UNKNOWN_GENE_ERROR_CODE"
+    },
+    "v2reportsErrorOrganelleErrorCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_ORGANELLE_ERROR_CODE",
+        "INVALID_ORGANELLE_TAXON",
+        "NO_ORGANELLES_FOR_ACCESSION"
+      ],
+      "default": "UNKNOWN_ORGANELLE_ERROR_CODE"
+    },
+    "v2reportsErrorVirusErrorCode": {
+      "type": "string",
+      "const": "UNKNOWN_VIRUS_ERROR_CODE",
+      "default": "UNKNOWN_VIRUS_ERROR_CODE"
+    },
+    "v2reportsErrorTaxonomyErrorCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_TAXONOMY_ERROR_CODE",
+        "INVALID_TAXONOMY_TAXON"
+      ],
+      "default": "UNKNOWN_TAXONOMY_ERROR_CODE"
+    },
+    "v2reportsErrorSequenceErrorCode": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN_SEQUENCE_ERROR_CODE",
+        "INVALID_SEQUENCE_ACCESSION"
+      ],
+      "default": "UNKNOWN_SEQUENCE_ERROR_CODE"
+    },
+    "v2reportsSeqRangeSet": {
+      "type": "object",
+      "properties": {
+        "accession_version": {
+          "type": "string",
+          "title": "NCBI Accession.version of the sequence"
+        },
+        "range": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsRange"
+          }
+        }
+      }
+    },
+    "v2reportsGenomicRegionGenomicRegionType": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "REFSEQ_GENE",
+        "PSEUDOGENE",
+        "BIOLOGICAL_REGION",
+        "OTHER"
+      ],
+      "default": "UNKNOWN"
+    },
+    "v2reportsGenomicLocation": {
+      "type": "object",
+      "properties": {
+        "genomic_accession_version": {
+          "type": "string"
+        },
+        "sequence_name": {
+          "type": "string"
+        },
+        "genomic_range": {
+          "$ref": "#/$defs/v2reportsRange"
+        },
+        "exons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/v2reportsRange"
+          }
+        }
+      }
+    },
+    "v2reportsTranscriptTranscriptType": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "PROTEIN_CODING",
+        "NON_CODING",
+        "PROTEIN_CODING_MODEL",
+        "NON_CODING_MODEL"
+      ],
+      "default": "UNKNOWN"
+    },
+    "v2reportsTranscriptSelectCategory": {
+      "type": "string",
+      "enum": [
+        "SELECT_UNKNOWN",
+        "REFSEQ_SELECT",
+        "MANE_SELECT",
+        "MANE_PLUS_CLINICAL"
+      ],
+      "default": "SELECT_UNKNOWN"
+    },
+    "v2reportsMaturePeptide": {
+      "type": "object",
+      "properties": {
+        "accession_version": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        }
+      }
+    },
+    "v2reportsRange": {
+      "type": "object",
+      "properties": {
+        "begin": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Sequence start position"
+        },
+        "end": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Sequence stop position"
+        },
+        "orientation": {
+          "$ref": "#/$defs/v2reportsOrientation",
+          "title": "Direction relative to the genome"
+        },
+        "order": {
+          "type": "integer",
+          "title": "The position of this sequence in a group of sequences"
+        },
+        "ribosomal_slippage": {
+          "type": "integer",
+          "title": "When ribosomal slippage is desired, fill out slippage amount between this and previous range."
+        }
+      }
+    }
+  }
+}

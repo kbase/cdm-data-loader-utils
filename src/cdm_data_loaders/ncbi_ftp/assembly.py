@@ -13,8 +13,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from cdm_data_loaders.ncbi_ftp.constants import ACCESSION_PARTS_REGEX, ASSEMBLY_PATH_REGEX, FTP_HOST
-from cdm_data_loaders.utils.checksums import verify_md5
-from cdm_data_loaders.utils.ftp_client import connect_ftp, ftp_noop_keepalive, ftp_retrieve_text
+from cdm_data_loaders.utils.checksums import compute_file_checksum
+from cdm_data_loaders.utils.file_transfer.ftp_client import connect_ftp, ftp_noop_keepalive, ftp_retrieve_text
 
 logger: Logger = getLogger(__name__)
 
@@ -100,7 +100,7 @@ def _download_and_verify(  # noqa: PLR0913
     # Returns False if file checksums mismatch, True otherwise
     def validate_file(local_file: Path) -> bool:
         if expected_md5:
-            if verify_md5(local_file, expected_md5):
+            if compute_file_checksum(local_file, "md5") == expected_md5:
                 (dest_dir / f"{filename}.md5").write_text(expected_md5)
             else:
                 logger.warning(

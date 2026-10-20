@@ -13,27 +13,33 @@ all_atb_files.tsv: https://osf.io/xv7q9/files/r6gcp (or Rg6cp, casing varies)
 import csv
 import re
 from collections.abc import Generator
+from functools import cached_property
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Final, Self
 
 import dlt
+import dlt.sources.helpers.requests
+from dlt.common.pipeline import LoadInfo
 from dlt.extract.items import DataItemWithMeta
-from dlt.sources.helpers import requests
 from dlt.sources.helpers.rest_client.client import RESTClient
-from frozendict import frozendict
-from pydantic import AliasChoices, Field, computed_field
+from pydantic import Field, StringConstraints, computed_field, model_validator
 from pydantic_settings import SettingsConfigDict
 
+from cdm_data_loaders.core.settings import (
+    CLI_SHORTCUTS,
+    CtsSettings,
+    default_settings_with_shortcuts,
+)
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
-from cdm_data_loaders.pipelines.cts_defaults import DEFAULT_SETTINGS_CONFIG_DICT, CtsSettings
-from cdm_data_loaders.utils.download.sync_client import FileDownloader
-from cdm_data_loaders.utils.s3 import stream_to_s3
+from cdm_data_loaders.utils.file_transfer.sync_client import FileDownloader
 
 logger: Logger = getLogger(__name__)
+
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
 
 
 DATASET_NAME = "all_the_bacteria"
@@ -42,12 +48,8 @@ ALL_ATB_FILE_NAME = "all_atb_files.tsv"
 REGEX_FILE = "filters.txt"
 ATB_VERSION = "2025-05"
 
-ARG_ALIASES = frozendict(
-    {
-        "version": ["-v", "--version"],
-        "pattern_file": ["-f", "--pattern-file", "--pattern_file"],
-    },
-)
+VERSION: Final[str] = "version"
+PATTERN_FILE: Final[str] = "pattern_file"
 
 # project parts needed:
 PROJECT_PARTS = ["Annotation/Bakta", "Assembly", "Metadata"]
@@ -60,33 +62,37 @@ REQUIRED_ATB_FIELDNAMES = {"project", "filename", "url", "md5"}
 class AtbSettings(CtsSettings):
     """Configuration for running the AllTheBacteria import pipeline."""
 
-    model_config = SettingsConfigDict(**DEFAULT_SETTINGS_CONFIG_DICT, cli_prog_name="all_the_bacteria")
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_prog_name="all_the_bacteria",
+        cli_shortcuts={VERSION: "v", **CLI_SHORTCUTS},
+    )
 
-    version: str = Field(
+    version: NonEmptyStr = Field(
         default=ATB_VERSION,
         description="Name of the current AllTheBacteria version",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in ARG_ALIASES["version"]]),
     )
 
-    pattern_file: str | None = Field(
+    pattern_file: NonEmptyStr | None = Field(
         default=None,
         description="Path, relative to the input dir, of a file containing patterns to match when downloading ATB files",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in ARG_ALIASES["pattern_file"]]),
     )
 
-    @computed_field
-    @property
-    def raw_data_dir(self) -> str:
-        """Directory in which to save the raw data files that are downloaded.
+    @model_validator(mode="after")
+    def post_init_checks(self) -> Self:
+        """Ensure that the raw data dir can be created."""
+        # check that the patterns are OK
+        _ = self.pattern_matches
 
-        Set to the output directory / "raw_data" / version.
-        """
-        if self.use_destination == "local_fs":
-            return str(Path(self.output) / "raw_data" / self.version)
-        return f"{self.output}/raw_data/{self.version}"
+        return self
 
     @computed_field
-    @property
+    @cached_property
+    def raw_data_dir(self) -> Path:
+        """Directory to save downloaded raw data files to: ``<output_dir>/raw_data/<version>``."""
+        return self.output_dir / "raw_data" / self.version
+
+    @computed_field
+    @cached_property
     def pattern_matches(self) -> re.Pattern:
         """The regular expression pattern to be used to select files for download.
 
@@ -95,10 +101,13 @@ class AtbSettings(CtsSettings):
         or does not contain any content, the default PROJECT_PART_REGEX will be used instead.
         """
         if self.pattern_file:
-            pattern_file = Path(self.input_dir) / self.pattern_file
+            pattern_file = self.input_dir / self.pattern_file
             regex = load_patterns(pattern_file)
-            if regex is not None:
-                return regex
+            if regex is None:
+                err_msg = f"No patterns found in {pattern_file!s}"
+                raise ValueError(err_msg)
+            # return the compiled regexes from the file
+            return regex
         # return the default
         return PROJECT_PART_REGEX
 
@@ -133,6 +142,9 @@ def download_atb_index_tsv(settings: AtbSettings) -> Path:
     :return: path to the downloaded file
     :rtype: Path
     """
+    # make sure that the directory structure to save the file in can be written to
+    settings.raw_data_dir.mkdir(parents=True, exist_ok=True)
+
     # get the all_atb_files.tsv file info from the OSF API and retrieve the download link
     osf_client = RESTClient(
         base_url="https://api.osf.io/v2/",
@@ -150,24 +162,10 @@ def download_atb_index_tsv(settings: AtbSettings) -> Path:
         err_msg = f"Could not find download URL in response from 'https://api.osf.io/v2/files/{ALL_FILES_TSV_FILE_ID}/'"
         raise RuntimeError(err_msg)
 
-    if settings.use_destination == "s3":
-        # download to a local temp file and also copy the file to s3
-        save_path = f"{settings.raw_data_dir}/{ALL_ATB_FILE_NAME}"
-        try:
-            stream_to_s3(url=all_files_tsv_download, s3_path=save_path, requests=requests)
-        except Exception:
-            logger.exception("Could not transfer %s to s3", ALL_ATB_FILE_NAME)
-            raise
-        # TODO: save as a temporary file, delete after pipeline has completed
-        # save a local copy of the file to current dir
-        atb_files_tsv = Path(ALL_ATB_FILE_NAME)
-    else:
-        # make sure that the directory structure to save the file in can be written to
-        raw_data_dir = Path(settings.raw_data_dir)
-        raw_data_dir.mkdir(parents=True, exist_ok=True)
-        atb_files_tsv = raw_data_dir / ALL_ATB_FILE_NAME
+    atb_files_tsv = settings.raw_data_dir / ALL_ATB_FILE_NAME
 
     # download the file listing and save it
+    # TODO: for non-local destinations, the file should also be copied to the remote
     FileDownloader().download(url=all_files_tsv_download, destination=atb_files_tsv)
     logger.info("Downloaded TSV index file.")
     return atb_files_tsv
@@ -218,15 +216,9 @@ def osf_file_downloader(settings: AtbSettings, atb_file_list: list[dict[str, Any
     for f in atb_file_list:
         try:
             project_part = f["project"].removeprefix("AllTheBacteria").removeprefix("/").rstrip("/")
-            if settings.use_destination == "s3":
-                if project_part:
-                    project_part = f"{project_part}/"
-                save_path = f"{settings.raw_data_dir}/{project_part}{f['filename']}"
-                stream_to_s3(url=f["url"], s3_path=save_path, requests=requests)
-                logger.debug("Successfully transferred file from %s to %s", f["url"], save_path)
-            else:
-                save_path = Path(settings.raw_data_dir) / project_part / f["filename"]
-                client.download(url=f["url"], destination=save_path, expected_checksum=f["md5"], checksum_fn="md5")
+            # TODO: stream to non-local destinations
+            save_path = settings.raw_data_dir / project_part / f["filename"]
+            client.download(url=f["url"], destination=save_path, expected_checksum=f["md5"], checksum_fn="md5")
 
             f["path"] = str(save_path)
             successful_downloads.append(f)
@@ -263,7 +255,7 @@ def file_downloader(
     return osf_file_downloader(settings, atb_file_list)
 
 
-def run_atb_pipeline(settings: AtbSettings) -> None:
+def run_atb_pipeline(settings: AtbSettings) -> LoadInfo | None:
     """Run the AllTheBacteria pipeline.
 
     :param settings: configuration for the pipeline
@@ -277,7 +269,7 @@ def run_atb_pipeline(settings: AtbSettings) -> None:
         "dataset_name": DATASET_NAME,
     }
 
-    run_pipeline(
+    return run_pipeline(
         settings=settings,
         resource=file_downloader,
         destination_kwargs={"max_table_nesting": 0},
@@ -286,10 +278,7 @@ def run_atb_pipeline(settings: AtbSettings) -> None:
     )
 
 
-def cli() -> None:
-    """CLI interface for the AllTheBacteria importer pipeline."""
-    run_cli(AtbSettings, run_atb_pipeline)
-
+cli = PipelineCli(AtbSettings, run_atb_pipeline)
 
 if __name__ == "__main__":
     cli()

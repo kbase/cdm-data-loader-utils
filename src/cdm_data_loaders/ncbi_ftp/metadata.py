@@ -25,7 +25,8 @@ from typing import Any, TypedDict
 
 from frictionless import Package
 
-from cdm_data_loaders.utils.s3 import copy_object, get_s3_client
+from cdm_data_loaders.utils.file_transfer.s3 import client
+from cdm_data_loaders.utils.file_transfer.s3.object_utils import copy_object
 
 logger: Logger = getLogger(__name__)
 
@@ -199,7 +200,7 @@ def upload_descriptor(
         logger.debug("[dry-run] would upload descriptor: s3://%s/%s", bucket, key)
         return key
 
-    s3 = get_s3_client()
+    s3_client = client.get_s3_client()
     body = json.dumps(descriptor, indent=2).encode()
 
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
@@ -207,7 +208,7 @@ def upload_descriptor(
         tmp.write(body)
 
     try:
-        s3.upload_file(Filename=tmp_path, Bucket=str(bucket), Key=str(key))
+        s3_client.upload_file(Filename=tmp_path, Bucket=str(bucket), Key=str(key))
         logger.debug("Uploaded descriptor: s3://%s/%s", bucket, key)
     finally:
         Path(tmp_path).unlink()
@@ -244,10 +245,10 @@ def archive_descriptor(  # noqa: PLR0913
         logger.debug("[dry-run] would archive descriptor: s3://%s/%s -> %s", bucket, source_key, archive_key)
         return True
 
-    s3 = get_s3_client()
+    s3_client = client.get_s3_client()
     try:
-        s3.head_object(Bucket=str(bucket), Key=str(source_key))
-    except s3.exceptions.NoSuchKey:
+        s3_client.head_object(Bucket=str(bucket), Key=str(source_key))
+    except s3_client.exceptions.NoSuchKey:
         logger.warning("Descriptor not found, skipping archive: s3://%s/%s", bucket, source_key)
         return False
     except Exception as e:

@@ -25,18 +25,16 @@ from cdm_data_loaders.ncbi_ftp.metadata import (
     create_descriptor,
     upload_descriptor,
 )
-from cdm_data_loaders.utils.s3 import (
+from cdm_data_loaders.utils.file_transfer.s3 import client
+from cdm_data_loaders.utils.file_transfer.s3.object_utils import (
     copy_object,
     delete_objects,
-    get_s3_client,
-    list_matching_objects,
+    list_objects,
     object_exists,
     upload_file,
 )
 
 logger: Logger = getLogger(__name__)
-
-DEFAULT_LAKEHOUSE_KEY_PREFIX: PurePosixPath = PurePosixPath("tenant-general-warehouse/kbase/datasets/ncbi")
 
 _MAX_DRY_RUN_LOGS = 10
 
@@ -49,7 +47,7 @@ def promote_from_s3(  # noqa: PLR0913
     staging_bucket: PurePosixPath,
     staging_key_prefix: PurePosixPath,
     lakehouse_bucket: PurePosixPath,
-    lakehouse_key_prefix: PurePosixPath = DEFAULT_LAKEHOUSE_KEY_PREFIX,
+    lakehouse_key_prefix: PurePosixPath,
     removed_manifest_path: Path | None = None,
     updated_manifest_path: Path | None = None,
     manifest_s3_key: PurePosixPath | None = None,
@@ -73,7 +71,7 @@ def promote_from_s3(  # noqa: PLR0913
     :return: report dict with counts
     """
     # Get list of objects under the staging prefix
-    staged_objects: list[dict[str, Any]] = list_matching_objects(f"{staging_bucket / staging_key_prefix}/")
+    staged_objects: list[dict[str, Any]] = list_objects(f"{staging_bucket / staging_key_prefix}/")
 
     # Separate data files from sidecars
     sidecars = {PurePosixPath(k["Key"]) for k in staged_objects if k["Key"].endswith((".crc64nvme", ".md5"))}
@@ -91,8 +89,8 @@ def promote_from_s3(  # noqa: PLR0913
             archived += _archive_assemblies(
                 manifest_file,
                 lakehouse_bucket=lakehouse_bucket,
-                ncbi_release=ncbi_release,
                 lakehouse_key_prefix=lakehouse_key_prefix,
+                ncbi_release=ncbi_release,
                 archive_reason=reason,
                 delete_source=delete,
                 dry_run=dry_run,
@@ -176,7 +174,7 @@ def _promote_file(  # noqa: PLR0913
     :param sidecars: set of S3 keys for sidecar files (to check for MD5 metadata)
     :return: ``(resource_dict, staged_key)`` on success; raises on failure.
     """
-    s3 = get_s3_client()
+    s3 = client.get_s3_client()
     rel_path = staged_key.relative_to(staging_prefix)
     final_key = lakehouse_key_prefix / rel_path
     final_key_path = PurePosixPath(final_key)
@@ -396,7 +394,7 @@ def _get_source_dest_pairs_for_accession(
     source_prefix = _get_accession_path_prefix(accession, lakehouse_key_prefix)
     if not source_prefix:
         return []
-    matching_objs: list[dict[str, Any]] = list_matching_objects(f"{lakehouse_bucket / source_prefix}")
+    matching_objs: list[dict[str, Any]] = list_objects(f"{lakehouse_bucket / source_prefix}")
     return [
         (
             PurePosixPath(obj["Key"]),
@@ -473,8 +471,8 @@ def _archive_objects(
 def _archive_assemblies(  # noqa: PLR0913
     manifest_local_path: Path,
     lakehouse_bucket: PurePosixPath,
+    lakehouse_key_prefix: PurePosixPath,
     ncbi_release: str | None = None,
-    lakehouse_key_prefix: PurePosixPath = DEFAULT_LAKEHOUSE_KEY_PREFIX,
     archive_reason: str = "unknown",
     *,
     delete_source: bool = False,
@@ -562,7 +560,7 @@ def _trim_manifest(
     :param staging_bucket: S3 bucket containing the transfer manifest
     :param promoted_accessions: set of accessions that were successfully promoted
     """
-    s3 = get_s3_client()
+    s3 = client.get_s3_client()
 
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp:
         tmp_path = tmp.name

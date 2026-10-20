@@ -1,0 +1,44 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+        "number": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "date": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "float": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "boolean": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "string": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    },
+    "required": [
+        "number",
+        "date",
+        "float",
+        "boolean",
+        "string"
+    ],
+    "title": "JSON Schema for TSV/CSV tests",
+    "type": "object"
+}

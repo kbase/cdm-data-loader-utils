@@ -1,97 +1,111 @@
 """DLT pipeline to import UniRef data."""
 
-from collections.abc import Generator
-from typing import Any, Final
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Annotated, Final
 
-import dlt
-from dlt.extract.items import DataItemWithMeta
-from pydantic import AliasChoices, Field, field_validator
+from dlt.common.pipeline import LoadInfo
+from dlt.extract import DltResource
+from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
-from cdm_data_loaders.parsers.uniprot.uniref import ENTRY_XML_TAG, UNIREF_VARIANTS, parse_uniref_entry
+from cdm_data_loaders.core.fields import LogInterval
+from cdm_data_loaders.core.settings import (
+    CLI_SHORTCUTS,
+    CtsSettings,
+    default_settings_with_shortcuts,
+)
+from cdm_data_loaders.parsers.uniprot.uniref import (
+    ENTRY_XML_TAG,
+    parse_uniref_entry,
+)
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
-    stream_xml_file_resource,
 )
-from cdm_data_loaders.pipelines.cts_defaults import (
-    DEFAULT_SETTINGS_CONFIG_DICT,
-    BatchedFileInputSettings,
-)
+from cdm_data_loaders.readers.xml import build_xml_file_resource
 
-APP_NAME: Final[str] = "uniref_importer"
+PIPELINE_NAME: Final[str] = "uniref"
 UNIREF_LOG_INTERVAL: Final[int] = 10000
+VARIANT: Final[str] = "variant"
+FIFTY: Final[str] = "50"
+NINETY: Final[str] = "90"
+HUNDRED: Final[str] = "100"
 
 
-UNIREF_VARIANT_ALIASES = ["-u", "--uniref", "--uniref-variant", "--uniref_variant"]
+class UnirefVariantEnum(StrEnum):
+    """Valid values for the Uniref variant."""
+
+    FIFTY = FIFTY
+    NINETY = NINETY
+    HUNDRED = HUNDRED
 
 
-class UnirefSettings(BatchedFileInputSettings):
+UNIREF_VARIANTS: Final[list[str]] = [member.value for member in UnirefVariantEnum.__members__.values()]
+
+
+class UnirefSettings(CtsSettings):
     """Configuration for running the UniRef import pipeline."""
 
-    model_config = SettingsConfigDict(
-        **DEFAULT_SETTINGS_CONFIG_DICT,
-        cli_prog_name="uniref",
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_prog_name=PIPELINE_NAME,
+        cli_shortcuts={**CLI_SHORTCUTS, "variant": "v"},
     )
 
-    uniref_variant: str = Field(
-        description=f"Which UniRef variant to import. Choices: {UNIREF_VARIANTS}",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in UNIREF_VARIANT_ALIASES]),
-    )
-
-    @field_validator("uniref_variant")
-    @classmethod
-    def validate_uniref_variant(cls, v: str) -> str:
-        """Validate the uniref variant against valid choices.
-
-        :param v: uniref variant specified
-        :type v: str
-        :raises ValueError: if the uniref variant is not valid
-        :return: valid uniref variant
-        :rtype: str
-        """
-        if v not in UNIREF_VARIANTS:
-            err_msg = f"uniref_variant must be one of {UNIREF_VARIANTS}, got '{v}'"
-            raise ValueError(err_msg)
-        return v
+    variant: Annotated[
+        UnirefVariantEnum,
+        Field(
+            description=f"Which UniRef variant to import. Choices: {UNIREF_VARIANTS}",
+        ),
+    ]
+    log_interval: Annotated[
+        LogInterval,
+        Field(
+            default=UNIREF_LOG_INTERVAL,
+        ),
+    ]
 
 
-@dlt.resource(name="parse_uniref", file_format="parquet", parallelized=True)
-def parse_uniref(settings: UnirefSettings) -> Generator[DataItemWithMeta, Any]:
-    """Parse the information from UniRef files, batch by batch.
+def parse_uniref(settings: UnirefSettings) -> DltResource:
+    """Build the resource that parses the information from UniRef files.
 
     :param settings: config for running the pipeline.
     :type settings: UnirefSettings
+    :return: resource yielding parsed UniRef entries
+    :rtype: DltResource
     """
-    yield from stream_xml_file_resource(
+    # a single timestamp is used to mark every entity parsed in this run
+    timestamp = datetime.now(UTC)
+    return build_xml_file_resource(
         settings=settings,
         xml_tag=ENTRY_XML_TAG,
-        parse_fn=lambda entry, timestamp, file_path: parse_uniref_entry(
-            entry=entry, timestamp=timestamp, file_path=file_path, uniref_variant=f"UniRef {settings.uniref_variant}"
+        parse_fn=lambda entry, file_path: parse_uniref_entry(
+            entry=entry,
+            timestamp=timestamp,
+            file_path=file_path,
+            uniref_variant=f"UniRef {settings.variant}",
         ),
-        log_interval=UNIREF_LOG_INTERVAL,
+        resource_name="parse_uniref",
     )
 
 
-def run_uniref_pipeline(settings: UnirefSettings) -> None:
+def run_uniref_pipeline(settings: UnirefSettings) -> LoadInfo | None:
     """Execute the Uniref pipeline.
 
     :param settings: config for running the pipeline.
     :type settings: UnirefSettings
     """
-    run_pipeline(
+    return run_pipeline(
         settings=settings,
         resource=parse_uniref(settings),
         pipeline_kwargs={
-            "pipeline_name": f"uniref_{settings.uniref_variant}",
-            "dataset_name": "uniprot_kb",
+            "pipeline_name": PIPELINE_NAME,
+            "dataset_name": f"uniref_{settings.variant}",
         },
     )
 
 
-def cli() -> None:
-    """CLI interface for the UniRef importer pipeline."""
-    run_cli(UnirefSettings, run_uniref_pipeline)
+cli = PipelineCli(UnirefSettings, run_uniref_pipeline)
 
 
 if __name__ == "__main__":

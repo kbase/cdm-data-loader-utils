@@ -1,6 +1,6 @@
 [project]
 name = "cdm-data-loaders"
-version = "0.1.10"
+version = "0.1.11"
 description = "Data loaders and wranglers for the CDM."
 requires-python = ">= 3.13"
 readme = "README.md"
@@ -9,50 +9,72 @@ authors = [
 ]
 
 dependencies = [
+    "beautifulsoup4>=4.15.0",
     "bioregistry>=0.13.58",
-    "boto3[crt]>=1.42.55",
+    "boto3[crt]>=1.43.0",
     "click>=8.4.1",
+    "datamodel-code-generator>=0.82.0",
     "defusedxml>=0.7.1",
     "delta-spark>=4.2.0",
-    "dlt[deltalake,duckdb,filesystem,hub,parquet,pyiceberg]>=1.27.2",
+    "dlt[duckdb,filesystem,parquet,pyiceberg]>=1.30.0",
     "frictionless[aws]>=5.19.0",
     "frozendict>=2.4.7",
+    "httpx>=0.28.1",
     "ipykernel>=7.2.0",
+    "jsonschema[format]>=4.26.0",
+    "linkml>=1.11.1",
+    "linkml-runtime>=1.11.1",
     "lxml>=6.1.0",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
-    "tqdm>=4.67.3",
+    "pyiceberg[pandas,pyarrow,pyiceberg-core,snappy]>=0.11.1",
+    "smart-open>=8.0.1",
+    "tqdm>=4.70.1",
+    "xml2db>=0.14.0",
+    "xmlschema>=4.3.1",
+    "xmltodict>=1.0.4",
 ]
 
 [project.scripts]
 all_the_bacteria = "cdm_data_loaders.pipelines.all_the_bacteria:cli"
+jsonl_extract = "cdm_data_loaders.pipelines.jsonlines.extract_pipeline:cli"
+jsonl_jsonschema = "cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline:cli"
+jsonl_pydantic = "cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline:cli"
+ncbi_ftp_promote = "cdm_data_loaders.pipelines.ncbi_ftp_promote:cli"
 ncbi_ftp_sync = "cdm_data_loaders.pipelines.ncbi_ftp_download:cli"
 ncbi_rest_api = "cdm_data_loaders.pipelines.ncbi_rest_api:cli"
+pdb_manifest = "cdm_data_loaders.pipelines.pdb_manifest:cli"
 uniprot = "cdm_data_loaders.pipelines.uniprot_kb:cli"
 uniref = "cdm_data_loaders.pipelines.uniref:cli"
+xmltodict = "cdm_data_loaders.pipelines.xmltodict.pipeline:cli"
+xml2db = "cdm_data_loaders.pipelines.xml2db.pipeline:cli"
+xsv = "cdm_data_loaders.pipelines.xsv.pipeline:cli"
+
 
 [dependency-groups]
 dev = [
-    "berdl-notebook-utils>=0.0.1",
-    "cdm-task-service-client>=0.2.1",
+    "linkml>=1.9.5",
     "moto[s3]>=5.2.1",
+    "platformdirs>=4.11.15",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
     "pytest-env>=1.6.0",
+    "pytest-randomly>=5.0.0",
     "pytest-recording>=0.13.4",
     "ruff>=0.15.14",
+    "types-boto3[s3]>=1.43.62",
 ]
+lakehouse = []
 models = [
     "genson>=1.3.0",
     "json2python-models>=0.3.1",
 ]
 xml = [
-    "xmlschema>=4.3.1",
     "xsdata[cli,lxml]>=26.2",
 ]
-
-[project.optional-dependencies]
 
 [tool.ruff]
 line-length = 120
@@ -159,7 +181,7 @@ ignore = [
     # D203: one-blank-line-before-class (conflicts with D211)
     "D203",
     # D212: multi-line-summary-first-line (conflicts with D213)
-    "D212",
+    "D213",
     # E203: whitespace before ',', ';', or ':'
     "E203",
     # E501: line length (specified elsewhere)
@@ -172,13 +194,14 @@ ignore = [
 "*.ipynb" = ["T201"] # ignore printing in notebooks
 "**/__init__.py" = ["D104"] # no docstrings for __init__ files
 "scripts/**/*.py" = ["T201"] # ignore printing in scripts
+# D401: docstrings in imperative mode
 # S101: use of assert
 # T201: print statements
 # FBT001, FBT002: booleans as args
 # ANN401: type annotations
 # ARG002: unused mock args
 # PLR0913: too many arguments
-"tests/**/*.py" = ["S101", "T201", "FBT001", "FBT002", "ARG002", "PLR0913"]
+"tests/**/*.py" = ["D401", "S101", "T201", "FBT001", "FBT002", "ARG002", "PLR0913", ]
 "tests/integration/**/*.py" = ["S101", "T201", "FBT001", "FBT002", "ARG002", "ANN401"]
 "tests/utils/test_s3.py" = ["ANN401"]
 
@@ -186,23 +209,38 @@ ignore = [
 # Flag errors (`C901`) whenever the complexity level exceeds 15.
 max-complexity = 15
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [build-system]
-requires = ["uv_build>=0.11.18,<0.20.0"]
+requires = ["uv_build>=0.12.0,<0.20.0"]
 build-backend = "uv_build"
 
 [tool.pytest]
 pythonpath = ["src"]
 log_cli = true
-log_cli_level = "INFO"
+log_cli_level = "WARNING"
 log_level = "INFO"
 addopts = ["-v"]
-markers = ["requires_spark: must be run in an environment where spark is available", "s3: tests that mock s3 interactions", "slow_test: does what it says on the tin", "requires_ceph: end-to-end tests requiring a running CEPH instance and network access", "external_request: tests that make real network requests to external services (e.g. NCBI FTP)"]
+markers = [
+    "requires_spark: must be run in an environment where spark is available",
+    "s3: tests that mock s3 interactions",
+    "slow_test: does what it says on the tin",
+    "requires_ceph: end-to-end tests requiring a running CEPH instance and network access",
+    "external_request: tests that make real network requests to external services (e.g. NCBI FTP)",
+    "settings_cls(cls): the pydantic-settings class under test for alias parametrization",   
+    "cli_fields: used for restricting cli-related tests to a subset of fields"
+]
 
 # environment settings for running tests
 [tool.pytest_env]
+# aws config settings
+AWS_CONFIG_FILE = "/dev/null"  # ensure tests don't pick up creds from a real config file
+AWS_DEFAULT_REGION = "us-east-1"
+# default to use containerized S3 test store
+AWS_ENDPOINT_URL = { value = "http://localhost:9000", skip_if_set = true }
+AWS_ENDPOINT_URL_S3 = { unset = true }
+S3_ENDPOINT_URL = "http://localhost:9000"
+AWS_ACCESS_KEY_ID = "test_access_key"
+AWS_SECRET_ACCESS_KEY = "test_access_secret"
+# required for KBase Lakehouse env
 USER = "fake_user"
 KBASE_AUTH_TOKEN = "test-token-123"
 CDM_TASK_SERVICE_URL = "http://localhost:8080"
@@ -212,17 +250,9 @@ BERDL_HIVE_METASTORE_URI = "thrift://localhost:9083"
 SPARK_CLUSTER_MANAGER_API_URL = "http://localhost:8000"
 GOVERNANCE_API_URL = "http://localhost:8000"
 DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
-S3_ENDPOINT_URL = "http://localhost:9000"
-# aws config settings
-AWS_CONFIG_FILE = "/dev/null"  # ensure tests don't pick up creds from a real config file
-AWS_DEFAULT_REGION = "us-east-1"
-# default to use containerized S3 test store
-AWS_ENDPOINT_URL = { value = "http://localhost:9000", skip_if_set = true }
-AWS_ENDPOINT_URL_S3 = { unset = true }
-AWS_ACCESS_KEY_ID = "test_access_key"
-AWS_SECRET_ACCESS_KEY = "test_access_secret"
 
 [tool.uv.sources]
 cdm-schema = { git = "https://github.com/kbase/cdm-schema.git" }
-berdl-notebook-utils = { git = "https://github.com/KBaseDataLakehouse/spark_notebook.git", subdirectory = "notebook_utils" }
-cdm-task-service-client = { git = "https://github.com/kbase/cdm-task-service-client.git" }
+dlt = { git = "https://github.com/dlt-hub/dlt", branch = "devel" }
+# berdl-notebook-utils = { git = "https://github.com/KBaseDataLakehouse/spark_notebook.git", subdirectory = "notebook_utils" }
+# cdm-task-service-client = { git = "https://github.com/kbase/cdm-task-service-client.git" }

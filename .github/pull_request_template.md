@@ -10,7 +10,6 @@
 
 # Dev Checklist:
 
-- [ ] My code follows the guidelines at https://sites.google.com/lbl.gov/trussresources/home?authuser=0
 - [ ] My submission follows the [AI Covenant](/AI_COVENANT.md) principles
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas
@@ -20,7 +19,6 @@
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] I have run Ruff `format` to format my code
 - [ ] I have run Ruff `check` and fixed any errors that it uncovered
-- [ ] Any dependent changes have been merged and published in downstream modules
 
 # Updating Version and Release Notes (if applicable)
 

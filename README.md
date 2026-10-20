@@ -205,12 +205,16 @@ docker run -d \
 **2. Run the integration tests:**
 
 ```sh
-> uv run pytest tests/integration/ -m requires_ceph -v
+# Run pure-S3 integration tests (moto-backed, fast)
+uv run pytest tests/integration/ -m s3 -v
+
+# Run NCBI FTP e2e tests (requires running CEPH instance)
+uv run pytest tests/integration/ -m requires_ceph -v
 ```
 
 **3. Inspect results:**
 
-Buckets are **not** cleaned up after tests. The CEPH dashboard at [http://localhost:9001](http://localhost:9001) (login: `admin` / `admin`) does not support inspecting bucket contents; use the CLI below (e.g. `scripts/s3_local.py ls/head`) to inspect the final state of each test bucket. Each test method creates its own bucket (e.g. `integ-test-promote-dry-run`).
+For CEPH-backed tests, buckets are **not** cleaned up after tests.
 
 **4. Stop CEPH when done:**
 

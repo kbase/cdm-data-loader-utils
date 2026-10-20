@@ -1,5 +1,4 @@
-"""
-UniProt XML Parser Core.
+"""UniProt XML Parser Core.
 
 Contains the core logic for parsing a UniProt XML file that can be successfully validated against the UniProt XSD.
 """
@@ -44,18 +43,6 @@ PREFIX_TRANSLATION: dict[str, str] = {
 }
 
 logger: Logger = getLogger(__name__)
-
-
-# TODO: FIXME!!!
-def build_datasource_record(xml_url: str) -> dict:
-    """Build a provenance record for the UniProt datasource."""
-    return {
-        NAME: "UniProt import",
-        "source": "UniProt",
-        "url": xml_url,
-        "accessed": datetime.datetime.now(datetime.UTC).isoformat(),
-        "version": 115,
-    }
 
 
 def parse_identifiers(entry: Element) -> list[dict[str, Any]]:

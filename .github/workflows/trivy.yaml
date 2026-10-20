@@ -35,23 +35,23 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
             - name: Build an image from Dockerfile
               run: |
                   docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
 
             - name: Run Trivy vulnerability scanner
-              uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+              uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
               with:
                   image-ref: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
                   format: "template"
                   template: "@/contrib/sarif.tpl"
                   output: "trivy-results.sarif"
                   severity: "CRITICAL,HIGH"
-                  timeout: 15m
+                  timeout: 25m
 
             - name: Upload Trivy scan results to GitHub Security tab
-              uses: github/codeql-action/upload-sarif@v4
+              uses: github/codeql-action/upload-sarif@ae098fa9fe6541a837c2271de7f9718bcfd06aa0
               with:
                   sarif_file: "trivy-results.sarif"

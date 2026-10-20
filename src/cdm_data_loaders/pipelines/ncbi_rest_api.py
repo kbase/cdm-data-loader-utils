@@ -8,7 +8,7 @@ batch_001.txt, batch_002.txt, batch_003.txt.
 import os
 import re
 from collections.abc import Generator
-from functools import partial
+from functools import cached_property, partial
 from itertools import islice
 from logging import Logger, getLogger
 from pathlib import Path
@@ -16,6 +16,7 @@ from typing import Any, Final
 from urllib.parse import parse_qs, urlparse
 
 import dlt
+from dlt.common.pipeline import LoadInfo
 from dlt.extract.items import DataItemWithMeta
 from dlt.sources.helpers.requests import Response
 from dlt.sources.helpers.rest_client.auth import APIKeyAuth
@@ -23,15 +24,16 @@ from dlt.sources.helpers.rest_client.client import RESTClient
 from dlt.sources.helpers.rest_client.paginators import (
     JSONResponseCursorPaginator,
 )
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import SettingsConfigDict
 from requests.exceptions import HTTPError
 
+from cdm_data_loaders.core.fields import SaveRawResponses
+from cdm_data_loaders.core.settings import CLI_SHORTCUTS, CtsSettings, default_settings_with_shortcuts
 from cdm_data_loaders.pipelines.core import (
-    run_cli,
+    PipelineCli,
     run_pipeline,
 )
-from cdm_data_loaders.pipelines.cts_defaults import DEFAULT_SETTINGS_CONFIG_DICT, CtsSettings
 from cdm_data_loaders.utils.batcher import NumericFileSequenceBatcher
 
 logger: Logger = getLogger(__name__)
@@ -54,19 +56,21 @@ QUERY_TYPE_REGEX: Final[re.Pattern[str]] = re.compile(r"^(" + DATASET + r"|" + A
 
 REST_CLIENT_HOOKS = {}
 
-ARG_ALIAS_BATCH_SIZE = ["-b", "--batch-size", "--batch_size"]
-ARG_ALIAS_QUERY_TYPE = ["-q", "--query-type", "--query_type"]
+BATCH_SIZE: Final[str] = "batch_size"
+QUERY_TYPE: Final[str] = "query_type"
 
 
-class NcbiSettings(CtsSettings):
+class NcbiRestApiSettings(CtsSettings):
     """Configuration for running the NCBI REST API import pipeline."""
 
-    model_config = SettingsConfigDict(**DEFAULT_SETTINGS_CONFIG_DICT, cli_prog_name="ncbi_rest_api")
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_prog_name="ncbi_rest_api",
+        cli_shortcuts={**CLI_SHORTCUTS, BATCH_SIZE: "b", QUERY_TYPE: "q"},
+    )
 
     batch_size: int = Field(
         default=MAX_IDS_PER_QUERY,
         description="Number of IDs to send in each request to the NCBI REST API.",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in ARG_ALIAS_BATCH_SIZE]),
         ge=1,
         le=MAX_IDS_PER_QUERY,
     )
@@ -74,11 +78,18 @@ class NcbiSettings(CtsSettings):
     query_type: str | None = Field(
         default=None,
         description="The type of query to perform, dataset or annotation. By default, both are performed.",
-        validation_alias=AliasChoices(*[alias.strip("-") for alias in ARG_ALIAS_QUERY_TYPE]),
         pattern=QUERY_TYPE_REGEX,
     )
 
-    @field_validator("query_type", mode="before")
+    save_raw_responses: SaveRawResponses
+
+    @computed_field
+    @cached_property
+    def raw_data_dir(self) -> Path:
+        """Directory to save downloaded raw data files to: ``<output_dir>/raw_data/<version>``."""
+        return self.output_dir / "raw_data" / "api_responses"
+
+    @field_validator(QUERY_TYPE, mode="before")
     @classmethod
     def trim_lc_query_type(cls, v: str | None) -> str | None:
         """Prepare the query_type parameter for validation.
@@ -91,15 +102,16 @@ class NcbiSettings(CtsSettings):
         return v.strip().lower() if v and v.strip() else None
 
 
-def generate_file_path_name_from_url(settings: NcbiSettings, url_string: str) -> Path:
+def generate_file_path_name_from_url(settings: NcbiRestApiSettings, url_string: str) -> Path:
     """Given an NCBI URL, generate a save directory and file name for the raw HTTP responses.
 
+    :param settings: settings object
+    :type  settings: NcbiRestApiSettings
     :param url_string: the URL
     :type url_string: str
     :return: path for the save dir
     :rtype: Path
     """
-    raw_data_dir = Path(settings.raw_data_dir) / "api_responses"  # type: ignore[reportArgumentType]
     url = urlparse(url_string)
     # retrieve the page token
     page_token = "".join(parse_qs(url.query).get("page_token", []))
@@ -109,14 +121,14 @@ def generate_file_path_name_from_url(settings: NcbiSettings, url_string: str) ->
     # any subsequent parts are the specific data type being accessed
     save_parts = url.path.replace("/datasets/v2/", "").split("/")
     # make a directory for this ID
-    save_dir = raw_data_dir / save_parts[3] / save_parts[2]
+    save_dir = settings.raw_data_dir / save_parts[3] / save_parts[2]
     save_dir.mkdir(parents=True, exist_ok=True)
     # file name is the PID plus optional page token if this was a multi-request PID
     file_name = f"{save_parts[2]}__{page_token}.json" if page_token else f"{save_parts[2]}.json"
     return save_dir / file_name
 
 
-def save_raw_response(settings: NcbiSettings, response: Response, *_: Any, **__: Any) -> Response:  # noqa: ANN401
+def save_raw_response(settings: NcbiRestApiSettings, response: Response, *_: Any, **__: Any) -> Response:  # noqa: ANN401
     """Save the response content to disk.
 
     :param response: HTTP Response object
@@ -129,25 +141,25 @@ def save_raw_response(settings: NcbiSettings, response: Response, *_: Any, **__:
     return response
 
 
-PIPELINE_SETTINGS: NcbiSettings | None = None
+PIPELINE_SETTINGS: NcbiRestApiSettings | None = None
 
 
-def set_settings(settings_obj: NcbiSettings) -> None:
+def set_settings(settings_obj: NcbiRestApiSettings) -> None:
     """Set the global PIPELINE_SETTINGS object to the supplied obj.
 
     :param settings_obj: settings object
-    :type settings_obj: NcbiSettings
+    :type settings_obj: NcbiRestApiSettings
     """
     # ugh, somewhat horrible
     global PIPELINE_SETTINGS
     PIPELINE_SETTINGS = settings_obj
 
 
-def get_settings() -> NcbiSettings:
+def get_settings() -> NcbiRestApiSettings:
     """Get the pipeline settings.
 
     return: pipeline settings
-    :rtype: NcbiSettings
+    :rtype: NcbiRestApiSettings
     """
     if PIPELINE_SETTINGS is None:
         err_msg = "Pipeline settings have not been initialised"
@@ -252,7 +264,7 @@ def get_assembly_reports(assembly_id_list: list[str]) -> dict[str, Any]:
     return output
 
 
-def get_dataset_reports(assembly_id_list: list[str]) -> dict[str, None | dict[str, Any]]:
+def get_dataset_reports(assembly_id_list: list[str]) -> dict[str, dict[str, Any] | None]:
     """Fetch the dataset report for a list of assemblies from the NCBI datasets REST API."""
     if not assembly_id_list:
         return {}
@@ -362,15 +374,15 @@ def assembly_report_parser(
     return assemble_assembly_reports(assembly_reports)
 
 
-def run_ncbi_pipeline(settings: NcbiSettings) -> None:
+def run_ncbi_pipeline(settings: NcbiRestApiSettings) -> LoadInfo | None:
     """Run the NCBI datasets API pipeline.
 
     :param settings: configuration for the pipeline
-    :type settings: NcbiSettings
+    :type settings: NcbiRestApiSettings
     """
     set_settings(settings)
 
-    if settings.dev_mode:
+    if settings.save_raw_responses:
         REST_CLIENT_HOOKS["response"] = [partial(save_raw_response, settings)]
 
     pipeline_kwargs = {
@@ -378,7 +390,7 @@ def run_ncbi_pipeline(settings: NcbiSettings) -> None:
         "dataset_name": DATASET_NAME,
     }
 
-    run_pipeline(
+    return run_pipeline(
         settings=settings,
         resource=[assembly_report_parser],
         destination_kwargs={"max_table_nesting": 0},
@@ -387,9 +399,7 @@ def run_ncbi_pipeline(settings: NcbiSettings) -> None:
     )
 
 
-def cli() -> None:
-    """CLI interface for the NCBI REST API importer pipeline."""
-    run_cli(NcbiSettings, run_ncbi_pipeline)
+cli = PipelineCli(NcbiRestApiSettings, run_ncbi_pipeline)
 
 
 if __name__ == "__main__":

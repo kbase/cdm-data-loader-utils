@@ -1,0 +1,28 @@
+{
+  "root__root__tags": {
+    "parent": "root",
+    "columns": {
+      "value": {"data_type": "text", "nullable": false},
+      "_dlt_id": {"data_type": "text"},
+      "value__v_json": {"data_type": "json", "variant": true}
+    },
+    "description": "Tags",
+    "x-custom": {"labels": ["original"]}
+  },
+  "catalog__literal": {"parent": null, "resource": "catalog"},
+  "unrelated__leaf": {
+    "parent": "unrelated",
+    "columns": {"amount": {"data_type": "decimal", "precision": 20, "scale": 4}}
+  },
+  "root": {
+    "name": "raw_metadata_name",
+    "columns": {
+      "identifier": {"name": "raw_column_name", "primary_key": true, "x-extra": {"labels": ["id"]}},
+      "incomplete": {}
+    },
+    "write_disposition": {"disposition": "merge", "strategy": "upsert"},
+    "x-extra": {"labels": ["root"]}
+  },
+  "unrelated": {"parent": "root", "columns": {}},
+  "root__looks_nested": {"columns": {}}
+}

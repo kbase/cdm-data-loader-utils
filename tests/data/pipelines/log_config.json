@@ -1,0 +1,16 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "handlers": {
+        "null": {
+            "class": "logging.NullHandler",
+            "level": "INFO"
+        }
+    },
+    "loggers": {
+        "root": {
+            "level": "INFO",
+            "handlers": ["null"]
+        }
+    }
+}

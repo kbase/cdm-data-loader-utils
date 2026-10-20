@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.34.2
+    method: GET
+    uri: https://httpbin.org/bytes/1024
+  response:
+    body:
+      string: !!binary |
+        /BR0MjsLM1K2Y2NiDMLa4vafyEqUnzQua8eXtNp97N+BczzpVw1F+QopYG+/5PeX8P+Nv5wIXRjV
+        S+hRYLvAiKlOYjexGTwoyoKod5PUqcNdTulT71MHDKtoPrSwkc6zDoNmNbw/ESpAWnScfLJXxmNZ
+        L3gp5MvKrQ1y8JvynROXBEhQey8stBs7dLb2nQ6qOYcpgZrSti4wWiUWFEcjO1Sj2Pkh7/FCHJy/
+        3dcdJKpx3LAWb4IepJr0NgqXLf+Gv0SmhrEwiZ6icDlle8efq7uFLYg34uEHGvYa25gJmuhueGEp
+        ErFRPDIyx3crISrPvQxZS8tN1ROMoW53iruirGiD44LD4MM4SUw1VesqDJjyN+3M/AcyjQXIG5Dc
+        Enyld3S3p86Ez0wuO7eAOT7e28K3D1aixemPi3YKkplq6r0K/suxtPVXTS7Nvs4zA6Bz5mnUxhA0
+        /HDIiatpnGwTCE3udvYTu1/r3GbEtf+whXIMSQaSdivA8K10g/t7ASfw6t1A67MMzJissny8VRIR
+        P3ChPRPbe3vTmdmtV9pKfzvT6cAKd+scdvqJmL0MlyPDb/EYMpRfDToCCqDjNlUy0Kv8kqwAVR/j
+        IjdFQWwLdmfC7j/VJj/kzSpMQAsukHhRStBeJ8DsTxwDemUb72t4IdAvGhb08CYh8ShdxBNLkrrv
+        woI6dWiacgKDyNu7/jf0Bzk4NUDOdSF8B9l6rfHdsFtQnX0VgyqqtrviHY1024gSt4KIElfPpiyJ
+        RtM8+jkZ9+8h+RZbs7JyYRKg3VvJlDbZ1tMR9QkyAwEgK0UJL96JRi2CA1glP9ukZyEIuGbbhbDt
+        tI/str/kNV/MhHh94jPpql9b3qrjdnSSP7SE5Tz6uYFGFWUOJLRlu3y0HARIIWqoQ6GUggIFsZW1
+        U2gAlZPTH3QgdNiPu1D6QfTLRXPvsXoZEOcPjxU/L5XYJuNXiFo3xqSG2caZfwWxVw+p8F9+p4+D
+        PsmEUP/vL1gUdrla0Us/Msqw2JdUVqvLMKQr1/M0Bd9/QK2VRq+CYxKECgQ5pau4DZualbPrsMtZ
+        fk+0XYg2nx9Bv2Zh0yiunKmgSxUYllC2Wl/jVK0WEjntj2OZrlZblphtkNgHjM2n1b/SWAa40irQ
+        j3FhuDAYWzhiIxc87E6E0ccQwAjYEGIiDmIFvm9qoDprK4e9ML+k+niSaUDmG2pF8UN40OIZw/Lc
+        K3/nvKQV3jCVS5Zp9p6WjQI9Cmf3l+4KOgYpmulSPa8f8qZiBKkA8jJJcdzilhg5Zw77uuoBEZIS
+        mg33NRtcAptuS5j4bIMAY3AtqjUoZ37Xn5h9a7CZB3uS+0ZB3IL924P9Dm6/9cJ57mr/VM7Y5Q==
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1024'
+      Content-Type:
+      - application/octet-stream
+      Date:
+      - Thu, 30 Jul 2026 21:48:18 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,13 +1,25 @@
 #!/bin/bash
-set -x
+set -euo pipefail
 
-# Get the parent directory of the dir where the run_tests script is located
 SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-# Change the current working directory to SCRIPT_DIR
 cd "$SCRIPT_DIR"
 
-# use the system packages in this virtual environment
-uv venv --system-site-packages
+SYSTEM_PYTHON=/opt/conda/bin/python
+VENV="$SCRIPT_DIR/docker_env"
+CONSTRAINTS="$(mktemp)"
+trap 'rm -f "$CONSTRAINTS"' EXIT
 
-# run the tests using the active venv and with the dev dependencies installed.
-uv run --active --frozen --group dev pytest -m "not requires_ceph" --cov=src --cov-report=xml
+# ensure that these package(s) match the system versions
+"$SYSTEM_PYTHON" -I - > "$CONSTRAINTS" <<'PY'
+from importlib.metadata import version
+
+for name in ["pyspark"]:
+    print(f"{name}=={version(name)}")
+PY
+
+# use system python but install own dependencies
+uv venv --python "$SYSTEM_PYTHON" "$VENV"
+
+uv pip install --python "$VENV/bin/python" --constraint "$CONSTRAINTS" -e . --group dev
+
+"$VENV/bin/python" -m pytest -m "not requires_ceph" --cov=src --cov-report=xml "$@"

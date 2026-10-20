@@ -1,0 +1,946 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uniprot xmlns="https://uniprot.org/uniprot"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://uniprot.org/uniprot http://www.uniprot.org/docs/uniprot.xsd">
+    <entry id="1" dataset="Swiss-Prot" created="2000-05-30" modified="2026-01-28" version="122" xmlns="https://uniprot.org/uniprot">
+        <accession>Q9V2L2</accession>
+        <accession>G8ZFP4</accession>
+        <name>1A1D_PYRAB</name>
+        <protein>
+            <recommendedName>
+                <fullName>Putative 1-aminocyclopropane-1-carboxylate deaminase</fullName>
+                <shortName>ACC deaminase</shortName>
+                <ecNumber>3.5.99.7</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">PYRAB00630</name>
+            <name type="ORF">PAB2303</name>
+        </gene>
+        <organism>
+            <name type="scientific">Pyrococcus abyssi (strain GE5 / Orsay)</name>
+            <dbReference type="NCBI Taxonomy" id="272844"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Thermococci</taxon>
+                <taxon>Thermococcales</taxon>
+                <taxon>Thermococcaceae</taxon>
+                <taxon>Pyrococcus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="2003" name="Mol. Microbiol." volume="47" first="1495" last="1512">
+                <title>An integrated analysis of the genome of the hyperthermophilic archaeon Pyrococcus abyssi.</title>
+                <authorList>
+                    <person name="Cohen G.N."/>
+                    <person name="Barbe V."/>
+                    <person name="Flament D."/>
+                    <person name="Galperin M."/>
+                    <person name="Heilig R."/>
+                    <person name="Lecompte O."/>
+                    <person name="Poch O."/>
+                    <person name="Prieur D."/>
+                    <person name="Querellou J."/>
+                    <person name="Ripp R."/>
+                    <person name="Thierry J.-C."/>
+                    <person name="Van der Oost J."/>
+                    <person name="Weissenbach J."/>
+                    <person name="Zivanovic Y."/>
+                    <person name="Forterre P."/>
+                </authorList>
+                <dbReference type="PubMed" id="12622808"/>
+                <dbReference type="DOI" id="10.1046/j.1365-2958.2003.03381.x"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>GE5 / Orsay</strain>
+            </source>
+        </reference>
+        <reference key="2">
+            <citation type="journal article" date="2012" name="Curr. Microbiol." volume="64" first="118" last="129">
+                <title>Re-annotation of two hyperthermophilic archaea Pyrococcus abyssi GE5 and Pyrococcus furiosus DSM 3638.</title>
+                <authorList>
+                    <person name="Gao J."/>
+                    <person name="Wang J."/>
+                </authorList>
+                <dbReference type="PubMed" id="22057919"/>
+                <dbReference type="DOI" id="10.1007/s00284-011-0035-x"/>
+            </citation>
+            <scope>GENOME REANNOTATION</scope>
+            <source>
+                <strain>GE5 / Orsay</strain>
+            </source>
+        </reference>
+        <comment type="catalytic activity">
+            <reaction>
+                <text>1-aminocyclopropane-1-carboxylate + H2O = 2-oxobutanoate + NH4(+)</text>
+                <dbReference type="Rhea" id="RHEA:16933"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:16763"/>
+                <dbReference type="ChEBI" id="CHEBI:28938"/>
+                <dbReference type="ChEBI" id="CHEBI:58360"/>
+                <dbReference type="EC" id="3.5.99.7"/>
+            </reaction>
+        </comment>
+        <comment type="cofactor">
+            <cofactor evidence="1">
+                <name>pyridoxal 5'-phosphate</name>
+                <dbReference type="ChEBI" id="CHEBI:597326"/>
+            </cofactor>
+        </comment>
+        <comment type="similarity">
+            <text evidence="2">Belongs to the ACC deaminase/D-cysteine desulfhydrase family.</text>
+        </comment>
+        <dbReference type="EC" id="3.5.99.7"/>
+        <dbReference type="EMBL" id="AJ248283">
+            <property type="protein sequence ID" value="CAB48986.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="EMBL" id="HE613800">
+            <property type="protein sequence ID" value="CCE69435.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="PIR" id="C75192">
+            <property type="entry name" value="C75192"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_010867187.1">
+            <property type="nucleotide sequence ID" value="NC_000868.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q9V2L2"/>
+        <dbReference type="SMR" id="Q9V2L2"/>
+        <dbReference type="STRING" id="272844.PAB2303"/>
+        <dbReference type="KEGG" id="pab:PAB2303"/>
+        <dbReference type="PATRIC" id="fig|272844.11.peg.70"/>
+        <dbReference type="eggNOG" id="arCOG01435">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_048897_1_0_2"/>
+        <dbReference type="OrthoDB" id="371827at2157"/>
+        <dbReference type="PhylomeDB" id="Q9V2L2"/>
+        <dbReference type="Proteomes" id="UP000000810">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="Proteomes" id="UP000009139">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0008660">
+            <property type="term" value="F:1-aminocyclopropane-1-carboxylate deaminase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-EC"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0019148">
+            <property type="term" value="F:D-cysteine desulfhydrase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="TreeGrafter"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.1100">
+            <property type="match status" value="2"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005966">
+            <property type="entry name" value="D-Cys_desShydrase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR001926">
+            <property type="entry name" value="TrpB-like_PALP"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036052">
+            <property type="entry name" value="TrpB-like_PALP_sf"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01275">
+            <property type="entry name" value="ACC_deam_rel"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF010646">
+            <property type="entry name" value="PRK14045.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780:SF2">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00291">
+            <property type="entry name" value="PALP"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PIRSF" id="PIRSF006278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF53686">
+            <property type="entry name" value="Tryptophan synthase beta subunit-like PLP-dependent enzymes"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-0663">Pyridoxal phosphate</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_0000184521" description="Putative 1-aminocyclopropane-1-carboxylate deaminase">
+            <location>
+                <begin position="1"/>
+                <end position="330"/>
+            </location>
+        </feature>
+        <feature type="modified residue" description="N6-(pyridoxal phosphate)lysine" evidence="1">
+            <location>
+                <position position="54"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000250" key="1"/>
+        <evidence type="ECO:0000305" key="2"/>
+        <sequence length="330" mass="35755" checksum="CC8699923C0B11CD" modified="2000-05-01" version="1">MHPKVDALLSRFPRITLIPWETPIQYLPRISRELGVDVYVKRDDLTGLGIGGNKIRKLEFLLGDALSRGCDTVITIGAVHSNHAFVTALAAKKLGLGAVLILRGEEVLKGNYLLDKLMGIETRIYEADNSWELMKVAEEVAEELKGEGKKPYIIPPGGASPVGTLGYIRGVGELYTQVKKLGLRIDTVVDAVGSGGTYAGLLLGSAIVNAEWSVVGIDVSSATEKAKERVKNLVEKTKELLGINVKVQEPRIYDYGFGAYGKIVKEVAKLIKSVGTMEGLLLDPVYTGKAFYGLMDLAKKGDLGESVLFIHTGGLPGIFHYGEEMLELLV</sequence>
+    </entry>
+    <entry id="2" dataset="Swiss-Prot" created="2002-11-15" modified="2026-01-28" version="107" xmlns="https://uniprot.org/uniprot">
+        <accession>Q8U4R3</accession>
+        <name>1A1D_PYRFU</name>
+        <protein>
+            <recommendedName>
+                <fullName>Putative 1-aminocyclopropane-1-carboxylate deaminase</fullName>
+                <shortName>ACC deaminase</shortName>
+                <ecNumber>3.5.99.7</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">PF0010</name>
+        </gene>
+        <organism>
+            <name type="scientific">Pyrococcus furiosus (strain ATCC 43587 / DSM 3638 / JCM 8422 / Vc1)</name>
+            <dbReference type="NCBI Taxonomy" id="186497"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Thermococci</taxon>
+                <taxon>Thermococcales</taxon>
+                <taxon>Thermococcaceae</taxon>
+                <taxon>Pyrococcus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="1999" name="Genetics" volume="152" first="1299" last="1305">
+                <title>Divergence of the hyperthermophilic archaea Pyrococcus furiosus and P. horikoshii inferred from complete genomic sequences.</title>
+                <authorList>
+                    <person name="Maeder D.L."/>
+                    <person name="Weiss R.B."/>
+                    <person name="Dunn D.M."/>
+                    <person name="Cherry J.L."/>
+                    <person name="Gonzalez J.M."/>
+                    <person name="DiRuggiero J."/>
+                    <person name="Robb F.T."/>
+                </authorList>
+                <dbReference type="PubMed" id="10430560"/>
+                <dbReference type="DOI" id="10.1093/genetics/152.4.1299"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 43587 / DSM 3638 / JCM 8422 / Vc1</strain>
+            </source>
+        </reference>
+        <comment type="catalytic activity">
+            <reaction>
+                <text>1-aminocyclopropane-1-carboxylate + H2O = 2-oxobutanoate + NH4(+)</text>
+                <dbReference type="Rhea" id="RHEA:16933"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:16763"/>
+                <dbReference type="ChEBI" id="CHEBI:28938"/>
+                <dbReference type="ChEBI" id="CHEBI:58360"/>
+                <dbReference type="EC" id="3.5.99.7"/>
+            </reaction>
+        </comment>
+        <comment type="cofactor">
+            <cofactor evidence="1">
+                <name>pyridoxal 5'-phosphate</name>
+                <dbReference type="ChEBI" id="CHEBI:597326"/>
+            </cofactor>
+        </comment>
+        <comment type="similarity">
+            <text evidence="2">Belongs to the ACC deaminase/D-cysteine desulfhydrase family.</text>
+        </comment>
+        <comment type="sequence caution" evidence="2">
+            <conflict type="erroneous initiation">
+                <sequence resource="EMBL-CDS" id="AAL80134" version="1"/>
+            </conflict>
+        </comment>
+        <dbReference type="EC" id="3.5.99.7"/>
+        <dbReference type="EMBL" id="AE009950">
+            <property type="protein sequence ID" value="AAL80134.1"/>
+            <property type="status" value="ALT_INIT"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_011011122.1">
+            <property type="nucleotide sequence ID" value="NC_003413.1"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q8U4R3"/>
+        <dbReference type="SMR" id="Q8U4R3"/>
+        <dbReference type="STRING" id="186497.PF0010"/>
+        <dbReference type="PaxDb" id="186497-PF0010"/>
+        <dbReference type="GeneID" id="13301100"/>
+        <dbReference type="KEGG" id="pfu:PF0010"/>
+        <dbReference type="PATRIC" id="fig|186497.12.peg.11"/>
+        <dbReference type="eggNOG" id="arCOG01435">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="HOGENOM" id="CLU_048897_1_0_2"/>
+        <dbReference type="OrthoDB" id="371827at2157"/>
+        <dbReference type="PhylomeDB" id="Q8U4R3"/>
+        <dbReference type="Proteomes" id="UP000001013">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0008660">
+            <property type="term" value="F:1-aminocyclopropane-1-carboxylate deaminase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-EC"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0019148">
+            <property type="term" value="F:D-cysteine desulfhydrase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="TreeGrafter"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.1100">
+            <property type="match status" value="2"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005966">
+            <property type="entry name" value="D-Cys_desShydrase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR001926">
+            <property type="entry name" value="TrpB-like_PALP"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036052">
+            <property type="entry name" value="TrpB-like_PALP_sf"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01275">
+            <property type="entry name" value="ACC_deam_rel"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF010646">
+            <property type="entry name" value="PRK14045.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780:SF2">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00291">
+            <property type="entry name" value="PALP"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PIRSF" id="PIRSF006278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF53686">
+            <property type="entry name" value="Tryptophan synthase beta subunit-like PLP-dependent enzymes"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-0663">Pyridoxal phosphate</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_0000184522" description="Putative 1-aminocyclopropane-1-carboxylate deaminase">
+            <location>
+                <begin position="1"/>
+                <end position="329"/>
+            </location>
+        </feature>
+        <feature type="modified residue" description="N6-(pyridoxal phosphate)lysine" evidence="1">
+            <location>
+                <position position="54"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000250" key="1"/>
+        <evidence type="ECO:0000305" key="2"/>
+        <sequence length="329" mass="35795" checksum="627852CFD0A450F8" modified="2002-11-15" version="2">MHPKVQSLLSKFPRVELIPWETPIQYLPNISKLVGADIYVKRDDLTGLGIGGNKIRKLEYLLGDAIIRKADVIITVGAVHSNHAFVTGLAAKKLGFDVVLVLRGKEELRGNYLLDKIMGIETRVYEAKDSFELMKYAEEVAKELEEKGRKPYIIPVGGASPVGTLGYVRASGEIAEQGNRIGVNFDSIVVATGSGGTLAGLSVGLAILRKETRAIGMAVGKFGETMVNKVEELAKATGEFIGVKNLKLKIELYDYSFGEYGKITREVAETIRLVGTKEGVILDPVYTGKAFYGLLDLAKKGELGEKILFIHTGGISGTFHYGDKILSFL</sequence>
+    </entry>
+    <entry id="3" dataset="Swiss-Prot" created="1998-12-15" modified="2026-01-28" version="132" xmlns="https://uniprot.org/uniprot">
+        <accession>O57809</accession>
+        <name>1A1D_PYRHO</name>
+        <protein>
+            <recommendedName>
+                <fullName>Putative 1-aminocyclopropane-1-carboxylate deaminase</fullName>
+                <shortName>ACC deaminase</shortName>
+                <ecNumber>3.5.99.7</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">PH0054</name>
+            <name type="ORF">PHBE027</name>
+        </gene>
+        <organism>
+            <name type="scientific">Pyrococcus horikoshii (strain ATCC 700860 / DSM 12428 / JCM 9974 / NBRC 100139 / OT-3)</name>
+            <dbReference type="NCBI Taxonomy" id="70601"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Methanobacteriati</taxon>
+                <taxon>Methanobacteriota</taxon>
+                <taxon>Thermococci</taxon>
+                <taxon>Thermococcales</taxon>
+                <taxon>Thermococcaceae</taxon>
+                <taxon>Pyrococcus</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="1998" name="DNA Res." volume="5" first="55" last="76">
+                <title>Complete sequence and gene organization of the genome of a hyper-thermophilic archaebacterium, Pyrococcus horikoshii OT3.</title>
+                <authorList>
+                    <person name="Kawarabayasi Y."/>
+                    <person name="Sawada M."/>
+                    <person name="Horikawa H."/>
+                    <person name="Haikawa Y."/>
+                    <person name="Hino Y."/>
+                    <person name="Yamamoto S."/>
+                    <person name="Sekine M."/>
+                    <person name="Baba S."/>
+                    <person name="Kosugi H."/>
+                    <person name="Hosoyama A."/>
+                    <person name="Nagai Y."/>
+                    <person name="Sakai M."/>
+                    <person name="Ogura K."/>
+                    <person name="Otsuka R."/>
+                    <person name="Nakazawa H."/>
+                    <person name="Takamiya M."/>
+                    <person name="Ohfuku Y."/>
+                    <person name="Funahashi T."/>
+                    <person name="Tanaka T."/>
+                    <person name="Kudoh Y."/>
+                    <person name="Yamazaki J."/>
+                    <person name="Kushida N."/>
+                    <person name="Oguchi A."/>
+                    <person name="Aoki K."/>
+                    <person name="Yoshizawa T."/>
+                    <person name="Nakamura Y."/>
+                    <person name="Robb F.T."/>
+                    <person name="Horikoshi K."/>
+                    <person name="Masuchi Y."/>
+                    <person name="Shizuya H."/>
+                    <person name="Kikuchi H."/>
+                </authorList>
+                <dbReference type="PubMed" id="9679194"/>
+                <dbReference type="DOI" id="10.1093/dnares/5.2.55"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 700860 / DSM 12428 / JCM 9974 / NBRC 100139 / OT-3</strain>
+            </source>
+        </reference>
+        <comment type="catalytic activity">
+            <reaction>
+                <text>1-aminocyclopropane-1-carboxylate + H2O = 2-oxobutanoate + NH4(+)</text>
+                <dbReference type="Rhea" id="RHEA:16933"/>
+                <dbReference type="ChEBI" id="CHEBI:15377"/>
+                <dbReference type="ChEBI" id="CHEBI:16763"/>
+                <dbReference type="ChEBI" id="CHEBI:28938"/>
+                <dbReference type="ChEBI" id="CHEBI:58360"/>
+                <dbReference type="EC" id="3.5.99.7"/>
+            </reaction>
+        </comment>
+        <comment type="cofactor">
+            <cofactor evidence="1">
+                <name>pyridoxal 5'-phosphate</name>
+                <dbReference type="ChEBI" id="CHEBI:597326"/>
+            </cofactor>
+        </comment>
+        <comment type="similarity">
+            <text evidence="2">Belongs to the ACC deaminase/D-cysteine desulfhydrase family.</text>
+        </comment>
+        <comment type="sequence caution" evidence="2">
+            <conflict type="erroneous initiation">
+                <sequence resource="EMBL-CDS" id="BAA29122" version="1"/>
+            </conflict>
+        </comment>
+        <dbReference type="EC" id="3.5.99.7"/>
+        <dbReference type="EMBL" id="BA000001">
+            <property type="protein sequence ID" value="BAA29122.1"/>
+            <property type="status" value="ALT_INIT"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="PIR" id="C71224">
+            <property type="entry name" value="C71224"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_010884169.1">
+            <property type="nucleotide sequence ID" value="NC_000961.1"/>
+        </dbReference>
+        <dbReference type="PDB" id="1J0A">
+            <property type="method" value="X-ray"/>
+            <property type="resolution" value="2.50 A"/>
+            <property type="chains" value="A/B/C=1-325"/>
+        </dbReference>
+        <dbReference type="PDB" id="1J0B">
+            <property type="method" value="X-ray"/>
+            <property type="resolution" value="2.70 A"/>
+            <property type="chains" value="A/B/C/D/E/F/G/H/I/J/K/L/M/N/O/P/Q/R/S/T/U/V/W/X=1-325"/>
+        </dbReference>
+        <dbReference type="PDBsum" id="1J0A"/>
+        <dbReference type="PDBsum" id="1J0B"/>
+        <dbReference type="AlphaFoldDB" id="O57809"/>
+        <dbReference type="SMR" id="O57809"/>
+        <dbReference type="STRING" id="70601.gene:9376961"/>
+        <dbReference type="EnsemblBacteria" id="BAA29122">
+            <property type="protein sequence ID" value="BAA29122"/>
+            <property type="gene ID" value="BAA29122"/>
+        </dbReference>
+        <dbReference type="GeneID" id="1443951"/>
+        <dbReference type="KEGG" id="pho:PH0054"/>
+        <dbReference type="eggNOG" id="arCOG01435">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="OrthoDB" id="371827at2157"/>
+        <dbReference type="BRENDA" id="4.3.1.17">
+            <property type="organism ID" value="5244"/>
+        </dbReference>
+        <dbReference type="BRENDA" id="4.3.1.18">
+            <property type="organism ID" value="5244"/>
+        </dbReference>
+        <dbReference type="EvolutionaryTrace" id="O57809"/>
+        <dbReference type="Proteomes" id="UP000000752">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0008660">
+            <property type="term" value="F:1-aminocyclopropane-1-carboxylate deaminase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="UniProtKB-EC"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0019148">
+            <property type="term" value="F:D-cysteine desulfhydrase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="TreeGrafter"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.40.50.1100">
+            <property type="match status" value="2"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR027278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR005966">
+            <property type="entry name" value="D-Cys_desShydrase"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR001926">
+            <property type="entry name" value="TrpB-like_PALP"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036052">
+            <property type="entry name" value="TrpB-like_PALP_sf"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="TIGR01275">
+            <property type="entry name" value="ACC_deam_rel"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="NCBIfam" id="NF010646">
+            <property type="entry name" value="PRK14045.1"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR43780:SF2">
+            <property type="entry name" value="1-AMINOCYCLOPROPANE-1-CARBOXYLATE DEAMINASE-RELATED"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00291">
+            <property type="entry name" value="PALP"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PIRSF" id="PIRSF006278">
+            <property type="entry name" value="ACCD_DCysDesulf"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF53686">
+            <property type="entry name" value="Tryptophan synthase beta subunit-like PLP-dependent enzymes"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="evidence at protein level"/>
+        <keyword id="KW-0002">3D-structure</keyword>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-0663">Pyridoxal phosphate</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_0000184523" description="Putative 1-aminocyclopropane-1-carboxylate deaminase">
+            <location>
+                <begin position="1"/>
+                <end position="325"/>
+            </location>
+        </feature>
+        <feature type="modified residue" description="N6-(pyridoxal phosphate)lysine" evidence="1">
+            <location>
+                <position position="54"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="3"/>
+                <end position="9"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="24"/>
+                <end position="26"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="28"/>
+                <end position="34"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="36"/>
+                <end position="42"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="43"/>
+                <end position="45"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="4">
+            <location>
+                <begin position="46"/>
+                <end position="48"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="54"/>
+                <end position="67"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="71"/>
+                <end position="76"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="82"/>
+                <end position="93"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="97"/>
+                <end position="104"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="110"/>
+                <end position="117"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="121"/>
+                <end position="126"/>
+            </location>
+        </feature>
+        <feature type="turn" evidence="3">
+            <location>
+                <begin position="130"/>
+                <end position="132"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="133"/>
+                <end position="144"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="151"/>
+                <end position="154"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="156"/>
+                <end position="158"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="161"/>
+                <end position="164"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="166"/>
+                <end position="177"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="183"/>
+                <end position="192"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="193"/>
+                <end position="204"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="210"/>
+                <end position="215"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="220"/>
+                <end position="222"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="223"/>
+                <end position="237"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="247"/>
+                <end position="250"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="261"/>
+                <end position="274"/>
+            </location>
+        </feature>
+        <feature type="turn" evidence="3">
+            <location>
+                <begin position="280"/>
+                <end position="282"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="283"/>
+                <end position="295"/>
+            </location>
+        </feature>
+        <feature type="turn" evidence="4">
+            <location>
+                <begin position="296"/>
+                <end position="299"/>
+            </location>
+        </feature>
+        <feature type="strand" evidence="3">
+            <location>
+                <begin position="301"/>
+                <end position="307"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="311"/>
+                <end position="316"/>
+            </location>
+        </feature>
+        <feature type="helix" evidence="3">
+            <location>
+                <begin position="318"/>
+                <end position="322"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000250" key="1"/>
+        <evidence type="ECO:0000305" key="2"/>
+        <evidence type="ECO:0007829" key="3">
+            <source>
+                <dbReference type="PDB" id="1J0A"/>
+            </source>
+        </evidence>
+        <evidence type="ECO:0007829" key="4">
+            <source>
+                <dbReference type="PDB" id="1J0B"/>
+            </source>
+        </evidence>
+        <sequence length="325" mass="35188" checksum="60AE1B7A37CDF231" modified="2000-05-30" version="2">MHPKIFALLAKFPRVELIPWETPIQYLPNISREIGADVYIKRDDLTGLGIGGNKIRKLEYLLGDALSKGADVVITVGAVHSNHAFVTGLAAKKLGLDAILVLRGKEELKGNYLLDKIMGIETRVYDAKDSFELMKYAEEIAEELKREGRKPYVIPPGGASPIGTLGYVRAVGEIATQSEVKFDSIVVAAGSGGTLAGLSLGLSILNEDIRPVGIAVGRFGEVMTSKLDNLIKEAAELLGVKVEVRPELYDYSFGEYGKITGEVAQIIRKVGTREGIILDPVYTGKAFYGLVDLARKGELGEKILFIHTGGISGTFHYGDKLLSLL</sequence>
+    </entry>
+    <entry id="4" dataset="Swiss-Prot" created="2002-01-23" modified="2025-04-09" version="104" xmlns="https://uniprot.org/uniprot">
+        <accession>Q9Y9P1</accession>
+        <name>3MGH_AERPE</name>
+        <protein>
+            <recommendedName>
+                <fullName evidence="1">Putative 3-methyladenine DNA glycosylase</fullName>
+                <ecNumber evidence="1">3.2.2.-</ecNumber>
+            </recommendedName>
+        </protein>
+        <gene>
+            <name type="ordered locus">APE_2247</name>
+        </gene>
+        <organism>
+            <name type="scientific">Aeropyrum pernix (strain ATCC 700893 / DSM 11879 / JCM 9820 / NBRC 100138 / K1)</name>
+            <dbReference type="NCBI Taxonomy" id="272557"/>
+            <lineage>
+                <taxon>Archaea</taxon>
+                <taxon>Thermoproteota</taxon>
+                <taxon>Thermoprotei</taxon>
+                <taxon>Desulfurococcales</taxon>
+                <taxon>Desulfurococcaceae</taxon>
+                <taxon>Aeropyrum</taxon>
+            </lineage>
+        </organism>
+        <reference key="1">
+            <citation type="journal article" date="1999" name="DNA Res." volume="6" first="83" last="101">
+                <title>Complete genome sequence of an aerobic hyper-thermophilic crenarchaeon, Aeropyrum pernix K1.</title>
+                <authorList>
+                    <person name="Kawarabayasi Y."/>
+                    <person name="Hino Y."/>
+                    <person name="Horikawa H."/>
+                    <person name="Yamazaki S."/>
+                    <person name="Haikawa Y."/>
+                    <person name="Jin-no K."/>
+                    <person name="Takahashi M."/>
+                    <person name="Sekine M."/>
+                    <person name="Baba S."/>
+                    <person name="Ankai A."/>
+                    <person name="Kosugi H."/>
+                    <person name="Hosoyama A."/>
+                    <person name="Fukui S."/>
+                    <person name="Nagai Y."/>
+                    <person name="Nishijima K."/>
+                    <person name="Nakazawa H."/>
+                    <person name="Takamiya M."/>
+                    <person name="Masuda S."/>
+                    <person name="Funahashi T."/>
+                    <person name="Tanaka T."/>
+                    <person name="Kudoh Y."/>
+                    <person name="Yamazaki J."/>
+                    <person name="Kushida N."/>
+                    <person name="Oguchi A."/>
+                    <person name="Aoki K."/>
+                    <person name="Kubota K."/>
+                    <person name="Nakamura Y."/>
+                    <person name="Nomura N."/>
+                    <person name="Sako Y."/>
+                    <person name="Kikuchi H."/>
+                </authorList>
+                <dbReference type="PubMed" id="10382966"/>
+                <dbReference type="DOI" id="10.1093/dnares/6.2.83"/>
+            </citation>
+            <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+            <source>
+                <strain>ATCC 700893 / DSM 11879 / JCM 9820 / NBRC 100138 / K1</strain>
+            </source>
+        </reference>
+        <comment type="similarity">
+            <text evidence="1">Belongs to the DNA glycosylase MPG family.</text>
+        </comment>
+        <dbReference type="EC" id="3.2.2.-" evidence="1"/>
+        <dbReference type="EMBL" id="BA000002">
+            <property type="protein sequence ID" value="BAA81259.1"/>
+            <property type="molecule type" value="Genomic_DNA"/>
+        </dbReference>
+        <dbReference type="PIR" id="C72450">
+            <property type="entry name" value="C72450"/>
+        </dbReference>
+        <dbReference type="RefSeq" id="WP_010866886.1">
+            <property type="nucleotide sequence ID" value="NC_000854.2"/>
+        </dbReference>
+        <dbReference type="AlphaFoldDB" id="Q9Y9P1"/>
+        <dbReference type="SMR" id="Q9Y9P1"/>
+        <dbReference type="STRING" id="272557.APE_2247"/>
+        <dbReference type="EnsemblBacteria" id="BAA81259">
+            <property type="protein sequence ID" value="BAA81259"/>
+            <property type="gene ID" value="APE_2247"/>
+        </dbReference>
+        <dbReference type="GeneID" id="1445293"/>
+        <dbReference type="KEGG" id="ape:APE_2247"/>
+        <dbReference type="eggNOG" id="arCOG04295">
+            <property type="taxonomic scope" value="Archaea"/>
+        </dbReference>
+        <dbReference type="Proteomes" id="UP000002518">
+            <property type="component" value="Chromosome"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003905">
+            <property type="term" value="F:alkylbase DNA N-glycosylase activity"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0003677">
+            <property type="term" value="F:DNA binding"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="GO" id="GO:0006284">
+            <property type="term" value="P:base-excision repair"/>
+            <property type="evidence" value="ECO:0007669"/>
+            <property type="project" value="InterPro"/>
+        </dbReference>
+        <dbReference type="CDD" id="cd00540">
+            <property type="entry name" value="AAG"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Gene3D" id="3.10.300.10">
+            <property type="entry name" value="Methylpurine-DNA glycosylase (MPG)"/>
+            <property type="match status" value="2"/>
+        </dbReference>
+        <dbReference type="HAMAP" id="MF_00527">
+            <property type="entry name" value="3MGH"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR011034">
+            <property type="entry name" value="Formyl_transferase-like_C_sf"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR003180">
+            <property type="entry name" value="MPG"/>
+        </dbReference>
+        <dbReference type="InterPro" id="IPR036995">
+            <property type="entry name" value="MPG_sf"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="PANTHER" id="PTHR10429:SF0">
+            <property type="entry name" value="DNA-3-METHYLADENINE GLYCOSYLASE"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF02245">
+            <property type="entry name" value="Pur_DNA_glyco"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <dbReference type="SUPFAM" id="SSF50486">
+            <property type="entry name" value="FMT C-terminal domain-like"/>
+            <property type="match status" value="1"/>
+        </dbReference>
+        <proteinExistence type="inferred from homology"/>
+        <keyword id="KW-0227">DNA damage</keyword>
+        <keyword id="KW-0234">DNA repair</keyword>
+        <keyword id="KW-0378">Hydrolase</keyword>
+        <keyword id="KW-1185">Reference proteome</keyword>
+        <feature type="chain" id="PRO_0000100117" description="Putative 3-methyladenine DNA glycosylase">
+            <location>
+                <begin position="1"/>
+                <end position="194"/>
+            </location>
+        </feature>
+        <evidence type="ECO:0000255" key="1">
+            <source>
+                <dbReference type="HAMAP-Rule" id="MF_00527"/>
+            </source>
+        </evidence>
+        <sequence length="194" mass="21276" checksum="1EE737DC6A1406EE" modified="1999-11-01" version="1">MGRLLPKSFYYRQPDVVARELLGKILVSCASGACMRCMVTEAEAYFGECDPASRARRGRGRIWRALYGEPGRALVYGMHRQWLLNIVAHSEGMAGAVLLRSCQPLEPPRLDPPPIGPGRLARALSIDRGVDGAPVYERGSPLTLWENPEAVEGFRVACSGRVGVSEDLELPLRFYIAGNPFVSKARVSPAPKHC</sequence>
+    </entry>
+</uniprot>

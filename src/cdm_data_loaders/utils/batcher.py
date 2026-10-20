@@ -1,18 +1,22 @@
 """Utilities for splitting a selection into batches."""
 
 import re
+from collections.abc import Generator
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Annotated, Final, Self
+from typing import Annotated, Any, Final, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, DirectoryPath, Field, model_validator
+
+from cdm_data_loaders.core.fields import MIN_START_AT
+from cdm_data_loaders.core.settings import CtsSettings
 
 # Matches files like: name_00001.ext or name_00001.ext.gz
 FILE_NAME_REGEX: re.Pattern[str] = re.compile(r"^\w+_(\d+)(\.\w+)+$")
 
 MIN_BATCH_SIZE: Final[int] = 1
-MIN_START_AT: Final[int] = 1
 MIN_END_AT: Final[int] = 0
+DEFAULT_PIPELINE_BATCH_SIZE: Final[int] = 50
 
 logger: Logger = getLogger(__name__)
 
@@ -24,6 +28,8 @@ class NumericFileSequenceBatcher(BaseModel):
     (underscore followed by one or more digits) with one or more extensions (e.g. `.gz`, `.txt`, `.tar.gz`).
 
     Assumes that file names only contain alphanumeric characters, underscore, and extension(s).
+
+    Re-scans the directory each time the next batch is requested.
 
     :param directory:   directory to retrieve files from; strings will be coerced to Paths
     :type  directory:   Path, required
@@ -41,7 +47,7 @@ class NumericFileSequenceBatcher(BaseModel):
     :type  file_regex:  re.Pattern, optional
     """
 
-    directory: Path
+    directory: DirectoryPath
     batch_size: Annotated[int, Field(ge=MIN_BATCH_SIZE, strict=True)] = MIN_BATCH_SIZE
     start_at: Annotated[int, Field(ge=MIN_START_AT, strict=True)] = MIN_START_AT
     end_at: Annotated[int, Field(ge=MIN_END_AT, strict=True)] = MIN_END_AT
@@ -90,3 +96,17 @@ class NumericFileSequenceBatcher(BaseModel):
             self.start_at = self._get_sequence_number(batch[-1]) + 1
 
         return batch
+
+
+def get_file_batches(settings: CtsSettings) -> Generator[list[Path], Any]:
+    """Yield successive batches of files to process, driven by a NumericFileSequenceBatcher.
+
+    :param settings: pipeline config with input_dir
+    :type  settings: CtsSettings
+    :yield: batches of file paths
+    :rtype: Generator[list[Path], Any]
+    """
+    batcher = NumericFileSequenceBatcher(directory=settings.input_dir, batch_size=DEFAULT_PIPELINE_BATCH_SIZE)
+    while files := batcher.get_batch():
+        logger.debug("Files to be processed:%s", "".join("- " + str(f) + "\n" for f in files))
+        yield files

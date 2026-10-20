@@ -1,0 +1,288 @@
+"""Tests for the gz module."""
+
+import gzip
+import logging
+from pathlib import Path
+
+import pytest
+from click.testing import CliRunner
+
+from cdm_data_loaders.utils.gz import compress_file, compress_files, decompress_file, main, open_maybe_gzip
+
+TEMP_FILE_CONTENT = b"Hello, world!\nThis is a test."
+
+
+@pytest.fixture
+def temporary_file(tmp_path: Path) -> Path:
+    """Create a temporary text file and return its path."""
+    file_path = tmp_path / "sample.txt"
+    file_path.write_bytes(TEMP_FILE_CONTENT)
+    return file_path
+
+
+@pytest.fixture
+def temporary_gz(tmp_path: Path) -> Path:
+    """Create a temporary gzipped text file and return its path."""
+    file_path = tmp_path / "sample.txt.gz"
+    with gzip.open(file_path, "wb") as f:
+        f.write(TEMP_FILE_CONTENT)
+    return file_path
+
+
+def read_gz(path: Path) -> bytes:
+    """Utility function to read a ``.gz`` file and return its decompressed bytes."""
+    with gzip.open(path, "rb") as f:
+        return f.read()
+
+
+@pytest.mark.parametrize("file_path", ["temporary_file", "temporary_gz"])
+@pytest.mark.parametrize("str_or_path", [str, Path])
+def test_open_maybe_gzip_pass_reads_files(file_path: str, str_or_path: type, request: pytest.FixtureRequest) -> None:
+    """Test that both plain and gzipped files can be read, and string or Path file paths are accepted."""
+    file_path = request.getfixturevalue(file_path)
+    with open_maybe_gzip(str_or_path(file_path)) as fh:
+        assert fh.read() == TEMP_FILE_CONTENT
+
+
+@pytest.mark.parametrize("mode", ["w", "rt", "wb", "rb+", "a+b"])
+def test_open_maybe_gzip_fail_rejects_non_read_mode(temporary_file: Path, mode: str) -> None:
+    """Only binary read modes are supported."""
+    err_msg = f"open_maybe_gzip incorrectly accepts {mode} mode"
+    with pytest.raises(ValueError, match="only supports binary reads"), open_maybe_gzip(temporary_file, mode=mode):
+        raise AssertionError(err_msg)
+
+
+def test_compress_file_creates_gzip(temporary_file: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test that running compress file actually compresses a file."""
+    # Ensure no .gz exists initially
+    gz_path = temporary_file.with_suffix(temporary_file.suffix + ".gz")
+    assert not gz_path.exists()
+
+    compress_file(temporary_file)
+
+    # Verify the .gz file was created
+    assert gz_path.exists()
+
+    # Decompress and compare content
+    decompressed = read_gz(gz_path)
+    original = temporary_file.read_bytes()
+    assert decompressed == original
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert f"Created output file {gz_path!s}" in caplog.records[0].getMessage()
+
+
+def test_compress_file_skips_existing_gzip(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Ensure that an existing gz file prevents compress_file from running compression."""
+    file_path = tmp_path / "data.bin"
+    file_path.write_bytes(b"binary\x00data")
+    # fake gzip file
+    gz_path = file_path.with_suffix(file_path.suffix + ".gz")
+    gz_path.write_bytes(b"some old crap")
+    original_mtime = gz_path.stat().st_mtime
+
+    # attempt to compress data.bin
+    compress_file(file_path)
+
+    # Ensure the .gz file was not overwritten (mtime unchanged)
+    assert gz_path.stat().st_mtime == original_mtime
+    assert gz_path.read_bytes() == b"some old crap"
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert f"Found existing file {file_path!s}.gz: skipping gz operation" in caplog.records[0].getMessage()
+
+
+def test_compress_files_multiple(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test that compressing a directory with a glob pattern to match works."""
+    # Create three files matching the glob pattern
+    n_files = 3
+    for i in range(n_files):
+        (tmp_path / f"file{i}.txt").write_text(f"content {i}")
+    # Create a non-matching file
+    (tmp_path / "ignore.md").write_text("should be ignored")
+
+    compress_files(tmp_path, "*.txt")
+
+    # Verify .gz files were created for the three txt files only
+    for i in range(n_files):
+        gz = tmp_path / f"file{i}.txt.gz"
+        assert gz.exists()
+        with gzip.open(gz, "rt") as f:
+            assert f.read() == f"content {i}"
+    # Ensure the non-matching file was not gzipped
+    assert not (tmp_path / "ignore.md.gz").exists()
+
+    assert len(caplog.records) == n_files + 2
+    for r in caplog.records:
+        assert r.levelno == logging.INFO
+    assert "Found 3 file(s) to compress" in caplog.records[0].getMessage()
+    for r in caplog.records[1:4]:
+        assert f"Created output file {tmp_path!s}/file" in r.getMessage()
+    assert caplog.records[-1].getMessage() == "Work complete!"
+
+
+def test_compress_files_no_matches(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test that nothing happens (no error, etc.) if a directory doesn't contain matching files."""
+    compress_files(tmp_path, "*.doesnotexist")
+    # No .gz files should be present
+    assert list(tmp_path.rglob("*.gz")) == []
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert "Found 0 file(s) to compress" in caplog.records[0].getMessage()
+
+
+def test_compress_files_accepts_str_path(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """The `directory` argument can be a plain string."""
+    f = tmp_path / "x.txt"
+    f.write_text("payload")
+
+    # Pass directory as a string
+    compress_files(str(tmp_path), "*.txt")
+
+    # Verify outcome is the same as when a Path is supplied
+    gz = f.with_name(f.name + ".gz")
+    assert gz.exists()
+    assert read_gz(gz) == b"payload"
+    # Logger should still contain the expected messages
+    assert len(caplog.records) == 3
+    msgs = [rec.getMessage() for rec in caplog.records]
+    assert msgs[0] == "Found 1 file(s) to compress"
+    assert f"Created output file {f!s}.gz" in msgs[1]
+    assert msgs[-1] == "Work complete!"
+
+
+def test_compress_files_invalid_directory(tmp_path: Path) -> None:
+    """Check the appropriate error is thrown if the directory is not valid."""
+    non_existent = tmp_path / "no_such_dir"
+    with pytest.raises(FileNotFoundError, match=f"Directory {non_existent!s} not found"):
+        compress_files(non_existent, "*")
+
+
+@pytest.mark.parametrize("input_type", [str, Path])
+def test_decompress_file_creates_file(
+    temporary_gz: Path, caplog: pytest.LogCaptureFixture, input_type: type[str] | type[Path]
+) -> None:
+    """Test that running decompress file actually decompresses a file."""
+    # Ensure no decompressed file exists initially
+    decompressed_file = temporary_gz.with_suffix("")
+    assert not decompressed_file.exists()
+    assert temporary_gz.exists()
+
+    # cast to either string or Path
+    decompress_file(input_type(temporary_gz))
+
+    # Verify the decompressed file was created
+    assert decompressed_file.exists()
+
+    # compare content of the decompressed file
+    assert decompressed_file.read_bytes() == TEMP_FILE_CONTENT
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert f"Created output file {decompressed_file!s}" in caplog.records[0].getMessage()
+
+
+@pytest.mark.parametrize("file_name", ["data", "data.tar", "not_a_gz", "file.gz.bak"])
+def test_decompress_file_skips_non_gz_file(tmp_path: Path, file_name: str, caplog: pytest.LogCaptureFixture) -> None:
+    """Ensure that an existing decompressed file prevents decompress_file from running decompression."""
+    file_path = tmp_path / file_name
+    # attempt to decompress data.bin.gz
+    decompress_file(file_path)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert f"File {file_path!s} does not end with .gz: skipping decompression" in caplog.records[0].getMessage()
+
+
+def test_decompress_file_skips_directory(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Ensure that if the supplied path is a directory, decompression does not occur."""
+    file_path = tmp_path / "some_directory.gz"
+    file_path.mkdir(parents=True, exist_ok=True)
+    assert file_path.exists()
+    assert file_path.is_dir()
+
+    decompress_file(file_path)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.WARNING
+    assert f"{file_path!s} is not a file: skipping decompression" in caplog.records[0].getMessage()
+
+
+def test_decompress_file_skips_missing_file(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Ensure that a missing file prevents decompress_file from running decompression."""
+    missing_file = tmp_path / "missing.gz"
+    decompress_file(missing_file)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.WARNING
+    assert f"File {missing_file!s} does not exist: skipping decompression" in caplog.records[0].getMessage()
+
+
+@pytest.mark.parametrize("file_name", ["data", "data.tar", "not_a_gz", "file.gz.bak"])
+def test_decompress_file_skips_existing_decompressed_file(
+    tmp_path: Path, file_name: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Ensure that an existing decompressed file prevents decompress_file from running decompression."""
+    file_path = tmp_path / file_name
+    file_path.write_bytes(b"binary\x00data")
+    assert file_path.name == file_name
+    assert file_path.exists()
+
+    original_mtime = file_path.stat().st_mtime
+    # fake gzip file
+    gz_path = file_path.with_suffix(file_path.suffix + ".gz")
+    gz_path.write_bytes(b"some old crap")
+    assert gz_path.name == file_name + ".gz"
+    assert gz_path.exists()
+
+    # attempt to decompress data.bin.gz
+    decompress_file(gz_path)
+
+    # Ensure the .gz file was not overwritten (mtime unchanged)
+    assert file_path.stat().st_mtime == original_mtime
+    assert file_path.read_bytes() == b"binary\x00data"
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelno == logging.INFO
+    assert f"Found existing file {file_path!s}: skipping decompression" in caplog.records[0].getMessage()
+
+
+@pytest.mark.skip("CliRunner conflicts with logging, causing a ValueError")
+def test_cli_single_file(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test the CLI with a valid file."""
+    # ensure that the logger does not produce any output
+    caplog.set_level(logging.CRITICAL)
+    runner = CliRunner()
+    # Create a single file and test CLI compression of a file
+    file_path = tmp_path / "single.txt"
+    file_path.write_text("single file content")
+    result = runner.invoke(main, ["--source", str(file_path)])
+    assert result.exit_code == 0
+    assert (file_path.with_suffix(file_path.suffix + ".gz")).exists()
+
+
+@pytest.mark.skip("CliRunner conflicts with logging, causing a ValueError")
+def test_cli_directory_with_glob(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test the CLI with a directory and some globbery action."""
+    caplog.set_level(logging.CRITICAL)
+    sub_dir = tmp_path / "sub"
+    sub_dir.mkdir()
+    for name in ["a.txt", "b.log"]:
+        (sub_dir / name).write_text(name)
+    runner = CliRunner()
+    result = runner.invoke(main, ["--source", str(sub_dir), "--file-glob", "*.txt"])
+    assert result.exit_code == 0
+    # Only the .txt file should be gzipped
+    assert (sub_dir / "a.txt.gz").exists()
+    assert not (sub_dir / "b.log.gz").exists()
+
+
+def test_cli_main_nonexistent_source(tmp_path: Path) -> None:
+    """Test the CLI interface with a missing source."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["--source", str(tmp_path / "doesnotexist")])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, RuntimeError)

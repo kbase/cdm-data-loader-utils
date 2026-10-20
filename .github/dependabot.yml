@@ -6,10 +6,13 @@ updates:
     interval: "monthly"
   open-pull-requests-limit: 20
 - package-ecosystem: "github-actions"
-  directory: "/.github"
+  directories: ["/", "/.github/*", "/.github/actions/*"]
   schedule:
-    interval: "monthly"
-  open-pull-requests-limit: 20
+    interval: "weekly"
+  groups:
+    actions:
+      # one PR for all GHA bumps
+      patterns: ["*"]
 - package-ecosystem: docker
   directory: "./"
   schedule:

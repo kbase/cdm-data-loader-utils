@@ -6,6 +6,7 @@ Usage (all commands assume ``uv run`` from the repo root):
 
     uv run python scripts/s3_local.py mb  s3://cdm-lake
     uv run python scripts/s3_local.py cp  staging/raw_data/ s3://cdm-lake/staging/run1/raw_data/
+    uv run python scripts/s3_local.py cp  my/local/file.txt s3://cdm-lake/staging/staged_file.txt
     uv run python scripts/s3_local.py ls  s3://cdm-lake/staging/run1/
     uv run python scripts/s3_local.py head s3://cdm-lake/some/key.gz
 
@@ -19,12 +20,12 @@ Environment variables (with defaults for the walkthrough):
 import os
 import sys
 
-from cdm_data_loaders.utils import s3
+from cdm_data_loaders.utils.file_transfer.s3 import cli, client
 
 
 def _client() -> None:
-    s3.reset_s3_client()
-    _ = s3.get_s3_client(
+    client.reset_s3_client()
+    _ = client.get_s3_client(
         {
             "endpoint_url": os.environ.get("AWS_ENDPOINT_URL", "http://localhost:9000"),
             "aws_access_key_id": os.environ.get("AWS_ACCESS_KEY_ID", "test_access_key"),
@@ -35,7 +36,7 @@ def _client() -> None:
 
 # dispatch
 
-COMMANDS = {"mb": s3.cmd_mb, "cp": s3.cmd_cp, "ls": s3.cmd_ls, "head": s3.cmd_head}
+COMMANDS = {"mb": cli.cmd_mb, "cp": cli.cmd_cp, "ls": cli.cmd_ls, "head": cli.cmd_head}
 
 
 def main() -> None:

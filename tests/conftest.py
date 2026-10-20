@@ -1,53 +1,123 @@
 """Global configuration settings for tests."""
 
-import datetime
+import gzip
 import logging
+import os
 import shutil
-from collections.abc import Generator
+import sys
+from collections.abc import Callable, Generator
 from copy import deepcopy
+from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Self
+from unittest.mock import patch
 
+import boto3
+import dlt
 import pytest
-from berdl_notebook_utils.setup_spark_session import generate_spark_conf
+from dlt.common.configuration.container import Container
+from dlt.common.pipeline import PipelineContext
 from frozendict import frozendict
-from pyspark.conf import SparkConf
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import (
-    ArrayType,
-    BooleanType,
-    DateType,
-    FloatType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
+from moto import mock_aws
+from pyspark.sql import SparkSession
+from types_boto3_s3.client import S3Client
 
-from cdm_data_loaders.audit.schema import (
-    NAMESPACE,
-    PIPELINE,
-    ROW_ERRORS,
-    RUN_ID,
-    SOURCE,
-)
-from cdm_data_loaders.core.pipeline_run import PipelineRun
-from cdm_data_loaders.readers.dsv import INVALID_DATA_FIELD
-from cdm_data_loaders.utils.cdm_logger import get_cdm_logger
+import cdm_data_loaders.utils.file_transfer.s3.client as s3_client
+from cdm_data_loaders.utils import cdm_logger
+from cdm_data_loaders.utils.file_transfer.s3.client import _client_config, reset_s3_client
+from tests.dlt_config_isolation import isolated_dlt_config
+
+pytest_plugins = ["tests.jsonlines_fixtures", "tests.jsonschema_fixtures"]
+
+LOCAL_FS: Final[str] = "local_fs"
+S3: Final[str] = "s3"
 
 SAVE_DIR: Final[str] = "spark.sql.warehouse.dir"
 
+BASE_DIR: Final[Path] = Path("tests").parent
+TEST_DATA_DIR: Final[Path] = Path("tests") / "data"
+CASSETTES_DIR: Final[Path] = Path("tests") / "cassettes"
 
-TEST_NS: Final[str] = "test_ns"
-PIPELINE_RUN = frozendict({RUN_ID: "1234-5678-90", PIPELINE: "KeystoneXL", SOURCE: "/path/to/file"})
-ALT_PIPELINE_RUN = frozendict({RUN_ID: "9876-5432-10", PIPELINE: "KeystoneXXXL", SOURCE: "/path/to/dir"})
+REFERENCE_XML_NS: Final[str] = "http://uniprot.org/uniref"
+REFERENCE_XML_TAG: Final[str] = f"{{{REFERENCE_XML_NS}}}entry"
+REFERENCE_XML_FIXTURE_DIR: Final[Path] = TEST_DATA_DIR / "uniprot" / "uniref"
+REFERENCE_XSD: Final[Path] = REFERENCE_XML_FIXTURE_DIR / "uniref.xsd"
+N_REFERENCE_XML_ENTRIES: Final[int] = 100
+
+DEFAULT_VCR_CONFIG = frozendict(
+    {
+        "cassette_library_dir": str(CASSETTES_DIR),
+        "record_mode": "once",  # record on first run, replay thereafter
+        "serializer": "yaml",
+        "match_on": ["method", "scheme", "host", "path", "query"],
+        # strip the NCBI API key from cassettes
+        "filter_query_parameters": ["api_key"],
+        "filter_headers": ["api_key"],
+        "decode_compressed_response": True,
+        "allow_playback_repeats": True,
+    }
+)
+
+_notebook_utils_available: bool | None = None
+
+
+def _find_notebook_utils() -> bool:
+    """Check whether the current environment has the KBase Lakehouse notebook_utils lib available.
+
+    :return: True if they are available
+    :rtype: bool
+    """
+    global _notebook_utils_available  # noqa: PLW0603
+    if _notebook_utils_available is not None:
+        return _notebook_utils_available
+
+    # set to false by default
+    _notebook_utils_available = False
+    try:
+        sss = find_spec("berdl_notebook_utils.setup_spark_session")
+        db = find_spec("berdl_notebook_utils.spark.database")
+        if sss is not None and db is not None:
+            _notebook_utils_available = True
+    except Exception:
+        logging.getLogger(__name__).exception("Notebook utils not available: requires_notebook_utils tests will fail")
+
+    return _notebook_utils_available
+
+
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    """Set up tests to skip anything where dependencies are missing.
+
+    :param item: test item
+    :type item: pytest.Item
+    """
+    if "requires_spark" not in item.keywords:
+        return
+
+    # notebook utils are available: we're fine
+    if _find_notebook_utils():
+        return
+
+    # the raw string passed to -m
+    markexpr = item.config.option.markexpr
+    # tests matching any "not" markers will already have been filtered out
+    # markexpr will contain "requires_spark" when -m requires_spark is used
+    # N.b. this blatantly ignores more complex situations, like "not(marker or marker)"
+    if markexpr and "requires_spark" in markexpr and "not requires_spark" not in markexpr:
+        pytest.fail(
+            "Test is marked requires_spark, but Spark is not available in this environment.",
+            pytrace=False,
+        )
+    else:
+        # no markexpr or unrelated -m expression: skip silently
+        pytest.skip("Test is marked requires_spark, but Spark is not available in this environment.")
 
 
 @pytest.fixture(autouse=True)
 def logging_setup(caplog: pytest.LogCaptureFixture) -> None:
     """Fiddle with the loggers used in the tests for a better experience."""
     vcr_logger = logging.getLogger("vcr")
-    vcr_logger.setLevel("ERROR")
+    vcr_logger.setLevel(logging.ERROR)
     # turn on log propagation for the dlt logger
     dlt_logger = logging.getLogger("dlt")
     dlt_logger.propagate = True
@@ -55,10 +125,38 @@ def logging_setup(caplog: pytest.LogCaptureFixture) -> None:
     caplog.clear()
 
 
+@pytest.fixture(autouse=True)
+def isolate_dlt_pipelines_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[None, Any]:
+    """Set the DLT_DATA_DIR (where dlt stores pipeline metadata) to the test temporary directory.
+
+    Prevents accumulation of dlt pipeline artefacts in the user ~/.dlt directory.
+    """
+    monkeypatch.setenv("DLT_DATA_DIR", str(tmp_path))
+    yield
+    if Container()[PipelineContext].is_active():
+        Container()[PipelineContext].deactivate()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_cli_and_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
+    """Clear sys.argv and the environment to prevent test-to-test pollution."""
+    monkeypatch.setattr(sys, "argv", ["pytest"])
+
+    current_env = deepcopy(os.environ)
+    with patch.dict(os.environ, {k: v for k, v in current_env.items() if not k.lower().startswith("cdl_")}, clear=True):
+        yield
+
+
 @pytest.fixture
 def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
-    """Generate a spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
-    config = generate_spark_conf("test_delta_app", local=True, use_delta_lake=True)
+    """Generate a local spark session with spark.sql.warehouse.dir set to the pytest temporary directory."""
+    logger = logging.getLogger(__name__)
+    try:
+        from berdl_notebook_utils.setup_spark_session import get_spark_session  # pyright: ignore[reportMissingImports]  # noqa: I001, PLC0415
+    except ModuleNotFoundError:
+        logger.exception("berdl_notebook_utils not available: cannot create a spark session")
+        raise
+
     test_config = {
         "spark.sql.shuffle.partitions": 5,
         "spark.default.parallelism": 9,
@@ -71,24 +169,40 @@ def spark(tmp_path: Path) -> Generator[SparkSession, Any]:
         # Extra configs to optimize Delta internal operations on tests
         "spark.databricks.delta.snapshotPartitions": 2,
         "delta.log.cacheSize": 3,
+        SAVE_DIR: str(tmp_path),
     }
-    config.update(test_config)
-    config[SAVE_DIR] = str(tmp_path)
-    spark_conf = SparkConf().setAll(list(config.items()))
-    spark = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+    # local=True builds the session without any BERDL environment (no get_settings(),
+    # no Spark Connect server); the override applies the test-tuning configs after.
+    logger.info("starting spark session...")
+    spark = get_spark_session("test_app", local=True, override=test_config)
     save_dir = spark.conf.get(SAVE_DIR).removeprefix("file:")  # pyright: ignore[reportOptionalMemberAccess]
     if save_dir != str(tmp_path):
-        logging.getLogger(__name__).error("spark dir: %s; save dir: %s", tmp_path, save_dir)
+        logger.error("spark dir: %s; save dir: %s", tmp_path, save_dir)
     yield spark
     spark.catalog.clearCache()
     spark.stop()
+    logger.info("stopping spark session...")
     shutil.rmtree(save_dir)
 
 
 @pytest.fixture(scope="session")
 def test_data_dir() -> Path:
     """Test data directory."""
-    return Path("tests") / "data"
+    return TEST_DATA_DIR
+
+
+@pytest.fixture
+def write_gzip_file() -> Callable[[Path, str, str], Path]:
+    """Return a function that writes text content to a gzip-compressed file."""
+
+    def _write(directory: Path, filename: str, content: str) -> Path:
+        directory.mkdir(parents=True, exist_ok=True)
+        file_path = directory / filename
+        with gzip.open(file_path, "wb") as f:
+            f.write(content.encode("utf-8"))
+        return file_path
+
+    return _write
 
 
 @pytest.fixture(scope="session")
@@ -116,363 +230,161 @@ def json_test_strings() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def empty_df_schema() -> list[StructField]:
-    """List of fields corresponding to the empty dataframe."""
-    return [
-        StructField("name", StringType(), nullable=True),
-        StructField("id", IntegerType(), nullable=False),
-    ]
+CONFIG_BUCKET = frozendict({LOCAL_FS: "/output_dir", S3: "s3://some/s3/bucket"})
+
+TEST_DLT_CONFIG = frozendict(
+    {
+        "destination.local_fs.bucket_url": CONFIG_BUCKET[LOCAL_FS],
+        "destination.local_fs.destination_type": "filesystem",
+        "destination.s3.bucket_url": CONFIG_BUCKET[S3],
+        "destination.s3.destination_type": "filesystem",
+        "normalize.data_writer.disable_compression": False,
+    }
+)
+
+
+def _generate_dlt_config() -> dict[str, Any]:
+    """Return a fresh DLT config dict (same shape as the conftest fixture)."""
+    return {
+        "destination": {
+            LOCAL_FS: {"bucket_url": CONFIG_BUCKET[LOCAL_FS], "destination_type": "filesystem"},
+            S3: {"bucket_url": CONFIG_BUCKET[S3], "destination_type": "filesystem"},
+        },
+        "destination.local_fs.bucket_url": CONFIG_BUCKET[LOCAL_FS],
+        "destination.local_fs.destination_type": "filesystem",
+        "destination.s3.bucket_url": CONFIG_BUCKET[S3],
+        "destination.s3.destination_type": "filesystem",
+        "normalize.data_writer.disable_compression": False,
+    }
 
 
 @pytest.fixture
-def empty_df(spark: SparkSession, empty_df_schema: list[StructField]) -> Generator[DataFrame, Any]:
-    """Empty dataframe for testing usage."""
-    df = spark.createDataFrame([], schema=StructType(empty_df_schema))
-    yield df
-    assert df.schema == StructType(empty_df_schema)
+def dlt_config() -> dict[str, Any]:
+    """DLT config for testing purposes."""
+    return _generate_dlt_config()
 
 
-# Various CSV permutations for testing
-VALID = "valid_csv"
-MISSING_REQUIRED = "invalid_csv_missing_required"
-TYPE_MISMATCH = "invalid_csv_type_mismatch"
-TOO_FEW_COLS = "invalid_csv_too_few_cols"
-TOO_MANY_COLS = "invalid_csv_too_many_cols"
-ALL_LINES = "all_lines"
+@pytest.fixture(autouse=True)
+def _isolated_dlt_config() -> Generator[None]:
+    """Isolate every test's dlt config/secrets provider chain, seeded with the standard test config.
+
+    Prevents mutation of the global dlt.config during tests. dlt.config can be set explicitly by
+    passing dlt_config=... to a Settings object or using `isolated_dlt_config(...)`.
+    """
+    with isolated_dlt_config(_generate_dlt_config()):
+        yield
 
 
 @pytest.fixture
-def csv_schema() -> list[StructField]:
-    """List of fields for parsing the various CSV snippets."""
-    return [
-        StructField("col1", IntegerType(), nullable=False),
-        StructField("col2", DateType(), nullable=False),
-        StructField("col3", FloatType(), nullable=False),
-        StructField("col4", BooleanType(), nullable=False),
-        StructField("col5", StringType(), nullable=False),
-    ]
+def dlt_destination_config(tmp_path: Path) -> Generator[str]:
+    """Set the 'local_fs' destination to tmp_path in dlt.config."""
+    bucket = tmp_path / "bucket"
+    bucket.mkdir()
+    with dlt.config.values(
+        {
+            "destination.local_fs.destination_type": "filesystem",
+            "destination.local_fs.bucket_url": str(bucket),
+        }
+    ):
+        yield LOCAL_FS
 
 
-@pytest.fixture(scope="session")
-def valid_csv(test_data_dir: Path) -> Path:
-    """Valid CSV data.
-
-    1,20250301,1.2345,true,EcoCyc:EG10986-MONOMER
-    2,20250201,0.2,false,MetaCyc:EG10986-MONOMER
-    3,20250801,23,True,4261555
-    4,00010101,.1234,False,col5
-
-    """
-    return test_data_dir / "dsv" / "valid.csv"
+"""S3 Client mocks"""
 
 
-@pytest.fixture(scope="session")
-def invalid_csv_missing_required(test_data_dir: Path) -> Path:
-    """CSV data with required fields missing.
-
-    # correct number of cols, but some cols are empty
-    1,,,,col5
-    # missing leading cols
-    ,,2.345,True,col5
-    # missing trailing cols
-    3,20250531,23.45,,
-    # all missing
-    ,,,,
-    """
-    return test_data_dir / "dsv" / "missing_required.csv"
+TEST_BUCKET: Final[str] = "test_bucket"
+ALT_BUCKET: Final[str] = "alt_bucket"
+BUCKETS = [TEST_BUCKET, ALT_BUCKET]
 
 
 @pytest.fixture
-def invalid_csv_missing_required_annots() -> list[list[str]]:
-    """Generate the expected error annotations for the lines in invalid_csv_missing_required.
+def mock_s3_client(monkeypatch: pytest.MonkeyPatch) -> Generator[S3Client]:
+    """Yield a mocked S3 client with two valid buckets created (TEST_BUCKET, ALT_BUCKET).
 
-    :return: list of list of error strings
-    :rtype: list[list[str]]
+    The function get_s3_client() is patched to ensure that all module functions use this client.
+
+    Resets the cached client before and after to prevent state leaking between tests.
     """
-    valid_invalid_fields = [[1, 0, 0, 0, 1], [0, 0, 1, 1, 1], [1, 1, 1, 0, 0], [0, 0, 0, 0, 0]]
-    return [[f"missing_required: col{n + 1}" for n in range(5) if not row[n]] for row in valid_invalid_fields]
+    # Remove any real endpoint/credential env vars so moto intercepts all HTTP calls.
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    monkeypatch.delenv("AWS_ENDPOINT_URL", raising=False)
+    monkeypatch.delenv("AWS_ENDPOINT_URL_S3", raising=False)
+    boto3.DEFAULT_SESSION = None
+
+    with mock_aws():
+        reset_s3_client()
+        client: S3Client = boto3.client(S3, config=_client_config())  # pyright: ignore[reportCallIssue]
+
+        for bucket in BUCKETS:
+            client.create_bucket(Bucket=bucket)
+
+        # delete any existing client
+        reset_s3_client()
+        assert s3_client._s3_client is None  # noqa: SLF001
+
+        # patch in the client that we have just created
+        with patch.object(s3_client, "get_s3_client", return_value=client):
+            yield client
+
+        reset_s3_client()
+        assert s3_client._s3_client is None  # noqa: SLF001
 
 
-@pytest.fixture(scope="session")
-def invalid_csv_type_mismatch(test_data_dir: Path) -> Path:
-    """CSV data with incorrect data types.
+@dataclass(frozen=True, slots=True)
+class LoggerState:
+    """Settings of a single logger that tests may change."""
 
-    # Y, N, Y, N, Y
-    1,2,3,4,5
-    # N, N, Y, N, Y
-    1.234,2.3456,3.45,4.5,5
-    # N, N, N, Y, Y
-    true,false,true,false,true
-    # Y, Y, N, N, Y
-    00200202,00200202,00200202,00200202,00200202
-    """
-    return test_data_dir / "dsv" / "type_mismatch.csv"
+    level: int = logging.NOTSET
+    propagate: bool = True
+    disabled: bool = False
+    filters: tuple[Any, ...] = ()
+    handlers: tuple[logging.Handler, ...] = ()
+    formatters: tuple[logging.Formatter | None, ...] = ()
 
+    @classmethod
+    def capture(cls, lg: logging.Logger, exclude: logging.Handler | None = None) -> Self:
+        """Record the current state of ``lg``, leaving out the ``exclude`` handler."""
+        handlers = tuple(h for h in lg.handlers if h is not exclude)
+        return cls(
+            level=lg.level,
+            propagate=lg.propagate,
+            disabled=lg.disabled,
+            filters=tuple(lg.filters),
+            handlers=handlers,
+            formatters=tuple(h.formatter for h in handlers),
+        )
 
-@pytest.fixture(scope="session")
-def invalid_csv_too_few_cols(test_data_dir: Path) -> Path:
-    """CSV data containing rows with too few columns.
-
-    # too few cols
-    1
-    2,20250502,0.2345
-    3,,23.56,False
-    ,,,
-    """
-    return test_data_dir / "dsv" / "too_few_cols.csv"
-
-
-@pytest.fixture(scope="session")
-def invalid_csv_too_many_cols(test_data_dir: Path) -> Path:
-    """CSV data containing rows with too many columns.
-
-    # too many cols - all have 6 cols
-    ,,,,,
-    2,20250710,col3,True,,col6
-    # empty trailing
-    3,20250101,,,,
-    # empty leading
-    ,,,,,col6
-    """
-    return test_data_dir / "dsv" / "too_many_cols.csv"
-
-
-@pytest.fixture(scope="session")
-def all_lines(test_data_dir: Path) -> Path:
-    """All the CSV lines in a single fixture!"""
-    return test_data_dir / "dsv" / "all_lines.csv"
-
-
-@pytest.fixture(scope="session")
-def all_lines_tsv(test_data_dir: Path) -> Path:
-    """All the CSV lines in a single fixture!"""
-    return test_data_dir / "dsv" / "all_lines.tsv"
+    def restore(self, lg: logging.Logger, *extra_handlers: logging.Handler) -> None:
+        """Put ``lg`` back into the recorded state and attach ``extra_handlers``."""
+        lg.setLevel(self.level)
+        lg.propagate = self.propagate
+        lg.disabled = self.disabled
+        lg.filters[:] = self.filters
+        lg.handlers[:] = [*self.handlers, *extra_handlers]
+        for handler, formatter in zip(self.handlers, self.formatters, strict=True):
+            handler.setFormatter(formatter)
 
 
 @pytest.fixture
-def annotated_df_schema(csv_schema: list[StructField]) -> StructType:
-    """The schema for the annotated dataframe produced by validating one of the CSV files above."""
-    actual_csv_schema = list(csv_schema)
-    for r in actual_csv_schema:
-        r.nullable = True
+def isolated_logging(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> Generator[None]:
+    """Reset init_logger's record of the applied config and undo any logging changes made by the test."""
+    root = logging.getLogger()
+    manager = logging.Logger.manager
+    # pytest attaches a new caplog handler to the root logger for each test phase, so this one must not be restored
+    root_state = LoggerState.capture(root, exclude=caplog.handler)
+    saved = {name: LoggerState.capture(lg) for name, lg in manager.loggerDict.items() if isinstance(lg, logging.Logger)}
+    monkeypatch.setattr(cdm_logger, "applied_key", None)
 
-    return StructType([*actual_csv_schema, INVALID_DATA_FIELD, StructField(ROW_ERRORS, ArrayType(StringType()))])
+    yield
 
-
-@pytest.fixture(scope="session")
-def annotated_df_data() -> list[dict[str, Any]]:
-    """The output of running all_lines (above) through the dsv parser and df_nullable_fields validator."""
-    return deepcopy(
-        [
-            {
-                "col1": 1,
-                "col2": datetime.date(2025, 3, 1),
-                "col3": 1.2345000505447388,
-                "col4": True,
-                "col5": "EcoCyc:EG10986-MONOMER",
-                "__invalid_data__": None,
-                "errors_in_record": [],
-            },
-            {
-                "col1": 2,
-                "col2": datetime.date(2025, 2, 1),
-                "col3": 0.20000000298023224,
-                "col4": False,
-                "col5": "MetaCyc:EG10986-MONOMER",
-                "__invalid_data__": None,
-                "errors_in_record": [],
-            },
-            {
-                "col1": 3,
-                "col2": datetime.date(2025, 8, 1),
-                "col3": 23.0,
-                "col4": True,
-                "col5": "4261555",
-                "__invalid_data__": None,
-                "errors_in_record": [],
-            },
-            {
-                "col1": 4,
-                "col2": datetime.date(1, 1, 1),
-                "col3": 0.1234000027179718,
-                "col4": False,
-                "col5": "col5",
-                "__invalid_data__": None,
-                "errors_in_record": [],
-            },
-            {
-                "col1": 1,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": "col5",
-                "__invalid_data__": None,
-                "errors_in_record": ["missing_required: col2", "missing_required: col3", "missing_required: col4"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": 2.3450000286102295,
-                "col4": True,
-                "col5": "col5",
-                "__invalid_data__": None,
-                "errors_in_record": ["missing_required: col1", "missing_required: col2"],
-            },
-            {
-                "col1": 3,
-                "col2": datetime.date(2025, 5, 31),
-                "col3": 23.450000762939453,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": None,
-                "errors_in_record": ["missing_required: col4", "missing_required: col5"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": None,
-                "errors_in_record": [
-                    "missing_required: col1",
-                    "missing_required: col2",
-                    "missing_required: col3",
-                    "missing_required: col4",
-                    "missing_required: col5",
-                ],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": ",,,,,",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 2,
-                "col2": datetime.date(2025, 7, 10),
-                "col3": None,
-                "col4": True,
-                "col5": None,
-                "__invalid_data__": "2,20250710,col3,True,,col6",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 3,
-                "col2": datetime.date(2025, 1, 1),
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": "3,20250101,,,,",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": ",,,,,col6",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 1,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": "1",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 2,
-                "col2": datetime.date(2025, 5, 2),
-                "col3": 0.2345000058412552,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": "2,20250502,0.2345",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 3,
-                "col2": None,
-                "col3": 23.559999465942383,
-                "col4": False,
-                "col5": None,
-                "__invalid_data__": "3,,23.56,False",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": None,
-                "col4": None,
-                "col5": None,
-                "__invalid_data__": ",,,",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 1,
-                "col2": None,
-                "col3": 3.0,
-                "col4": None,
-                "col5": "5",
-                "__invalid_data__": "1,2,3,4,5",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": 3.450000047683716,
-                "col4": None,
-                "col5": "5",
-                "__invalid_data__": "1.234,2.3456,3.45,4.5,5",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": None,
-                "col2": None,
-                "col3": None,
-                "col4": False,
-                "col5": "true",
-                "__invalid_data__": "true,false,true,false,true",
-                "errors_in_record": ["parse_error"],
-            },
-            {
-                "col1": 200202,
-                "col2": datetime.date(20, 2, 2),
-                "col3": 200202.0,
-                "col4": None,
-                "col5": "00200202",
-                "__invalid_data__": "00200202,00200202,00200202,00200202,00200202",
-                "errors_in_record": ["parse_error"],
-            },
-        ]
-    )
-
-
-@pytest.fixture(scope="session")
-def annotated_df_errors(annotated_df_data: list[dict[str, Any]]) -> set[str]:
-    """Unique errors found in annotated_df_data."""
-    list_of_errors = []
-    for r in annotated_df_data:
-        list_of_errors.extend(r[ROW_ERRORS])
-
-    return set(list_of_errors)
-
-
-# Audit-related stuff
-@pytest.fixture(scope="package")
-def pipeline_run() -> PipelineRun:
-    """Generate a pipeline run."""
-    return PipelineRun(**{**PIPELINE_RUN, NAMESPACE: TEST_NS})
-
-
-@pytest.fixture(scope="package")
-def alt_pipeline_run() -> PipelineRun:
-    """Generate a different pipeline run."""
-    return PipelineRun(**{**ALT_PIPELINE_RUN, NAMESPACE: TEST_NS})
+    loggers = {name: lg for name, lg in manager.loggerDict.items() if isinstance(lg, logging.Logger)}
+    known = {*root_state.handlers, caplog.handler, *(h for state in saved.values() for h in state.handlers)}
+    for lg in [root, *loggers.values()]:
+        for handler in lg.handlers:
+            if handler not in known:
+                handler.close()
+    root_state.restore(root, caplog.handler)
+    for name, lg in loggers.items():
+        saved.get(name, LoggerState()).restore(lg)

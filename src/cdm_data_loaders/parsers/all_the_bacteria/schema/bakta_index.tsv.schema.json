@@ -1,0 +1,51 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON Schema for the All The Bacteria Bakta index file.",
+    "properties": {
+        "sample": {
+            "type": "string",
+            "description": "the INSDC sample accession"
+        },
+        "status": {
+            "type": "string",
+            "description": "the status of the Bakta run (PASS, FAIL)",
+            "enum": [
+                "PASS",
+                "FAIL"
+            ]
+        },
+        "file_name": {
+            "type": "string",
+            "description": "the name of the Bakta JSON result file, e.g. SAMN38372697.bakta.json"
+        },
+        "file_md5": {
+            "type": "string",
+            "description": "MD5 sum of file_name",
+            "minLength": 32,
+            "maxLength": 32
+        },
+        "tar_xz": {
+            "type": "string",
+            "description": "the name of the tar.xz file where this sample's JSON lives following a fix schema: atb. analysis . release . batch .tar.xz, e.g. atb.bakta.r0.2.batch.1.tar.xz"
+        },
+        "tar_xz_md5": {
+            "type": "string",
+            "description": "MD5 sum of tar_xz"
+        },
+        "tar_xz_size_MB": {
+            "type": "number",
+            "description": "size of the tar_xz file in MB"
+        }
+    },
+    "required": [
+        "sample",
+        "status",
+        "file_name",
+        "file_md5",
+        "tar_xz",
+        "tar_xz_md5",
+        "tar_xz_size_MB"
+    ],
+    "title": "All the Bacteria Bakta index file schema",
+    "type": "object"
+}

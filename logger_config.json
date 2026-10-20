@@ -4,17 +4,17 @@
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
             "stream": "ext://sys.stdout"
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "/output_dir/log_file.txt"
+            "filename": "/output_dir/log_file.txt",
+            "level": "WARNING"
         }
     },
     "loggers": {
         "root": {
-            "level": "INFO",
+            "level": "WARNING",
             "handlers": [
                 "console",
                 "file"
