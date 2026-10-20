@@ -1,7 +1,5 @@
 """Unified test execution framework for running CDM data ingestion pipelines in core, cli, or docker mode."""
 
-import gzip
-import json
 import logging
 import os
 import shutil
@@ -27,7 +25,7 @@ from cdm_data_loaders.core.settings import CtsSettings, LoggerSettings
 from cdm_data_loaders.pipelines import core
 from cdm_data_loaders.pipelines.core import LOAD_INFO_TABLE_NAME, PipelineCli
 from cdm_data_loaders.utils import cdm_logger
-from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
+from tests.cdm_data_loaders.pipelines.helpers import read_jsonl_file, settings_to_argv
 from tests.conftest import BASE_DIR, CONFIG_BUCKET, LOCAL_FS
 
 DEFAULT_DOCKER_IMAGE_TAG: Final[str] = "cdm-data-loaders-test:latest"
@@ -264,14 +262,9 @@ def _read_saved_load_info_row(dataset_dir: Path) -> dict[str, Any]:
     for file_path in sorted(load_info_dir.glob("*.jsonl*")):
         if not file_path.is_file():
             continue
-        with file_path.open("rb") as fh:
-            is_gzipped = fh.read(2) == b"\x1f\x8b"
-        opener = gzip.open if is_gzipped else open
-        with opener(file_path, "rt", encoding="utf-8") as fh:
-            for line in fh:
-                stripped = line.strip()
-                if stripped:
-                    return json.loads(stripped)
+        rows = read_jsonl_file(file_path)
+        if rows:
+            return rows[0]
     return {}
 
 

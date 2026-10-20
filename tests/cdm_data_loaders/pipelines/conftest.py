@@ -2,7 +2,6 @@
 
 import copy
 import gzip
-import json
 import logging
 import os
 from collections.abc import Callable, Iterable, Iterator
@@ -12,7 +11,6 @@ from typing import Any, Final
 from unittest.mock import MagicMock, patch
 
 import dlt
-import pyarrow.parquet as pq
 import pytest
 from dlt.common.pipeline import LoadInfo
 
@@ -28,6 +26,7 @@ from tests.cdm_data_loaders.pipelines.framework import (
     PipelineTestRunner,
     ensure_docker_image,
 )
+from tests.cdm_data_loaders.pipelines.helpers import read_destination_rows as _read_destination_rows
 from tests.conftest import LOCAL_FS, S3
 
 DEFAULT_DLT_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", LOAD_INFO_TABLE_NAME}
@@ -263,18 +262,7 @@ def read_destination_rows(base_dir: Path, table_name: str) -> list[dict[str, Any
 
     Handles parquet, jsonl and gzipped jsonl files. Returns an empty list if the table has no files.
     """
-    rows: list[dict[str, Any]] = []
-    for data_file in sorted(base_dir.glob(f"**/{table_name}/*")):
-        if data_file.name.endswith(".parquet"):
-            rows.extend(pq.read_table(data_file).to_pylist())
-        elif ".jsonl" in data_file.name:
-            if data_file.name.endswith(GZIP_SUFFIX):
-                with gzip.open(data_file, "rt") as f:
-                    content = f.read()
-            else:
-                content = data_file.read_text()
-            rows.extend(json.loads(line) for line in content.splitlines() if line)
-    return [{key: value for key, value in row.items() if not key.startswith("_dlt")} for row in rows]
+    return _read_destination_rows(base_dir, table_name)
 
 
 def sort_rows(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:

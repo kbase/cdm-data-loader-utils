@@ -6,7 +6,6 @@ import sys
 from collections.abc import Callable, Iterator
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
-from json import loads
 from pathlib import Path
 from typing import Any, Final, cast
 from unittest.mock import MagicMock, call, patch
@@ -39,6 +38,7 @@ from cdm_data_loaders.pipelines.core import (
     write_pipeline_report,
 )
 from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
+from tests.cdm_data_loaders.pipelines.helpers import read_destination_rows, read_jsonl_file
 from tests.conftest import LOCAL_FS, S3
 from tests.dlt_config_isolation import dlt_config_unset, isolated_dlt_config
 
@@ -101,20 +101,15 @@ def read_jsonl_rows(base_dir: Path, table_name: str) -> list[dict[str, Any]]:
     """Read every jsonl row written for table_name anywhere under base_dir."""
     rows: list[dict[str, Any]] = []
     for jsonl_file in sorted(base_dir.glob(f"**/{table_name}/*.jsonl*")):
-        if jsonl_file.name.endswith(".gz"):
-            with gzip.open(jsonl_file, "rt") as f:
-                content = f.read()
-        else:
-            content = jsonl_file.read_text()
-        rows.extend(loads(record) for record in content.splitlines() if record)
+        rows.extend(read_jsonl_file(jsonl_file))
     return rows
 
 
 def read_output_jsonl_records(base_dir: Path) -> list[dict[str, Any]]:
     """Read the tiny table records under base_dir, minus dlt's internal columns."""
-    records = read_jsonl_rows(base_dir, TINY_TABLE_NAME)
+    records = read_destination_rows(base_dir, TINY_TABLE_NAME)
     assert records
-    return [{key: value for key, value in record.items() if not key.startswith("_dlt")} for record in records]
+    return records
 
 
 def make_mock_pipeline(save_run_result: object, slack_hook: str | None = None) -> MagicMock:
