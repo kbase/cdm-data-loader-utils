@@ -289,31 +289,33 @@ def reconstruct_load_info(output_dir: Path, bucket_dir: Path | None = None) -> L
 
     report_file = report_files[-1]
     lines = report_file.read_text(encoding="utf-8").splitlines()
-    if len(lines) < 3:  # noqa: PLR2004
+    if len(lines) < 5:  # noqa: PLR2004
         return None
 
-    # Line 0: "Pipeline <pipeline_name> dataset <dataset_name>"
-    header_prefix = "Pipeline "
-    dataset_sep = " dataset "
-    if not lines[0].startswith(header_prefix) or dataset_sep not in lines[0]:
+    # Line 0: "Pipeline: <pipeline_name>"
+    # Line 1: "Dataset: <dataset_name>"
+    # Line 2: "Started: <started_at>"
+    # Line 3: "Finished: <finished_at>"
+    # Line 4: "Status: completed" | "Status: completed with errors" | "Status: error"
+    expected_prefixes = ("Pipeline: ", "Dataset: ", "Started: ", "Finished: ", "Status: ")
+    if not all(line.startswith(prefix) for line, prefix in zip(lines[:5], expected_prefixes, strict=True)):
         return None
-    pipeline_name, dataset_name = lines[0].removeprefix(header_prefix).rsplit(dataset_sep, maxsplit=1)
-    pipeline_name = pipeline_name.strip()
-    dataset_name = dataset_name.strip()
 
-    # Line 1: "Started: <started_at>"
-    started_str = lines[1].removeprefix("Started: ").strip()
+    pipeline_name = lines[0].removeprefix("Pipeline: ").strip()
+    dataset_name = lines[1].removeprefix("Dataset: ").strip()
+    started_str = lines[2].removeprefix("Started: ").strip()
+    finished_str = lines[3].removeprefix("Finished: ").strip()
     started_at = _PreservedStrDatetime(started_str)
+    report_finished_at = _PreservedStrDatetime(finished_str)
 
-    # Line 2: "Status: completed" | "Status: completed with errors" | "Status: error"
-    status_str = lines[2].removeprefix("Status: ").strip()
+    status_str = lines[4].removeprefix("Status: ").strip()
     if status_str == "error":
         return None
     has_failed_jobs = status_str != "completed"
 
-    # Line 3+: "Completed loads: <id1>, <id2>, ..."
+    # Line 5+: "Completed loads: <id1>, <id2>, ..."
     loads_ids: list[str] = []
-    for line in lines[3:]:
+    for line in lines[5:]:
         if line.startswith("Completed loads:"):
             loads_raw = line.removeprefix("Completed loads:").strip()
             loads_ids = [item.strip() for item in loads_raw.split(",") if item.strip()]
@@ -329,7 +331,7 @@ def reconstruct_load_info(output_dir: Path, bucket_dir: Path | None = None) -> L
 
     saved_row = _read_saved_load_info_row(actual_bucket_dir / dataset_name)
     finished_at_raw = saved_row.get("finished_at")
-    finished_at = _PreservedStrDatetime(str(finished_at_raw)) if finished_at_raw else None
+    finished_at = _PreservedStrDatetime(str(finished_at_raw)) if finished_at_raw else report_finished_at
 
     # Use a fresh working directory outside output_dir so dlt syncs the schema from the destination
     # without colliding with stale schemas in ~/.dlt/pipelines or adding files to output_dir.

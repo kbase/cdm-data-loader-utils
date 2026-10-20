@@ -101,7 +101,9 @@ def test_integration_uniprot_pipeline_entity_and_source_file_content(
     assert all(entity_type == "protein" for _, entity_type in rows)
 
     # entity_x_source_file must reference exactly the fixture files we loaded from
-    source_files = {row[0] for row in fetch_all_duckdb(pipeline, "SELECT DISTINCT source_file FROM entity_x_source_file")}
+    source_files = {
+        row[0] for row in fetch_all_duckdb(pipeline, "SELECT DISTINCT source_file FROM entity_x_source_file")
+    }
     assert source_files == {str(UNIPROT_FIXTURE_DIR.resolve() / name) for name in UNIPROT_FIXTURE_FILES}
 
 

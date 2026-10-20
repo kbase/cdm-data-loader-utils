@@ -20,7 +20,9 @@ ALL_IDS = [*VALID_IDS, INVALID_ID]
 def patch_rest_client_hooks(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure that the REST_CLIENT_HOOKS dict is empty for tests."""
     monkeypatch.setattr("cdm_data_loaders.pipelines.ncbi_rest_api.REST_CLIENT_HOOKS", {})
-    monkeypatch.setattr("cdm_data_loaders.pipelines.ncbi_rest_api.ncbi_genome_client._config.http_show_error_body", True)
+    monkeypatch.setattr(
+        "cdm_data_loaders.pipelines.ncbi_rest_api.ncbi_genome_client._config.http_show_error_body", True
+    )
 
 
 @pytest.fixture(scope="module")
@@ -67,4 +69,3 @@ def reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     :type monkeypatch: pytest.MonkeyPatch
     """
     monkeypatch.setattr(ncbi_module, "PIPELINE_SETTINGS", None)
-

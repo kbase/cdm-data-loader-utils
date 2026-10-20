@@ -56,11 +56,8 @@ def test_jsonlines_fail_malformed_rows_preserve_provenance(
     )
     tables = read_pipeline_tables(output_dir / result.dataset_name, loader_file_format)
     actual = reconstructed_entries(tables, "dataset")
-    assert sorted(
-        json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in actual
-    ) == sorted(
-        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str)
-        for entry in entries
+    assert sorted(json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in actual) == sorted(
+        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str) for entry in entries
     )
     suffix, error_key = (
         ("invalid", "parse_error") if pipeline_kind == EXTRACT_PIPELINE_NAME else ("rejected", "error_detail")

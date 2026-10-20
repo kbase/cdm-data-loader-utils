@@ -127,7 +127,12 @@ def test_reconstruct_load_info_pass_and_error_cases(tmp_path: Path) -> None:
     error_dir = tmp_path / "error_out"
     error_dir.mkdir()
     (error_dir / "report_123_456.txt").write_text(
-        "Pipeline test_pipe dataset test_ds\nStarted: 2026-01-01 00:00:00+00:00\nStatus: error\nPipeline failed\n",
+        "Pipeline: test_pipe\n"
+        "Dataset: test_ds\n"
+        "Started: 2026-01-01 00:00:00+00:00\n"
+        "Finished: 2026-01-01 00:00:05+00:00\n"
+        "Status: error\n"
+        "Pipeline failed\n",
         encoding="utf-8",
     )
     assert reconstruct_load_info(error_dir) is None
@@ -135,9 +140,12 @@ def test_reconstruct_load_info_pass_and_error_cases(tmp_path: Path) -> None:
     completed_dir = tmp_path / "completed_out"
     completed_dir.mkdir()
     started_str = "2026-01-01 12:34:56.789000+00:00"
+    finished_str = "2026-01-01 12:35:00.000000+00:00"
     (completed_dir / "report_111_222.txt").write_text(
-        f"Pipeline test_pipe dataset test_ds\n"
+        f"Pipeline: test_pipe\n"
+        f"Dataset: test_ds\n"
         f"Started: {started_str}\n"
+        f"Finished: {finished_str}\n"
         f"Status: completed with errors\n"
         f"Completed loads: 111, 222\n"
         f"Pipeline load info saved\n",
@@ -148,6 +156,7 @@ def test_reconstruct_load_info_pass_and_error_cases(tmp_path: Path) -> None:
     assert reconstructed.pipeline.pipeline_name == "test_pipe"
     assert reconstructed.dataset_name == "test_ds"
     assert str(reconstructed.started_at) == started_str
+    assert str(reconstructed.finished_at) == finished_str
     assert reconstructed.has_failed_jobs is True
     assert reconstructed.loads_ids == ["111", "222"]
     as_dict = reconstructed.asdict()
@@ -255,8 +264,10 @@ def test_pipeline_test_runner_pass_docker_mode_command_and_staging(
         captured_cmds.append(cmd)
         # Simulate the container writing a completed report to the mounted output_dir
         (output_dir / "report_999_1000.txt").write_text(
-            "Pipeline xmltodict dataset xml_docker_ds\n"
+            "Pipeline: xmltodict\n"
+            "Dataset: xml_docker_ds\n"
             "Started: 2026-02-01 00:00:00+00:00\n"
+            "Finished: 2026-02-01 00:00:05+00:00\n"
             "Status: completed\n"
             "Completed loads: 999\n"
             "Pipeline load info saved\n",

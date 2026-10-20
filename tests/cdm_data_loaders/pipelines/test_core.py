@@ -599,7 +599,9 @@ def test_run_pipeline_pipelines_dir_used_for_pipeline_metadata(dlt_test_settings
     assert any(p.name == "state.json" for p in pipeline_state_files)
 
 
-def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
+def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(
+    dlt_test_settings: CtsSettings, destination_bucket: Path
+) -> None:
     """dev_mode=True is forwarded to dlt.pipeline(); the pipeline loads into a suffixed dataset."""
     settings = dlt_test_settings.model_copy(update={"dlt_dev_mode": True})
 
@@ -722,7 +724,9 @@ def test_run_pipeline_load_info_in_dev_mode(dlt_test_settings: CtsSettings, dest
     assert rows[0]["dataset_name"] == load_info.dataset_name
 
 
-def test_run_pipeline_load_info_named_pipeline_and_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
+def test_run_pipeline_load_info_named_pipeline_and_dataset(
+    dlt_test_settings: CtsSettings, destination_bucket: Path
+) -> None:
     """A named pipeline/dataset save lands in the named dataset with a load_info row."""
     load_info = run_pipeline(
         dlt_test_settings,

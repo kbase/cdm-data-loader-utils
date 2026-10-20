@@ -514,8 +514,7 @@ def run_and_compare_variations(
 ) -> dict[str, tuple[LoadInfo, Path]]:
     """Run a pipeline across named (chunk_dir, overrides) variations, assert equal datasets, and optionally match reference."""
     load_info_and_dir = {
-        key: run_and_read(run_pipeline, chunk_dir, **overrides)
-        for key, (chunk_dir, overrides) in variations.items()
+        key: run_and_read(run_pipeline, chunk_dir, **overrides) for key, (chunk_dir, overrides) in variations.items()
     }
     if len(load_info_and_dir) >= 2:  # noqa: PLR2004
         assert_datasets_equal(load_info_and_dir)

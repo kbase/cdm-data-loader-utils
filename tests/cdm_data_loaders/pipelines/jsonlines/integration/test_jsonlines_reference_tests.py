@@ -243,8 +243,7 @@ def test_jsonlines_pass_reconstructed_matches_duckdb_reference(
     from_duckdb = reference_entries_from_duckdb(reference_dataset)
     assert len(from_duckdb) == EXPECTED_ENTRY_COUNT
     from_duckdb_canonical = sorted(
-        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str)
-        for entry in from_duckdb
+        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str) for entry in from_duckdb
     )
     from_pipeline = sorted(
         json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in reconstructed
