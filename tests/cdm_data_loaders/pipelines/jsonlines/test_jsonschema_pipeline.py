@@ -20,17 +20,7 @@ from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline i
     run_jsonlines_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlJsonschemaIngestSettings
-
-
-def make_item(record: object, line_no: int = 1) -> dict[str, Any]:
-    """Build the shared reader's parsed-line envelope."""
-    return {
-        "record": record,
-        "raw_record": json.dumps(record, separators=(",", ":")),
-        "parse_error": None,
-        "source_file": "data.jsonl",
-        "line_no": line_no,
-    }
+from tests.cdm_data_loaders.pipelines.jsonlines.conftest import make_item
 
 
 def make_router(schema: dict[str, Any], buffer_size: int = 2) -> Callable[[list[dict[str, Any]]], Any]:
@@ -187,7 +177,7 @@ def test_make_page_router_fail_reports_exact_errors(
             "widget_rejected",
             [
                 {
-                    "source_file": "data.jsonl",
+                    "source_file": "file.jsonl",
                     "line_no": 7,
                     "raw_record": item["raw_record"],
                     "error_detail": json.dumps(messages),

@@ -1,5 +1,6 @@
 """Shared fixtures for jsonlines pipeline tests."""
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,26 @@ from typing import Any
 import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlExtractSettings, JsonlPydanticIngestSettings
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+
+
+def make_item(
+    record: object = None,
+    line_no: int = 1,
+    raw_record: str | None = None,
+    parse_error: str | None = None,
+    source_file: str = "file.jsonl",
+) -> dict[str, Any]:
+    """Build a line record matching stream_jsonl_lines' output shape."""
+    if raw_record is None:
+        raw_record = "" if parse_error is not None and record is None else json.dumps(record, separators=(",", ":"))
+    return {
+        "record": record,
+        "raw_record": raw_record,
+        "parse_error": parse_error,
+        "source_file": source_file,
+        "line_no": line_no,
+    }
 
 
 @pytest.fixture
@@ -16,25 +37,14 @@ def settings_factory(
     """Return a factory that builds a valid JsonlPydanticIngestSettings, with fields open to override."""
 
     def _factory(**overrides: Any) -> JsonlPydanticIngestSettings:  # noqa: ANN401
-        log_config_file = tmp_path / "logging.conf"
-        log_config_file.touch()
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
-
-        kwargs: dict[str, Any] = {
+        defaults: dict[str, Any] = {
             "dataset_name": "test_dataset",
             "dlt_dev_mode": True,
             "entity_models_module": entity_models_module,
-            "input_dir": str(input_dir),
-            "log_config_file": str(log_config_file),
-            "output_dir": str(output_dir),
             "use_destination": dlt_destination_config,
-            "use_output_dir_for_pipeline_metadata": False,
         }
-        kwargs.update(overrides)
-        return JsonlPydanticIngestSettings(**kwargs)
+        defaults.update(overrides)
+        return make_cts_settings(JsonlPydanticIngestSettings, tmp_path, **defaults)
 
     return _factory
 
@@ -44,24 +54,13 @@ def extract_settings_factory(tmp_path: Path, dlt_destination_config: str) -> Cal
     """Return a factory that builds a valid JsonlExtractSettings, with fields open to override."""
 
     def _factory(**overrides: Any) -> JsonlExtractSettings:  # noqa: ANN401
-        log_config_file = tmp_path / "logging.conf"
-        log_config_file.touch()
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
-
-        kwargs: dict[str, Any] = {
+        defaults: dict[str, Any] = {
             "dataset_name": "test_dataset",
             "dlt_dev_mode": True,
-            "input_dir": str(input_dir),
-            "log_config_file": str(log_config_file),
-            "output_dir": str(output_dir),
             "table_name": "widget",
             "use_destination": dlt_destination_config,
-            "use_output_dir_for_pipeline_metadata": False,
         }
-        kwargs.update(overrides)
-        return JsonlExtractSettings(**kwargs)
+        defaults.update(overrides)
+        return make_cts_settings(JsonlExtractSettings, tmp_path, **defaults)
 
     return _factory

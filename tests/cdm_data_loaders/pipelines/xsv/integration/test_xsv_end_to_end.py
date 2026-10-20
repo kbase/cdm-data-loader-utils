@@ -11,7 +11,7 @@ from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSett
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
-from tests.cdm_data_loaders.pipelines.xsv.integration.conftest import (
+from tests.cdm_data_loaders.pipelines.xsv.conftest import (
     ALL_RAGGED_ROWS,
     COLUMNS,
     DEFAULT_XSV_SCHEMA,

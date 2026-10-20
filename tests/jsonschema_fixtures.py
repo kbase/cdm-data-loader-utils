@@ -12,6 +12,7 @@ import dlt
 import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlJsonschemaIngestSettings
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 
 
 @pytest.fixture
@@ -59,27 +60,20 @@ def schema_settings_factory(
 
     def _factory(**overrides: object) -> JsonlJsonschemaIngestSettings:
         run_index = next(run_counter)
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
         output_dir = tmp_path / f"output_{run_index}"
         output_dir.mkdir()
-        log_config_file = tmp_path / "logging.json"
-        log_config_file.write_text('{"version": 1, "disable_existing_loggers": false}', encoding="utf-8")
-        kwargs = {
-            "input_dir": str(input_dir),
+        defaults: dict[str, Any] = {
             "output_dir": str(output_dir),
-            "log_config_file": str(log_config_file),
             "use_destination": dlt_destination_config,
             "use_output_dir_for_pipeline_metadata": True,
-            "dlt_dev_mode": False,
             "dataset_name": "schema_test",
             "file_glob": "*.jsonl*",
             "loader_file_format": "parquet",
             "buffer_size": 2,
             "schema_files_module": schema_module,
         }
-        kwargs.update(overrides)
-        settings = JsonlJsonschemaIngestSettings(**kwargs)
+        defaults.update(overrides)
+        settings = make_cts_settings(JsonlJsonschemaIngestSettings, tmp_path, **defaults)
         dlt.config["destination.local_fs.bucket_url"] = str(settings.output_dir)
         return settings
 

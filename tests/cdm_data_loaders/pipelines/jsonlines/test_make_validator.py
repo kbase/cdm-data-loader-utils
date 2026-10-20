@@ -9,23 +9,7 @@ from dlt.extract.items import DataItemWithMeta, TableNameMeta
 from pydantic import ValidationError
 
 from cdm_data_loaders.pipelines.jsonlines.base import make_page_router
-
-
-def make_item(
-    record: dict[str, Any] | None = None,
-    raw_record: str = "",
-    parse_error: str | None = None,
-    source_file: str = "file.jsonl",
-    line_no: int = 1,
-) -> dict[str, Any]:
-    """Build a line record matching stream_jsonl_lines' output shape."""
-    return {
-        "record": record,
-        "raw_record": raw_record,
-        "parse_error": parse_error,
-        "source_file": source_file,
-        "line_no": line_no,
-    }
+from tests.cdm_data_loaders.pipelines.jsonlines.conftest import make_item
 
 
 def run_validator(validator: Callable[[list[dict[str, Any]]], Any], item: dict[str, Any]) -> list[DataItemWithMeta]:

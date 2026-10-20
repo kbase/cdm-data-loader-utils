@@ -63,12 +63,6 @@ def make_cts_settings(**kwargs: str | int | bool | Path) -> CtsSettings:
 
 
 @pytest.fixture
-def bucket_dir(tmp_path: Path, dlt_destination_config: str) -> Path:  # noqa: ARG001
-    """The bucket_url of the local_fs destination in dlt.config, where run_pipeline loads data."""
-    return tmp_path / "bucket"
-
-
-@pytest.fixture
 def dlt_test_settings(tmp_path: Path, dlt_destination_config: str) -> CtsSettings:
     """Settings that load into the local_fs destination and keep pipeline metadata in a separate output_dir."""
     input_dir = tmp_path / "input"
@@ -476,13 +470,13 @@ def test_run_pipeline_no_slack_env_var_when_vars_missing(
 
 
 # run_pipeline tests
-def test_run_pipeline_minimal(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_minimal(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """A tiny pipeline loads its records into the destination bucket, not into output_dir."""
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
-    assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
+    assert read_output_jsonl_records(destination_bucket) == TINY_RESOURCE_DATA
     assert read_jsonl_rows(Path(dlt_test_settings.output_dir), TINY_TABLE_NAME) == []
 
 
@@ -605,7 +599,7 @@ def test_run_pipeline_pipelines_dir_used_for_pipeline_metadata(dlt_test_settings
     assert any(p.name == "state.json" for p in pipeline_state_files)
 
 
-def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """dev_mode=True is forwarded to dlt.pipeline(); the pipeline loads into a suffixed dataset."""
     settings = dlt_test_settings.model_copy(update={"dlt_dev_mode": True})
 
@@ -616,7 +610,7 @@ def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: 
     # dataset_name is `dlt_pipeline_dataset_\d+`, where \d+ is YYYYMMDDHHMMSS
     assert load_info.dataset_name.startswith(f"{load_info.pipeline.pipeline_name}_dataset_")
     assert load_info.dataset_name != f"{load_info.pipeline.pipeline_name}_dataset"
-    assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
+    assert read_output_jsonl_records(destination_bucket) == TINY_RESOURCE_DATA
 
 
 @pytest.mark.parametrize(
@@ -630,7 +624,7 @@ def test_run_pipeline_dev_mode_true_loads_into_fresh_dataset(dlt_test_settings: 
 )
 def test_run_pipeline_passes_kwargs_to_real_pipeline(
     dlt_test_settings: CtsSettings,
-    bucket_dir: Path,
+    destination_bucket: Path,
     pipeline_kwargs: dict[str, Any],
     pipeline_run_kwargs: dict[str, Any],
 ) -> None:
@@ -647,17 +641,17 @@ def test_run_pipeline_passes_kwargs_to_real_pipeline(
     if pipeline_kwargs:
         assert load_info.pipeline.pipeline_name == TINY_PIPELINE_NAME
         assert load_info.dataset_name == "core_test_dataset"
-    assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
+    assert read_output_jsonl_records(destination_bucket) == TINY_RESOURCE_DATA
 
 
 # load_info saved as part of the dataset
-def test_run_pipeline_saves_load_info_to_dataset(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_saves_load_info_to_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """The pipeline's load_info is saved as a table in the same dataset."""
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 1
     row = rows[0]
     assert row["dataset_name"] == load_info.dataset_name
@@ -669,26 +663,26 @@ def test_run_pipeline_saves_load_info_to_dataset(dlt_test_settings: CtsSettings,
     assert set(row["pipeline"]) == {"pipeline_name"}
 
 
-def test_run_pipeline_load_info_saved_to_same_dataset(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_load_info_saved_to_same_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """The load info table lands in the same dataset directory as the resource tables."""
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
-    dataset_dir = bucket_dir / load_info.dataset_name
+    dataset_dir = destination_bucket / load_info.dataset_name
     assert (dataset_dir / TINY_TABLE_NAME).is_dir()
     assert (dataset_dir / LOAD_INFO_TABLE_NAME).is_dir()
-    assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
-    assert read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    assert read_output_jsonl_records(destination_bucket) == TINY_RESOURCE_DATA
+    assert read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
 
 
-def test_run_pipeline_load_info_flat_structure(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_load_info_flat_structure(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """max_table_nesting=0 keeps nested structures as json columns; no child tables."""
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
-    dataset_dir = bucket_dir / load_info.dataset_name
+    dataset_dir = destination_bucket / load_info.dataset_name
     assert list(dataset_dir.glob("_dlt_load_info__*")) == []
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 1
     row = rows[0]
     for nested in ("load_packages", "outputs", "job_metrics"):
@@ -697,7 +691,7 @@ def test_run_pipeline_load_info_flat_structure(dlt_test_settings: CtsSettings, b
         assert all(isinstance(item, dict) for item in row[nested])
 
 
-def test_run_pipeline_load_info_runs_accumulate(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_load_info_runs_accumulate(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """Each pipeline run appends its own load_info row; earlier rows are preserved."""
     first = run_pipeline(dlt_test_settings, tiny_resource())
     assert first is not None
@@ -705,30 +699,30 @@ def test_run_pipeline_load_info_runs_accumulate(dlt_test_settings: CtsSettings, 
     second = run_pipeline(dlt_test_settings, tiny_resource())
     assert second is not None
 
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 2
     saved_load_ids = {tuple(row["loads_ids"]) for row in rows}
     assert len(saved_load_ids) == 2
     # each accumulated row references one of the entity data loads
-    tiny_load_ids = {row["_dlt_load_id"] for row in read_jsonl_rows(bucket_dir, TINY_TABLE_NAME)}
+    tiny_load_ids = {row["_dlt_load_id"] for row in read_jsonl_rows(destination_bucket, TINY_TABLE_NAME)}
     assert saved_load_ids == {(load_id,) for load_id in tiny_load_ids}
 
 
-def test_run_pipeline_load_info_in_dev_mode(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_load_info_in_dev_mode(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """dev_mode runs save the load_info into the same suffixed dataset as the resource data."""
     settings = dlt_test_settings.model_copy(update={"dlt_dev_mode": True})
     load_info = run_pipeline(settings, tiny_resource())
 
     assert load_info is not None
     assert load_info.dataset_name != "dlt_pipeline_dataset"
-    dataset_dir = bucket_dir / load_info.dataset_name
+    dataset_dir = destination_bucket / load_info.dataset_name
     assert (dataset_dir / TINY_TABLE_NAME).is_dir()
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 1
     assert rows[0]["dataset_name"] == load_info.dataset_name
 
 
-def test_run_pipeline_load_info_named_pipeline_and_dataset(dlt_test_settings: CtsSettings, bucket_dir: Path) -> None:
+def test_run_pipeline_load_info_named_pipeline_and_dataset(dlt_test_settings: CtsSettings, destination_bucket: Path) -> None:
     """A named pipeline/dataset save lands in the named dataset with a load_info row."""
     load_info = run_pipeline(
         dlt_test_settings,
@@ -737,22 +731,22 @@ def test_run_pipeline_load_info_named_pipeline_and_dataset(dlt_test_settings: Ct
     )
 
     assert load_info is not None
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 1
     assert rows[0]["dataset_name"] == "core_test_dataset"
     assert rows[0]["pipeline"] == {"pipeline_name": TINY_PIPELINE_NAME}
-    assert (bucket_dir / "core_test_dataset" / LOAD_INFO_TABLE_NAME).is_dir()
+    assert (destination_bucket / "core_test_dataset" / LOAD_INFO_TABLE_NAME).is_dir()
 
 
 def test_run_pipeline_load_info_returns_original_import_result(
-    dlt_test_settings: CtsSettings, bucket_dir: Path
+    dlt_test_settings: CtsSettings, destination_bucket: Path
 ) -> None:
     """run_pipeline returns the original resource load; the saved row references it, not the save load."""
     load_info = run_pipeline(dlt_test_settings, tiny_resource())
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
-    rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(rows) == 1
     # loads_ids is the original payload; _dlt_load_id is the save run's own load id
     assert rows[0]["loads_ids"] != [rows[0]["_dlt_load_id"]]
@@ -762,7 +756,7 @@ def test_run_pipeline_load_info_returns_original_import_result(
 
 def test_run_pipeline_load_info_save_resource_error_still_returns_load_info(
     dlt_test_settings: CtsSettings,
-    bucket_dir: Path,
+    destination_bucket: Path,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -781,8 +775,8 @@ def test_run_pipeline_load_info_save_resource_error_still_returns_load_info(
 
     assert load_info is not None
     assert not load_info.has_failed_jobs
-    assert read_output_jsonl_records(bucket_dir) == TINY_RESOURCE_DATA
-    assert read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME) == []
+    assert read_output_jsonl_records(destination_bucket) == TINY_RESOURCE_DATA
+    assert read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME) == []
     error_messages = [record.getMessage() for record in caplog.records if record.levelno == logging.ERROR]
     assert error_messages == [f"{LOAD_INFO_SAVE_FAILED}load info save failed"]
     assert ALL_JOBS_COMPLETED in caplog.messages
@@ -1026,7 +1020,7 @@ def test_run_pipeline_pass_failed_jobs_reported(
 
 def test_run_pipeline_pass_partial_load_worker_failure_filesystem(
     dlt_test_settings: CtsSettings,
-    bucket_dir: Path,
+    destination_bucket: Path,
     monkeypatch: pytest.MonkeyPatch,
     slack_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
@@ -1060,15 +1054,15 @@ def test_run_pipeline_pass_partial_load_worker_failure_filesystem(
     ]
 
     # The record from the succeeding worker thread is in the tiny table; the failed worker's record is missing
-    assert read_output_jsonl_records(bucket_dir) == [TINY_RESOURCE_DATA[0]]
+    assert read_output_jsonl_records(destination_bucket) == [TINY_RESOURCE_DATA[0]]
 
     # Both the partially-failed data load and the _load_info metadata load are recorded in _dlt_loads as status 0
-    dlt_loads = read_jsonl_rows(bucket_dir, "_dlt_loads")
+    dlt_loads = read_jsonl_rows(destination_bucket, "_dlt_loads")
     assert [row["status"] for row in dlt_loads] == [0, 0]
-    assert len(read_jsonl_rows(bucket_dir, "_dlt_pipeline_state")) == 1
+    assert len(read_jsonl_rows(destination_bucket, "_dlt_pipeline_state")) == 1
 
     # _load_info is saved to the filesystem destination and records both completed and failed worker jobs
-    load_info_rows = read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME)
+    load_info_rows = read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME)
     assert len(load_info_rows) == 1
     package = load_info_rows[0]["load_packages"][0]
     assert package["state"] == "loaded"
@@ -1109,7 +1103,7 @@ def test_run_pipeline_pass_partial_load_worker_failure_filesystem(
 
 def test_run_pipeline_fail_partial_extract_worker_failure_filesystem(
     dlt_test_settings: CtsSettings,
-    bucket_dir: Path,
+    destination_bucket: Path,
     monkeypatch: pytest.MonkeyPatch,
     slack_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
@@ -1136,9 +1130,9 @@ def test_run_pipeline_fail_partial_extract_worker_failure_filesystem(
     )
 
     assert load_info is None
-    assert list(bucket_dir.iterdir()) == []
-    assert read_jsonl_rows(bucket_dir, TINY_TABLE_NAME) == []
-    assert read_jsonl_rows(bucket_dir, LOAD_INFO_TABLE_NAME) == []
+    assert list(destination_bucket.iterdir()) == []
+    assert read_jsonl_rows(destination_bucket, TINY_TABLE_NAME) == []
+    assert read_jsonl_rows(destination_bucket, LOAD_INFO_TABLE_NAME) == []
     assert caplog.records[-1].levelno == logging.ERROR
     assert caplog.records[-1].getMessage().startswith("Pipeline failed: ")
     assert SINK_ERROR in caplog.records[-1].getMessage()

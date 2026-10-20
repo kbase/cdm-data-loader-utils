@@ -25,6 +25,7 @@ from cdm_data_loaders.pipelines.jsonlines.settings import (
     JsonlJsonschemaIngestSettings,
     JsonlPydanticIngestSettings,
 )
+from tests.cdm_data_loaders.pipelines.helpers import duckdb_reference_from_jsonl, make_cts_settings
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models import ENTITY_MODELS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas import ENTITY_SCHEMAS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
@@ -81,7 +82,7 @@ def run_reference_pipeline(
     }
     runner = isolated_run_factory(dataset_prefix=dataset_prefix, run_fn=run_fn, base_kwargs=base_kwargs)
 
-    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:
+    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:  # noqa: ANN401
         kwargs = {"input_dir": str(reference_data_dir / chunk_dir), **overrides}
         return runner(**kwargs)
 
@@ -147,16 +148,8 @@ def reference_dataset(reference_jsonl: Path) -> Generator[duckdb.DuckDBPyConnect
 
     read_json_auto infers native STRUCT/STRUCT[] types for the nested content.
     """
-    connection = duckdb.connect()
-    jsonl_path = str(reference_jsonl)
-    connection.execute(
-        "CREATE TABLE reference AS SELECT * FROM read_json_auto(?, sample_size=200)",
-        [jsonl_path],
-    )
-    try:
-        yield connection
-    finally:
-        connection.close()
+    with duckdb_reference_from_jsonl(reference_jsonl) as conn:
+        yield conn
 
 
 @pytest.fixture
@@ -177,26 +170,15 @@ def settings_factory(
 ) -> Callable[..., JsonlPydanticIngestSettings]:
     """Return a factory that builds a valid JsonlPydanticIngestSettings, with fields open to override."""
 
-    def _factory(**overrides: Any) -> JsonlPydanticIngestSettings:
-        log_config_file = tmp_path / "logging.json"
-        log_config_file.write_text('{"version": 1}')
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
-
-        kwargs: dict[str, Any] = {
+    def _factory(**overrides: Any) -> JsonlPydanticIngestSettings:  # noqa: ANN401
+        defaults: dict[str, Any] = {
             "dataset_name": "test_dataset",
             "dlt_dev_mode": False,
             "entity_models_module": entity_models_module,
-            "input_dir": str(input_dir),
-            "log_config_file": str(log_config_file),
-            "output_dir": str(output_dir),
             "use_destination": dlt_destination_config,
-            "use_output_dir_for_pipeline_metadata": False,
         }
-        kwargs.update(overrides)
-        return JsonlPydanticIngestSettings(**kwargs)
+        defaults.update(overrides)
+        return make_cts_settings(JsonlPydanticIngestSettings, tmp_path, **defaults)
 
     return _factory
 

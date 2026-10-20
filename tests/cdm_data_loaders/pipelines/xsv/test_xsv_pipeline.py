@@ -26,8 +26,7 @@ from cdm_data_loaders.pipelines.xsv.pipeline import (
     run_xsv_pipeline,
 )
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
-
-VALID_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
+from tests.cdm_data_loaders.pipelines.xsv.conftest import VALID_SCHEMA_URI
 
 SIMPLE_SCHEMA: dict[str, Any] = {
     "$schema": VALID_SCHEMA_URI,

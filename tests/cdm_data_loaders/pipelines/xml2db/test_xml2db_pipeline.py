@@ -20,6 +20,7 @@ from cdm_data_loaders.pipelines.xml2db.pipeline import _read_items, cli, run_xml
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 
 SIMPLE_LIBRARY_XML = """<?xml version="1.0"?>
 <library>
@@ -82,28 +83,13 @@ def fake_settings(
     **overrides: Any,  # noqa: ANN401
 ) -> Xml2DbSettings:
     """Build a valid Xml2DbSettings with fields open to override."""
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}', encoding="utf-8")
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(exist_ok=True)
-    output_dir = tmp_path / "output"
-    output_dir.mkdir(exist_ok=True)
-
-    kwargs: dict[str, Any] = {
-        "buffer_size": 100,
-        "log_interval": 1000,
+    defaults: dict[str, Any] = {
         "dataset_name": "xml2db_test_dataset",
         "loader_file_format": "parquet",
-        "log_config_file": str(log_config_file),
-        "input_dir": str(input_dir),
-        "output_dir": str(output_dir),
-        "dlt_dev_mode": False,
-        "use_destination": "local_fs",
-        "use_output_dir_for_pipeline_metadata": False,
         "xsd_file": str(xsd_file),
     }
-    kwargs.update(overrides)
-    return Xml2DbSettings(**kwargs)
+    defaults.update(overrides)
+    return make_cts_settings(Xml2DbSettings, tmp_path, **defaults)
 
 
 # _read_items

@@ -1,71 +1,14 @@
 """Tests for XsvIngestSettings field validation, schema loading, and derived properties."""
 
-import json
 from collections.abc import Callable
-from pathlib import Path
-from typing import Any, Final
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from cdm_data_loaders.core.fields import DEFAULTS
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
-
-VALID_SCHEMA_URI: Final[str] = "https://json-schema.org/draft/2020-12/schema"
-COLUMNS: Final[list[str]] = ["number", "date", "float", "boolean", "string"]
-
-VALID_SCHEMA: Final[dict[str, Any]] = {
-    "$schema": VALID_SCHEMA_URI,
-    "title": "test schema",
-    "type": "object",
-    "required": COLUMNS,
-    "properties": {
-        "number": {"type": "integer"},
-        "date": {"type": "string"},
-        "float": {"type": ["string", "null"]},
-        "boolean": {"type": "boolean"},
-        "string": {"type": "string"},
-    },
-}
-
-MINIMAL_SETTINGS_KWARGS: dict[str, object] = {
-    "buffer_size": 100,
-    "log_interval": 1000,
-    "dataset_name": "xsv_test_dataset",
-    "loader_file_format": "parquet",
-    "table_name": "my_table",
-    "log_config_file": None,
-    "dlt_dev_mode": False,
-    "use_destination": "local_fs",
-    "use_output_dir_for_pipeline_metadata": False,
-}
-
-
-@pytest.fixture
-def settings_factory(tmp_path: Path) -> Callable[..., XsvIngestSettings]:
-    """Return a factory that builds a valid XsvIngestSettings, with fields open to override."""
-
-    def _factory(schema: dict[str, Any] | None = VALID_SCHEMA, **overrides: object) -> XsvIngestSettings:
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
-
-        if schema is not None:
-            (input_dir / "schema.json").write_text(json.dumps(schema))
-
-        kwargs: dict[str, object] = {
-            **MINIMAL_SETTINGS_KWARGS,
-            "input_dir": str(input_dir),
-            "output_dir": str(output_dir),
-            "file_glob": DEFAULTS["file_glob"],
-            "schema_file": str(input_dir / "schema.json"),
-        }
-        kwargs.update(overrides)
-        return XsvIngestSettings(**kwargs)
-
-    return _factory
-
+from tests.cdm_data_loaders.pipelines.xsv.conftest import COLUMNS, DEFAULT_XSV_SCHEMA, VALID_SCHEMA_URI
 
 """defaults and basic construction"""
 
@@ -149,7 +92,8 @@ def test_xsv_settings_pass_parsing_config_empty_without_xsv_config_block(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """parsing_config is empty when the schema carries no x-xsv-config block."""
-    settings = settings_factory()
+    schema_without_config = {k: v for k, v in DEFAULT_XSV_SCHEMA.items() if k != "x-xsv-config"}
+    settings = settings_factory(schema=schema_without_config)
     assert settings.parsing_config == {}
 
 
@@ -157,8 +101,7 @@ def test_xsv_settings_pass_parsing_config_resolved_from_xsv_config_block(
     settings_factory: Callable[..., XsvIngestSettings],
 ) -> None:
     """parsing_config resolves qsv kwargs from the schema's x-xsv-config block."""
-    schema_with_config = {**VALID_SCHEMA, "x-xsv-config": {"x-delimiter": ",", "x-has-header": True}}
-    settings = settings_factory(schema=schema_with_config)
+    settings = settings_factory()
     assert settings.parsing_config == {"delimiter": ",", "missing_header": False}
 
 
