@@ -93,7 +93,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict",
+        PIPELINE_NAME,
         "--input-dir",
         str(input_dir),
         "--output-dir",
@@ -158,7 +158,7 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict",
+        PIPELINE_NAME,
         "--input-dir",
         str(input_dir),
         "--output-dir",
@@ -223,7 +223,7 @@ def test_cli_fail_missing_required_args_raise(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "xmltodict",
+        PIPELINE_NAME,
         "--input-dir",
         str(tmp_path / "input"),
         "--output-dir",

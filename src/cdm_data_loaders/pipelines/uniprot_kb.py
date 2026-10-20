@@ -21,7 +21,7 @@ from cdm_data_loaders.pipelines.core import (
 )
 from cdm_data_loaders.readers.xml import build_xml_file_resource
 
-PIPELINE_NAME: Final[str] = "uniprot_kb"
+PIPELINE_NAME: Final[str] = "uniprot"
 UNIPROT_LOG_INTERVAL: Final[int] = 1000
 
 
@@ -29,7 +29,7 @@ class UniProtSettings(CtsSettings):
     """Configuration for running the UniProt KB import pipeline."""
 
     model_config: SettingsConfigDict = default_settings_with_shortcuts(
-        cli_prog_name="uniprot", cli_shortcuts=CLI_SHORTCUTS
+        cli_prog_name=PIPELINE_NAME, cli_shortcuts=CLI_SHORTCUTS
     )
 
     log_interval: Annotated[

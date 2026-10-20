@@ -33,8 +33,8 @@ def test_run_uniprot_pipeline_args_set_correctly(test_settings: UniProtSettings)
     _, kwargs = mock_run_pipeline.call_args
     assert kwargs.keys() == {"settings", "resource", "pipeline_kwargs"}
     assert kwargs["pipeline_kwargs"] == {
-        "pipeline_name": "uniprot_kb",
-        "dataset_name": "uniprot_kb",
+        "pipeline_name": "uniprot",
+        "dataset_name": "uniprot",
     }
     assert kwargs["settings"] == test_settings
     assert isinstance(kwargs["resource"], Callable)
@@ -57,8 +57,8 @@ def test_run_uniprot_pipeline_sets_core_run_pipeline_args_correctly(
 
     mock_dlt.destination.assert_called_once_with(test_settings.use_destination)
     mock_dlt.pipeline.assert_called_once_with(
-        pipeline_name="uniprot_kb",
-        dataset_name="uniprot_kb",
+        pipeline_name="uniprot",
+        dataset_name="uniprot",
     )
     assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
     first_run, load_info_save_run = mock_dlt.pipeline.return_value.run.call_args_list

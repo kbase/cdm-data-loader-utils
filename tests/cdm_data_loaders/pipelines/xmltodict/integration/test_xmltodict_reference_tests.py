@@ -17,6 +17,7 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     read_pipeline_tables,
     reconstruct_entries,
     reference_entries_from_duckdb,
+    run_and_compare_variations,
     run_and_read,
     sorted_json,
 )
@@ -58,15 +59,13 @@ def test_xml_pass_reference_dataset_has_nested_structures(
 
 def test_xml_pass_diff_format_same_results(run_xmltodict_pipeline_fxt: Callable[..., Any]) -> None:
     """Ensure that the save format does not affect the output."""
-    load_info_and_dir = {
-        str(output_format): run_and_read(
-            run_xmltodict_pipeline_fxt,
-            "chunk_20_el",
-            loader_file_format=output_format,
-        )
-        for output_format in LOADER_FILE_FORMATS
-    }
-    assert_datasets_equal(load_info_and_dir)
+    run_and_compare_variations(
+        run_xmltodict_pipeline_fxt,
+        {
+            str(output_format): ("chunk_20_el", {"loader_file_format": output_format})
+            for output_format in LOADER_FILE_FORMATS
+        },
+    )
 
 
 @pytest.mark.xfail(reason="not yet implemented")
@@ -104,15 +103,12 @@ def test_xml_pass_output_identical_across_chunk_dirs(
     run_xmltodict_pipeline_fxt: Callable[..., Any], sorted_reference_xml_entries: list[str], loader_file_format: str
 ) -> None:
     """Pipeline output is identical across all three chunk dirs and matches the reference."""
-    load_info_and_dir = {
-        f"{key}_{loader_file_format}": run_and_read(
-            run_xmltodict_pipeline_fxt, key, loader_file_format=loader_file_format
-        )
-        for key in CHUNK_DIRS
-    }
-
-    assert_datasets_equal(load_info_and_dir)
-    assert_dataset_matches_reference(load_info_and_dir, sorted_reference_xml_entries, loader_file_format)
+    run_and_compare_variations(
+        run_xmltodict_pipeline_fxt,
+        {f"{key}_{loader_file_format}": (key, {"loader_file_format": loader_file_format}) for key in CHUNK_DIRS},
+        sorted_reference_json=sorted_reference_xml_entries,
+        output_format=loader_file_format,
+    )
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS)
@@ -121,14 +117,18 @@ def test_xml_pass_output_identical_across_buffer_sizes(
 ) -> None:
     """List buffer size does not affect pipeline output for any chunk dir."""
     for chunk_dir in CHUNK_DIRS:
-        load_info_and_dir = {
-            f"{buffer_size}_{loader_file_format}": run_and_read(
-                run_xmltodict_pipeline_fxt, chunk_dir, buffer_size=buffer_size, loader_file_format=loader_file_format
-            )
-            for buffer_size in BUFFER_SIZES
-        }
-        assert_datasets_equal(load_info_and_dir)
-        assert_dataset_matches_reference(load_info_and_dir, sorted_reference_xml_entries, loader_file_format)
+        run_and_compare_variations(
+            run_xmltodict_pipeline_fxt,
+            {
+                f"{buffer_size}_{loader_file_format}": (
+                    chunk_dir,
+                    {"buffer_size": buffer_size, "loader_file_format": loader_file_format},
+                )
+                for buffer_size in BUFFER_SIZES
+            },
+            sorted_reference_json=sorted_reference_xml_entries,
+            output_format=loader_file_format,
+        )
 
 
 @pytest.mark.parametrize(

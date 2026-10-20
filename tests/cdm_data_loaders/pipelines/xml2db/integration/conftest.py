@@ -10,10 +10,8 @@ from frozendict import frozendict
 
 from cdm_data_loaders.pipelines.xml2db.pipeline import run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import Xml2DbSettings
-from tests.conftest import (
-    REFERENCE_XML_FIXTURE_DIR,
-    REFERENCE_XSD,
-)
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.conftest import REFERENCE_XSD
 from tests.xml_samples import LIBRARY_XSD
 
 DEFAULT_XML2DB_SETTINGS: frozendict = frozendict(
@@ -36,49 +34,25 @@ def library_xsd(tmp_path: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
-def reference_xml_data_dir() -> Path:
-    """Path to the uniref fixture directory (shared with the xmltodict reference tests)."""
-    return REFERENCE_XML_FIXTURE_DIR
-
-
-@pytest.fixture(scope="session")
 def reference_xsd() -> Path:
     """Path to the uniref.xsd schema."""
     return REFERENCE_XSD
-
-
-def make_settings(
-    tmp_path: Path, dlt_destination_config: str, xsd_file: str | Path, **overrides: Any
-) -> dict[str, Any]:
-    """Build a valid xml2db settings dict, with fields open to override."""
-    log_config_file = overrides.get("log_config_file", tmp_path / "logging.conf")
-    log_config_file.touch()
-    output_dir = overrides.get("output_dir", tmp_path / "bucket")
-    output_dir.mkdir(exist_ok=True)
-    input_dir = overrides.get("input_dir", tmp_path / "input")
-
-    kwargs: dict[str, Any] = {
-        **DEFAULT_XML2DB_SETTINGS,
-        "dataset_name": "xml2db_test_dataset",
-        "input_dir": str(input_dir),
-        "log_config_file": str(log_config_file),
-        "output_dir": str(output_dir),
-        "use_destination": dlt_destination_config,
-        "xsd_file": str(xsd_file),
-    }
-    kwargs.update(overrides)
-    return kwargs
 
 
 @pytest.fixture
 def settings_factory(tmp_path: Path, dlt_destination_config: str, library_xsd: Path) -> Callable[..., Xml2DbSettings]:
     """Return a factory that builds a valid Xml2DbSettings using the library.xsd schema."""
 
-    def _factory(**overrides: Any) -> Xml2DbSettings:
-        settings_dict = make_settings(tmp_path, dlt_destination_config, xsd_file=library_xsd, **overrides)
-        input_dir = Path(settings_dict["input_dir"])
-        input_dir.mkdir(exist_ok=True)
-        return Xml2DbSettings(**settings_dict)
+    def _factory(**overrides: Any) -> Xml2DbSettings:  # noqa: ANN401
+        defaults: dict[str, Any] = {
+            **DEFAULT_XML2DB_SETTINGS,
+            "dataset_name": "xml2db_test_dataset",
+            "output_dir": str(tmp_path / "bucket"),
+            "use_destination": dlt_destination_config,
+            "xsd_file": str(library_xsd),
+        }
+        defaults.update(overrides)
+        return make_cts_settings(Xml2DbSettings, tmp_path, **defaults)
 
     return _factory
 
@@ -114,7 +88,7 @@ def run_xml2db_pipeline_fxt(
         },
     )
 
-    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:
+    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:  # noqa: ANN401
         return run(input_dir=str(reference_xml_data_dir / chunk_dir), **overrides)
 
     return _factory

@@ -2,21 +2,18 @@
 
 import gzip
 import json
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import (
-    cli,
-    run_jsonlines_pipeline,
-)
 from cdm_data_loaders.pipelines.jsonlines.settings import JSONSCHEMA_PIPELINE_NAME, JsonlJsonschemaIngestSettings
+from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
     assert_pipeline_report_written,
+    assert_run_ok,
     parse_json_string,
     read_data_rows,
 )
@@ -61,16 +58,14 @@ def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
     loader_file_format: str,
     buffer_size: int,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Mixed files load every row exactly once with intact nested data and rejection provenance."""
     settings = schema_settings_factory(
         input_dir=str(schema_input_dir), loader_file_format=loader_file_format, buffer_size=buffer_size
     )
 
-    load_info = run_jsonlines_pipeline(settings)
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings))
     assert load_info.pipeline.pipeline_name == JSONSCHEMA_PIPELINE_NAME
     assert load_info.dataset_name == "schema_test"
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
@@ -104,7 +99,9 @@ def test_run_jsonlines_pipeline_pass_persists_valid_and_rejected_rows(
 
 
 def test_run_jsonlines_pipeline_pass_all_invalid(
-    schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings], loader_file_format: str
+    schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
+    loader_file_format: str,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """An entirely invalid entity still produces its complete rejection table."""
     settings = schema_settings_factory(loader_file_format=loader_file_format, buffer_size=1)
@@ -112,10 +109,7 @@ def test_run_jsonlines_pipeline_pass_all_invalid(
     table_dir.mkdir()
     (table_dir / "invalid.jsonl").write_text(f"{MALFORMED_RAW}\n{TYPE_ERROR_RAW}", encoding="utf-8")
 
-    load_info = run_jsonlines_pipeline(settings)
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(JSONSCHEMA_PIPELINE_NAME, settings=settings))
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {
         "widget_rejected": [
@@ -134,40 +128,36 @@ def test_cli_pass_loads_selected_entity(
     schema_input_dir: Path,
     schema_settings_factory: Callable[..., JsonlJsonschemaIngestSettings],
     loader_file_format: str,
-    monkeypatch: pytest.MonkeyPatch,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """The real CTS CLI accepts a registry shortcut, table selection, and the requested file format."""
     settings = schema_settings_factory(input_dir=str(schema_input_dir), loader_file_format=loader_file_format)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
+
+    load_info = assert_run_ok(
+        pipeline_runner.run(
             JSONSCHEMA_PIPELINE_NAME,
-            "--input-dir",
-            str(settings.input_dir),
-            "--output-dir",
-            str(settings.output_dir),
-            "--log-config-file",
-            str(settings.log_config_file),
-            "--use-destination",
-            str(settings.use_destination),
-            "--use-output-dir-for-pipeline-metadata",
-            "true",
-            "--loader-file-format",
-            loader_file_format,
-            "--dataset-name",
-            "schema_cli",
-            "-m",
-            settings.schema_files_module,
-            "--table-names",
-            "gadget",
-        ],
+            cli_args=[
+                "--input-dir",
+                str(settings.input_dir),
+                "--output-dir",
+                str(settings.output_dir),
+                "--log-config-file",
+                str(settings.log_config_file),
+                "--use-destination",
+                str(settings.use_destination),
+                "--use-output-dir-for-pipeline-metadata",
+                "true",
+                "--loader-file-format",
+                loader_file_format,
+                "--dataset-name",
+                "schema_cli",
+                "-m",
+                settings.schema_files_module,
+                "--table-names",
+                "gadget",
+            ],
+        )
     )
-
-    load_info = cli.run()
-
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
     assert load_info.dataset_name == "schema_cli"
     assert_pipeline_report_written(Path(settings.output_dir), load_info, metadata_moved=True)
     assert read_data_tables(settings, load_info.dataset_name) == {"gadget": [GADGET_RECORD]}

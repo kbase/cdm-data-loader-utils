@@ -1,20 +1,26 @@
 """Error and boundary tests for all JSONL pipelines using assembly-report contracts."""
 
 import json
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline import cli as jsonschema_cli
-from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import cli as extract_cli
-from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline import cli as validate_cli
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, read_pipeline_tables, run_and_read
+from cdm_data_loaders.pipelines.jsonlines.settings import (
+    EXTRACT_PIPELINE_NAME,
+    JSONSCHEMA_PIPELINE_NAME,
+    PYDANTIC_PIPELINE_NAME,
+)
+from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
+from tests.cdm_data_loaders.pipelines.helpers import (
+    LOADER_FILE_FORMATS,
+    assert_run_ok,
+    read_pipeline_tables,
+    run_and_read,
+)
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
-    canonicalize_pipeline_entry,
-    canonicalize_reference_entry,
+    canonicalize_entry,
     reconstructed_entries,
 )
 
@@ -50,15 +56,14 @@ def test_jsonlines_fail_malformed_rows_preserve_provenance(
     )
     tables = read_pipeline_tables(output_dir / result.dataset_name, loader_file_format)
     actual = reconstructed_entries(tables, "dataset")
-    assert sorted(
-        json.dumps(canonicalize_pipeline_entry(entry), sort_keys=True, default=str) for entry in actual
-    ) == sorted(
-        json.dumps(canonicalize_reference_entry(prepare_reference(entry)), sort_keys=True, default=str)
-        for entry in entries
+    assert sorted(json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in actual) == sorted(
+        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str) for entry in entries
     )
-    suffix, error_key = ("invalid", "parse_error") if pipeline_kind == "extract" else ("rejected", "error_detail")
+    suffix, error_key = (
+        ("invalid", "parse_error") if pipeline_kind == EXTRACT_PIPELINE_NAME else ("rejected", "error_detail")
+    )
     rejected = sorted(tables[f"dataset_{suffix}"], key=lambda row: row["source_file"])
-    prefix = "dataset/" if pipeline_kind == "extract" else ""
+    prefix = "dataset/" if pipeline_kind == EXTRACT_PIPELINE_NAME else ""
     with pytest.raises(json.JSONDecodeError) as error_info:
         json.loads(malformed)
     expected_error = str(error_info.value)
@@ -116,8 +121,8 @@ def test_jsonlines_pass_duplicates_blanks_and_final_line_preserved(
         loader_file_format=loader_file_format,
     )
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
-    expected = canonicalize_reference_entry(prepare_reference(entry))
-    assert [canonicalize_pipeline_entry(row) for row in reconstructed_entries(tables)] == [expected, expected]
+    expected = canonicalize_entry(prepare_reference(entry))
+    assert [canonicalize_entry(row) for row in reconstructed_entries(tables)] == [expected, expected]
 
 
 def test_jsonlines_pass_multiple_entities_and_file_glob(
@@ -147,7 +152,7 @@ def test_jsonlines_pass_multiple_entities_and_file_glob(
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     expected_tables = (
         {"dataset": sorted(expected.values())}
-        if pipeline_kind == "extract"
+        if pipeline_kind == EXTRACT_PIPELINE_NAME
         else {table_name: [accession] for table_name, accession in expected.items()}
     )
     assert {
@@ -178,7 +183,7 @@ def test_jsonlines_pass_multiple_entities_and_file_glob(
         pytest.param("text", "model_type", [], "'text' is not of type 'object'", id="json-string"),
     ],
 )
-@pytest.mark.parametrize("pipeline_kind", ["extract_validate", "extract_jsonschema_validate"], ids=str)
+@pytest.mark.parametrize("pipeline_kind", [PYDANTIC_PIPELINE_NAME, JSONSCHEMA_PIPELINE_NAME], ids=str)
 def test_jsonlines_validation_fail_schema_invalid_rows_are_rejected(
     *,
     run_reference_pipeline: Callable[..., Any],
@@ -214,7 +219,7 @@ def test_jsonlines_validation_fail_schema_invalid_rows_are_rejected(
     assert (row["source_file"], row["line_no"]) == ("records.jsonl", 2)
     assert row["raw_record"] == raw_record
     errors = json.loads(row["error_detail"])
-    if pipeline_kind == "extract_validate":
+    if pipeline_kind == PYDANTIC_PIPELINE_NAME:
         assert reconstructed_entries(tables, "dataset_rejected")[0].get("record") == record
         assert len(errors) == 1
         assert errors[0]["type"] == error_type
@@ -224,7 +229,7 @@ def test_jsonlines_validation_fail_schema_invalid_rows_are_rejected(
         assert errors == [error_message]
 
 
-@pytest.mark.parametrize("pipeline_kind", ["extract_validate", "extract_jsonschema_validate"], ids=str)
+@pytest.mark.parametrize("pipeline_kind", [PYDANTIC_PIPELINE_NAME, JSONSCHEMA_PIPELINE_NAME], ids=str)
 def test_jsonlines_validation_pass_table_selection_skips_other_entities(
     *,
     run_reference_pipeline: Callable[..., Any],
@@ -260,7 +265,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     tmp_path: Path,
     loader_file_format: str,
     dlt_destination_config: str,
-    monkeypatch: pytest.MonkeyPatch,
+    pipeline_runner: PipelineTestRunner,
     sorted_reference_entities: list[str],
 ) -> None:
     """All real CLI entry points load the reference dataset from command-line settings."""
@@ -268,18 +273,18 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     log_config.write_text('{"version": 1}', encoding="utf-8")
     output_dir = tmp_path / "bucket"
     registry_flag, registry_module = {
-        "extract": ("table-name", "dataset"),
-        "extract_validate": (
+        EXTRACT_PIPELINE_NAME: ("table-name", "dataset"),
+        PYDANTIC_PIPELINE_NAME: (
             "entity-models-module",
             "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models",
         ),
-        "extract_jsonschema_validate": (
+        JSONSCHEMA_PIPELINE_NAME: (
             "schema-files-module",
             "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas",
         ),
     }[pipeline_kind]
     argv = [
-        "jsonlines",
+        pipeline_kind,
         "--input-dir",
         str(reference_data_dir / "chunk_52"),
         "--output-dir",
@@ -299,19 +304,11 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     ]
     if registry_flag:
         argv.extend([f"--{registry_flag}", registry_module])
-    monkeypatch.setattr(sys, "argv", argv)
-    cli = {
-        "extract": extract_cli,
-        "extract_validate": validate_cli,
-        "extract_jsonschema_validate": jsonschema_cli,
-    }[pipeline_kind]
-    load_info = cli.run()
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    load_info = assert_run_ok(pipeline_runner.run(pipeline_kind, cli_args=argv[1:]))
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     assert (
         sorted(
-            json.dumps(canonicalize_pipeline_entry(entry), sort_keys=True, default=str)
+            json.dumps(canonicalize_entry(entry), sort_keys=True, default=str)
             for entry in reconstructed_entries(tables)
         )
         == sorted_reference_entities

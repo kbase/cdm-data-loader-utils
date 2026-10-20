@@ -3,7 +3,8 @@
 import gzip
 import json
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from logging import Logger, getLogger
 from pathlib import Path
@@ -11,12 +12,16 @@ from typing import Any, Final
 
 import dlt
 import duckdb
+import pendulum
 import pyarrow.parquet as pq
 from dlt.common.pipeline import LoadInfo
+from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.destinations import filesystem
 
 from cdm_data_loaders.core.fields import PARQUET, LoaderFileFormatEnum
+from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.core import LOAD_INFO_TABLE_NAME
+from tests.conftest import LOCAL_FS
 
 logger: Logger = getLogger(__name__)
 
@@ -47,6 +52,25 @@ def is_metadata_table(table_name: str) -> bool:
     return table_name.startswith("_dlt") or table_name == LOAD_INFO_TABLE_NAME
 
 
+def read_jsonl_file(file_path: Path) -> list[dict[str, Any]]:
+    """Read a plain or gzipped JSONLines file, detecting gzip by magic bytes."""
+    with file_path.open("rb") as f:
+        is_gzipped = f.read(2) == b"\x1f\x8b"
+
+    opener = gzip.open if is_gzipped else open
+    rows: list[dict[str, Any]] = []
+    with opener(file_path, "rt", encoding="utf-8") as f:
+        for raw_line in f:
+            stripped = raw_line.strip()
+            if not stripped:
+                continue
+            try:
+                rows.append(json.loads(stripped))
+            except json.JSONDecodeError:
+                logger.warning("Skipping unparseable line in %s: %r", file_path, raw_line[:200])
+    return rows
+
+
 def read_parquet_tables(output_dir: Path) -> dict[str, list[dict[str, Any]]]:
     """Read all parquet files under a pipeline output dataset dir, grouped by table name."""
     tables: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -71,20 +95,86 @@ def read_pipeline_tables(output_dir: Path, output_format: str | None = None) -> 
         # ignore metadata dirs
         if is_metadata_table(json_file.parent.name):
             continue
-        # Detect gzip by magic bytes rather than relying on the extension,
-        # in case a .json file is actually gzipped or vice versa.
-        with json_file.open("rb") as f:
-            is_gzipped = f.read(2) == b"\x1f\x8b"
-
-        opener = gzip.open if is_gzipped else open
-        with opener(json_file, "rt", encoding="utf-8") as f:
-            for raw_line in f:
-                try:
-                    tables[json_file.parent.name].append(json.loads(raw_line.strip()))
-                except json.JSONDecodeError:
-                    logger.warning("Skipping unparseable line in %s: %r", json_file, raw_line[:200])
+        tables[json_file.parent.name].extend(read_jsonl_file(json_file))
 
     return dict(tables)
+
+
+def read_destination_rows(base_dir: Path, table_name: str) -> list[dict[str, Any]]:
+    """Read the rows the filesystem destination wrote for table_name under base_dir, without dlt columns.
+
+    Handles parquet, jsonl and gzipped jsonl files. Returns an empty list if the table has no files.
+    """
+    rows: list[dict[str, Any]] = []
+    for data_file in sorted(base_dir.glob(f"**/{table_name}/*")):
+        if data_file.name.endswith(".parquet"):
+            rows.extend(pq.read_table(data_file).to_pylist())
+        elif ".jsonl" in data_file.name:
+            rows.extend(read_jsonl_file(data_file))
+    return [strip_metadata_columns(row) for row in rows]
+
+
+def make_cts_settings[S: CtsSettings](
+    settings_cls: type[S],
+    base_dir: Path,
+    **overrides: Any,  # noqa: ANN401
+) -> S:
+    """Create standard input/output directories and log config under base_dir and instantiate settings_cls."""
+    input_dir = base_dir / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = base_dir / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    log_config_file = base_dir / "logging.json"
+    if not log_config_file.exists():
+        log_config_file.write_text('{"version": 1}', encoding="utf-8")
+
+    kwargs: dict[str, Any] = {
+        "input_dir": str(input_dir),
+        "output_dir": str(output_dir),
+        "log_config_file": str(log_config_file),
+        "use_destination": LOCAL_FS,
+        "dlt_dev_mode": False,
+        "use_output_dir_for_pipeline_metadata": False,
+    }
+    kwargs.update(overrides)
+    return settings_cls(**kwargs)
+
+
+def make_file_item(file_path: Path, mime_type: str = "application/octet-stream") -> FileItemDict:
+    """Build a dlt FileItemDict for a local file."""
+    return FileItemDict(
+        {
+            "file_url": file_path.as_uri(),
+            "file_name": file_path.name,
+            "relative_path": file_path.name,
+            "mime_type": mime_type,
+            "modification_date": pendulum.now(),
+            "size_in_bytes": file_path.stat().st_size,
+        }
+    )
+
+
+def fetch_all_duckdb(pipeline: dlt.Pipeline, query: str) -> list[tuple[Any, ...]]:
+    """Run a query against a pipeline's DuckDB destination and return all rows."""
+    with (
+        pipeline.sql_client() as client,
+        client.execute_query(query) as cur,
+    ):
+        return list(cur.fetchall())
+
+
+@contextmanager
+def duckdb_reference_from_jsonl(jsonl_path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
+    """Load a reference JSONL file into an in-memory DuckDB connection with a `reference` table."""
+    connection = duckdb.connect()
+    connection.execute(
+        "CREATE TABLE reference AS SELECT * FROM read_json_auto(?, sample_size=200)",
+        [str(jsonl_path)],
+    )
+    try:
+        yield connection
+    finally:
+        connection.close()
 
 
 def sorted_json(entries: list[dict[str, Any]]) -> list[str]:
@@ -96,7 +186,8 @@ def settings_to_argv(settings: Any) -> list[str]:
     """Derive CLI arguments from a settings instance.
 
     Every serialized field becomes a ``--kebab-case`` flag, with bools rendered
-    as their ``true``/``false`` CLI spelling and None-valued fields skipped.
+    as their ``true``/``false`` CLI spelling, sequence fields expanded after the
+    flag, and None-valued or computed fields skipped.
 
     :param settings: a CtsSettings (or derivative) instance
     :type settings: Any
@@ -104,12 +195,16 @@ def settings_to_argv(settings: Any) -> list[str]:
     :rtype: list[str]
     """
     argv: list[str] = []
-    for name, value in settings.model_dump().items():
+    computed_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys())
+    for name, value in settings.model_dump(exclude=computed_fields).items():
         flag = f"--{name.replace('_', '-')}"
         if isinstance(value, bool):
             argv.extend([flag, "true" if value else "false"])
         elif value is None:
             continue
+        elif isinstance(value, list | tuple):
+            if value:
+                argv.extend([flag, *(str(item) for item in value)])
         else:
             argv.extend([flag, str(value)])
     return argv
@@ -406,3 +501,29 @@ def assert_dataset_matches_reference(
 
     for value in reconstructed.values():
         assert value == sorted_reference_json
+
+
+def run_and_compare_variations(
+    run_pipeline: Callable[..., Any],
+    variations: dict[str, tuple[str, dict[str, Any]]],
+    *,
+    sorted_reference_json: list[str] | None = None,
+    output_format: str | None = None,
+    reconstruct: Callable[[dict[str, list[dict[str, Any]]]], list[dict[str, Any]]] = reconstruct_entries,
+    canonicalize: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+) -> dict[str, tuple[LoadInfo, Path]]:
+    """Run a pipeline across named (chunk_dir, overrides) variations, assert equal datasets, and optionally match reference."""
+    load_info_and_dir = {
+        key: run_and_read(run_pipeline, chunk_dir, **overrides) for key, (chunk_dir, overrides) in variations.items()
+    }
+    if len(load_info_and_dir) >= 2:  # noqa: PLR2004
+        assert_datasets_equal(load_info_and_dir)
+    if sorted_reference_json is not None:
+        assert_dataset_matches_reference(
+            load_info_and_dir,
+            sorted_reference_json,
+            output_format,
+            reconstruct=reconstruct,
+            canonicalize=canonicalize,
+        )
+    return load_info_and_dir
