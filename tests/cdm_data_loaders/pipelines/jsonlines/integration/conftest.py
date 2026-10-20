@@ -29,7 +29,7 @@ from tests.cdm_data_loaders.pipelines.helpers import duckdb_reference_from_jsonl
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models import ENTITY_MODELS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas import ENTITY_SCHEMAS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
-    canonicalize_reference_entry,
+    canonicalize_entry,
 )
 from tests.conftest import TEST_DATA_DIR
 
@@ -158,7 +158,7 @@ def sorted_reference_entities(
 ) -> list[str]:
     """Canonicalized entries as sorted JSON strings for order-insensitive comparison."""
     lines_as_json = [
-        json.dumps(canonicalize_reference_entry(prepare_reference(obj)), sort_keys=True, default=str)
+        json.dumps(canonicalize_entry(prepare_reference(obj)), sort_keys=True, default=str)
         for obj in jsonl_reference_entities
     ]
     return sorted(lines_as_json)

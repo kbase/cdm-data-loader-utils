@@ -21,16 +21,15 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
     WORKER_CONFIGS,
     assert_dataset_matches_reference,
-    assert_datasets_equal,
     read_pipeline_tables,
+    run_and_compare_variations,
     run_and_read,
 )
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models import ENTITY_MODELS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas import ENTITY_SCHEMAS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
     EXPECTED_ENTRY_COUNT,
-    canonicalize_pipeline_entry,
-    canonicalize_reference_entry,
+    canonicalize_entry,
     reconstructed_entries,
     reference_entries_from_duckdb,
 )
@@ -60,8 +59,8 @@ def test_jsonlines_reference_pass_assembly_model_accepts_all_records(
     assert [entry.model_dump()["accession"] for entry in validated] == [
         entry["accession"] for entry in jsonl_reference_entities
     ]
-    assert [canonicalize_reference_entry(entry.model_dump(mode="json", exclude_unset=True)) for entry in validated] == [
-        canonicalize_reference_entry(entry) for entry in jsonl_reference_entities
+    assert [canonicalize_entry(entry.model_dump(mode="json", exclude_unset=True)) for entry in validated] == [
+        canonicalize_entry(entry) for entry in jsonl_reference_entities
     ]
 
 
@@ -102,16 +101,13 @@ def test_jsonlines_passed_dataset_matches_reference(
     sorted_reference_entities: list[str],
 ) -> None:
     """Pipeline output matches the pipeline input."""
-    load_info_and_dir = {
-        source_dir: run_and_read(run_reference_pipeline, source_dir, loader_file_format=loader_file_format)
-    }
-
-    assert_dataset_matches_reference(
-        load_info_and_dir,
-        sorted_reference_entities,
-        loader_file_format,
+    run_and_compare_variations(
+        run_reference_pipeline,
+        {source_dir: (source_dir, {"loader_file_format": loader_file_format})},
+        sorted_reference_json=sorted_reference_entities,
+        output_format=loader_file_format,
         reconstruct=reconstructed_entries,
-        canonicalize=canonicalize_pipeline_entry,
+        canonicalize=canonicalize_entry,
     )
 
 
@@ -120,18 +116,13 @@ def test_jsonlines_pass_output_identical_across_chunk_dirs(
     run_reference_pipeline: Callable[..., Any], sorted_reference_entities: list[str], loader_file_format: str
 ) -> None:
     """Pipeline output is identical across all three chunk dirs and matches the reference."""
-    load_info_and_dir = {
-        f"{key}_{loader_file_format}": run_and_read(run_reference_pipeline, key, loader_file_format=loader_file_format)
-        for key in CHUNK_DIRS
-    }
-
-    assert_datasets_equal(load_info_and_dir)
-    assert_dataset_matches_reference(
-        load_info_and_dir,
-        sorted_reference_entities,
-        loader_file_format,
+    run_and_compare_variations(
+        run_reference_pipeline,
+        {f"{key}_{loader_file_format}": (key, {"loader_file_format": loader_file_format}) for key in CHUNK_DIRS},
+        sorted_reference_json=sorted_reference_entities,
+        output_format=loader_file_format,
         reconstruct=reconstructed_entries,
-        canonicalize=canonicalize_pipeline_entry,
+        canonicalize=canonicalize_entry,
     )
 
 
@@ -175,7 +166,7 @@ def test_jsonlines_pass_diff_format_same_results(
             sorted_reference_entities,
             output_format,
             reconstruct=reconstructed_entries,
-            canonicalize=canonicalize_pipeline_entry,
+            canonicalize=canonicalize_entry,
         )
 
 
@@ -185,20 +176,19 @@ def test_jsonlines_pass_output_identical_across_buffer_sizes(
 ) -> None:
     """List buffer size does not affect pipeline output for any chunk dir."""
     for chunk_dir in CHUNK_DIRS:
-        load_info_and_dir = {
-            f"{buffer_size}_{loader_file_format}": run_and_read(
-                run_reference_pipeline, chunk_dir, buffer_size=buffer_size, loader_file_format=loader_file_format
-            )
-            for buffer_size in BUFFER_SIZES
-        }
-
-        assert_datasets_equal(load_info_and_dir)
-        assert_dataset_matches_reference(
-            load_info_and_dir,
-            sorted_reference_entities,
-            loader_file_format,
+        run_and_compare_variations(
+            run_reference_pipeline,
+            {
+                f"{buffer_size}_{loader_file_format}": (
+                    chunk_dir,
+                    {"buffer_size": buffer_size, "loader_file_format": loader_file_format},
+                )
+                for buffer_size in BUFFER_SIZES
+            },
+            sorted_reference_json=sorted_reference_entities,
+            output_format=loader_file_format,
             reconstruct=reconstructed_entries,
-            canonicalize=canonicalize_pipeline_entry,
+            canonicalize=canonicalize_entry,
         )
 
 
@@ -235,7 +225,7 @@ def test_jsonlines_pass_no_data_lost_across_worker_configs(
         sorted_reference_entities,
         output_format=loader_file_format,
         reconstruct=reconstructed_entries,
-        canonicalize=canonicalize_pipeline_entry,
+        canonicalize=canonicalize_entry,
     )
 
 
@@ -253,11 +243,11 @@ def test_jsonlines_pass_reconstructed_matches_duckdb_reference(
     from_duckdb = reference_entries_from_duckdb(reference_dataset)
     assert len(from_duckdb) == EXPECTED_ENTRY_COUNT
     from_duckdb_canonical = sorted(
-        json.dumps(canonicalize_reference_entry(prepare_reference(entry)), sort_keys=True, default=str)
+        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str)
         for entry in from_duckdb
     )
     from_pipeline = sorted(
-        json.dumps(canonicalize_pipeline_entry(entry), sort_keys=True, default=str) for entry in reconstructed
+        json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in reconstructed
     )
     assert from_pipeline == from_duckdb_canonical
 
@@ -285,7 +275,7 @@ def test_jsonlines_pass_gzip_input_matches_plain_text(
         sorted_reference_entities,
         loader_file_format,
         reconstruct=reconstructed_entries,
-        canonicalize=canonicalize_pipeline_entry,
+        canonicalize=canonicalize_entry,
     )
 
 
@@ -313,5 +303,5 @@ def test_jsonlines_pass_nesting_matches_pipeline_contract(
         sorted_reference_entities,
         loader_file_format,
         reconstruct=reconstructed_entries,
-        canonicalize=canonicalize_pipeline_entry,
+        canonicalize=canonicalize_entry,
     )

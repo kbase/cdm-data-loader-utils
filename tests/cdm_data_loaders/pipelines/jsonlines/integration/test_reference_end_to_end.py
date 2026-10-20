@@ -20,8 +20,7 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     run_and_read,
 )
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
-    canonicalize_pipeline_entry,
-    canonicalize_reference_entry,
+    canonicalize_entry,
     reconstructed_entries,
 )
 
@@ -58,9 +57,9 @@ def test_jsonlines_fail_malformed_rows_preserve_provenance(
     tables = read_pipeline_tables(output_dir / result.dataset_name, loader_file_format)
     actual = reconstructed_entries(tables, "dataset")
     assert sorted(
-        json.dumps(canonicalize_pipeline_entry(entry), sort_keys=True, default=str) for entry in actual
+        json.dumps(canonicalize_entry(entry), sort_keys=True, default=str) for entry in actual
     ) == sorted(
-        json.dumps(canonicalize_reference_entry(prepare_reference(entry)), sort_keys=True, default=str)
+        json.dumps(canonicalize_entry(prepare_reference(entry)), sort_keys=True, default=str)
         for entry in entries
     )
     suffix, error_key = (
@@ -125,8 +124,8 @@ def test_jsonlines_pass_duplicates_blanks_and_final_line_preserved(
         loader_file_format=loader_file_format,
     )
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
-    expected = canonicalize_reference_entry(prepare_reference(entry))
-    assert [canonicalize_pipeline_entry(row) for row in reconstructed_entries(tables)] == [expected, expected]
+    expected = canonicalize_entry(prepare_reference(entry))
+    assert [canonicalize_entry(row) for row in reconstructed_entries(tables)] == [expected, expected]
 
 
 def test_jsonlines_pass_multiple_entities_and_file_glob(
@@ -312,7 +311,7 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     assert (
         sorted(
-            json.dumps(canonicalize_pipeline_entry(entry), sort_keys=True, default=str)
+            json.dumps(canonicalize_entry(entry), sort_keys=True, default=str)
             for entry in reconstructed_entries(tables)
         )
         == sorted_reference_entities

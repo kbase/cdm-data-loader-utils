@@ -10,7 +10,12 @@ import pytest
 import xmltodict
 
 from cdm_data_loaders.core.fields import PARQUET
-from tests.cdm_data_loaders.pipelines.helpers import LOADER_FILE_FORMATS, read_pipeline_tables, sorted_json
+from tests.cdm_data_loaders.pipelines.helpers import (
+    LOADER_FILE_FORMATS,
+    read_pipeline_tables,
+    run_and_read,
+    sorted_json,
+)
 from tests.cdm_data_loaders.pipelines.xml2db.integration.xml2db_reference_helpers import (
     assert_uniref_referential_integrity,
     reconstruct_xml2db_entries,
@@ -77,9 +82,7 @@ def run_and_reconstruct(run_pipeline: Callable[..., Any], chunk_dir: str, **over
     Reads back whatever `loader_file_format` the run actually used -- `PARQUET`, matching
     `Xml2DbSettings.loader_file_format`'s own default, unless overridden.
     """
-    (load_info, output_dir) = run_pipeline(chunk_dir, **overrides)
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    (load_info, output_dir) = run_and_read(run_pipeline, chunk_dir, **overrides)
     output_format = str(overrides.get("loader_file_format", PARQUET))
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, output_format)
     return reconstruct_xml2db_entries(tables)
@@ -125,9 +128,7 @@ def test_xml2db_pass_referential_integrity_across_merged_files(
     run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Every foreign key in the merged, multi-file dataset resolves to a row in its target table."""
-    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_5_el")
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    (load_info, output_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_5_el")
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
     assert_uniref_referential_integrity(tables)
 
@@ -167,9 +168,7 @@ def test_xml2db_pass_chunked_referential_integrity_across_files_and_chunks(
     run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Foreign keys still resolve correctly when both multiple files and multiple chunks per file are involved."""
-    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_5_el", xml_tag="entry", chunk_size=2)
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    (load_info, output_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_5_el", xml_tag="entry", chunk_size=2)
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
     assert_uniref_referential_integrity(tables)
 
@@ -185,12 +184,8 @@ def test_xml2db_pass_chunked_compaction_matches_unchunked_row_counts_exactly(
     Not just the same *content*, which the reconstruction-based tests above already establish,
     but the same physical row count, with no literal duplicates left over.
     """
-    (unchunked_info, unchunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el")
-    (chunked_info, chunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
-    assert unchunked_info is not None
-    assert chunked_info is not None
-    assert not unchunked_info.has_failed_jobs
-    assert not chunked_info.has_failed_jobs
+    (unchunked_info, unchunked_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_100_el")
+    (chunked_info, chunked_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_100_el", xml_tag="entry", chunk_size=7)
 
     unchunked_tables = read_pipeline_tables(unchunked_dir / unchunked_info.dataset_name, PARQUET)
     chunked_tables = read_pipeline_tables(chunked_dir / chunked_info.dataset_name, PARQUET)
@@ -208,9 +203,7 @@ def test_xml2db_pass_chunked_compaction_root_table_is_left_alone(
     the kind of literal duplicate compaction removes, so it still gets one row per chunk after
     compaction runs, unlike property/representative_member.
     """
-    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    (load_info, output_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_100_el", xml_tag="entry", chunk_size=7)
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
 
     n_chunks = -(-EXPECTED_ENTRY_COUNT // 7)  # ceil division
@@ -221,9 +214,7 @@ def test_xml2db_pass_chunked_compaction_preserves_referential_integrity(
     run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Every foreign key still resolves after compaction has removed literal duplicate rows."""
-    (load_info, output_dir) = run_xml2db_pipeline_fxt("chunk_100_el", xml_tag="entry", chunk_size=7)
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
+    (load_info, output_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_100_el", xml_tag="entry", chunk_size=7)
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, PARQUET)
     assert_uniref_referential_integrity(tables)
 
@@ -232,12 +223,10 @@ def test_xml2db_pass_compact_reused_tables_false_keeps_literal_duplicates(
     run_xml2db_pipeline_fxt: Callable[..., Any],
 ) -> None:
     """Disabling compact_reused_tables leaves the literal duplicate rows chunking can produce."""
-    (unchunked_info, unchunked_dir) = run_xml2db_pipeline_fxt("chunk_100_el")
-    (chunked_info, chunked_dir) = run_xml2db_pipeline_fxt(
-        "chunk_100_el", xml_tag="entry", chunk_size=7, compact_reused_tables=False
+    (unchunked_info, unchunked_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_100_el")
+    (chunked_info, chunked_dir) = run_and_read(
+        run_xml2db_pipeline_fxt, "chunk_100_el", xml_tag="entry", chunk_size=7, compact_reused_tables=False
     )
-    assert unchunked_info is not None
-    assert chunked_info is not None
 
     unchunked_tables = read_pipeline_tables(unchunked_dir / unchunked_info.dataset_name, PARQUET)
     chunked_tables = read_pipeline_tables(chunked_dir / chunked_info.dataset_name, PARQUET)
@@ -262,12 +251,10 @@ def test_xml2db_pass_compaction_dedupes_across_separate_unchunked_files(
     literal duplicate rows until compaction merges them -- exactly the same failure mode as
     chunking, just from multiple files instead of multiple chunks of one file.
     """
-    (compacted_info, compacted_dir) = run_xml2db_pipeline_fxt("chunk_5_el")
-    (uncompacted_info, uncompacted_dir) = run_xml2db_pipeline_fxt("chunk_5_el", compact_reused_tables=False)
-    assert compacted_info is not None
-    assert uncompacted_info is not None
-    assert not compacted_info.has_failed_jobs
-    assert not uncompacted_info.has_failed_jobs
+    (compacted_info, compacted_dir) = run_and_read(run_xml2db_pipeline_fxt, "chunk_5_el")
+    (uncompacted_info, uncompacted_dir) = run_and_read(
+        run_xml2db_pipeline_fxt, "chunk_5_el", compact_reused_tables=False
+    )
 
     compacted_tables = read_pipeline_tables(compacted_dir / compacted_info.dataset_name, PARQUET)
     uncompacted_tables = read_pipeline_tables(uncompacted_dir / uncompacted_info.dataset_name, PARQUET)

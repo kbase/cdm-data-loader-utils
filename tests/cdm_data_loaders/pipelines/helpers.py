@@ -501,3 +501,30 @@ def assert_dataset_matches_reference(
 
     for value in reconstructed.values():
         assert value == sorted_reference_json
+
+
+def run_and_compare_variations(
+    run_pipeline: Callable[..., Any],
+    variations: dict[str, tuple[str, dict[str, Any]]],
+    *,
+    sorted_reference_json: list[str] | None = None,
+    output_format: str | None = None,
+    reconstruct: Callable[[dict[str, list[dict[str, Any]]]], list[dict[str, Any]]] = reconstruct_entries,
+    canonicalize: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+) -> dict[str, tuple[LoadInfo, Path]]:
+    """Run a pipeline across named (chunk_dir, overrides) variations, assert equal datasets, and optionally match reference."""
+    load_info_and_dir = {
+        key: run_and_read(run_pipeline, chunk_dir, **overrides)
+        for key, (chunk_dir, overrides) in variations.items()
+    }
+    if len(load_info_and_dir) >= 2:  # noqa: PLR2004
+        assert_datasets_equal(load_info_and_dir)
+    if sorted_reference_json is not None:
+        assert_dataset_matches_reference(
+            load_info_and_dir,
+            sorted_reference_json,
+            output_format,
+            reconstruct=reconstruct,
+            canonicalize=canonicalize,
+        )
+    return load_info_and_dir

@@ -51,8 +51,8 @@ def reconstructed_entries(
     return reconstruct_entries(renamed)
 
 
-def canonicalize_reference_entry(entry: dict[str, Any]) -> dict[str, Any]:
-    """Canonicalize an entry so pipeline output and source JSON compare equal.
+def canonicalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Canonicalize a reference or reconstructed pipeline entry so both sides compare equal.
 
     Reverses the transformations dlt's normalization applies, and normalizes the
     two storage representations (parquet datetimes vs jsonl timestamp strings):
@@ -72,14 +72,8 @@ def canonicalize_reference_entry(entry: dict[str, Any]) -> dict[str, Any]:
     return _canonicalize_value(entry)
 
 
-def canonicalize_pipeline_entry(entry: dict[str, Any]) -> dict[str, Any]:
-    """Canonicalize a reconstructed pipeline entry for comparison.
-
-    Preserved JSON lists and reconstructed child rows share the same scalar-list
-    representation. Null fields and empty objects disappear during flattening.
-    Timestamps are normalized for both JSONL strings and Parquet datetimes.
-    """
-    return _canonicalize_value(entry)
+canonicalize_reference_entry = canonicalize_entry
+canonicalize_pipeline_entry = canonicalize_entry
 
 
 def _canonicalize_value(value: Any, key: str = "") -> Any:
