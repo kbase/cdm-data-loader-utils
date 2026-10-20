@@ -29,7 +29,7 @@ dependencies = [
     "pandas>=3.0.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
-    "pyiceberg[pandas,pyarrow,pyiceberg-core,snappy]>=0.11.1",
+    "pyiceberg[pandas,pyarrow,pyiceberg-core,snappy]>=0.12",
     "smart-open>=8.0.1",
     "tqdm>=4.70.1",
     "xml2db>=0.14.0",
@@ -39,9 +39,9 @@ dependencies = [
 
 [project.scripts]
 all_the_bacteria = "cdm_data_loaders.pipelines.all_the_bacteria:cli"
-jsonl_extract = "cdm_data_loaders.pipelines.jsonlines.extract_pipeline:cli"
-jsonl_jsonschema = "cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline:cli"
-jsonl_pydantic = "cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline:cli"
+jsonlines_extract = "cdm_data_loaders.pipelines.jsonlines.extract_pipeline:cli"
+jsonlines_jsonschema = "cdm_data_loaders.pipelines.jsonlines.extract_jsonschema_validate_pipeline:cli"
+jsonlines_pydantic = "cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline:cli"
 ncbi_ftp_promote = "cdm_data_loaders.pipelines.ncbi_ftp_promote:cli"
 ncbi_ftp_sync = "cdm_data_loaders.pipelines.ncbi_ftp_download:cli"
 ncbi_rest_api = "cdm_data_loaders.pipelines.ncbi_rest_api:cli"
@@ -51,7 +51,7 @@ uniref = "cdm_data_loaders.pipelines.uniref:cli"
 xmltodict = "cdm_data_loaders.pipelines.xmltodict.pipeline:cli"
 xml2db = "cdm_data_loaders.pipelines.xml2db.pipeline:cli"
 xsv = "cdm_data_loaders.pipelines.xsv.pipeline:cli"
-
+hello_world = "cdm_data_loaders.utils.hello_world:cli"
 
 [dependency-groups]
 dev = [
@@ -74,6 +74,10 @@ models = [
 ]
 xml = [
     "xsdata[cli,lxml]>=26.2",
+]
+mutants = [
+    "mutmut>=3.8.0",
+    "pytest-gremlins>=1.12.2",
 ]
 
 [tool.ruff]
@@ -213,6 +217,12 @@ max-complexity = 15
 requires = ["uv_build>=0.12.0,<0.20.0"]
 build-backend = "uv_build"
 
+[tool.mutmut]
+source_paths = [ "src/" ]
+pytest_add_cli_args_test_selection= [ "-m", "not requires_spark", "-m", "not slow_test", "-m", "not requires_ceph", "-m", "not external_request", "-m", "not docker", "--ignore", "tests/cdm_data_loaders/pipelines/ncbi_rest_api/test_ncbi_rest_api.py" ]
+
+
+
 [tool.pytest]
 pythonpath = ["src"]
 log_cli = true
@@ -225,6 +235,7 @@ markers = [
     "slow_test: does what it says on the tin",
     "requires_ceph: end-to-end tests requiring a running CEPH instance and network access",
     "external_request: tests that make real network requests to external services (e.g. NCBI FTP)",
+    "docker: tests that build and run the pipeline inside a Docker container",
     "settings_cls(cls): the pydantic-settings class under test for alias parametrization",   
     "cli_fields: used for restricting cli-related tests to a subset of fields"
 ]
@@ -243,13 +254,18 @@ AWS_SECRET_ACCESS_KEY = "test_access_secret"
 # required for KBase Lakehouse env
 USER = "fake_user"
 KBASE_AUTH_TOKEN = "test-token-123"
-CDM_TASK_SERVICE_URL = "http://localhost:8080"
-BERDL_POD_IP = "192.168.1.100"
-SPARK_MASTER_URL = "spark://localhost:7077"
+
 BERDL_HIVE_METASTORE_URI = "thrift://localhost:9083"
-SPARK_CLUSTER_MANAGER_API_URL = "http://localhost:8000"
-GOVERNANCE_API_URL = "http://localhost:8000"
+# BERDL_POD_IP = "192.168.1.100"
+BERDL_POD_IP = "spark-notebook"
+CDM_TASK_SERVICE_URL = "http://localhost:8080"
 DATALAKE_MCP_SERVER_URL = "http://localhost:8080"
+GOVERNANCE_API_URL = "http://localhost:8000"
+POLARIS_CATALOG_URI = "http://polaris:8181/api/catalog"
+SPARK_CLUSTER_MANAGER_API_URL = "http://localhost:8000"
+SPARK_MASTER_URL = "spark://localhost:7077"
+# SPARK_MASTER_URL = "spark://spark-master:7077"
+DLT_PROJECT_DIR = "/tmp/dlt"
 
 [tool.uv.sources]
 cdm-schema = { git = "https://github.com/kbase/cdm-schema.git" }

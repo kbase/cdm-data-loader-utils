@@ -11,6 +11,11 @@ import pytest
 from jsonschema import FormatChecker
 from jsonschema.validators import validator_for
 
+from cdm_data_loaders.pipelines.jsonlines.settings import (
+    EXTRACT_PIPELINE_NAME,
+    JSONSCHEMA_PIPELINE_NAME,
+    PYDANTIC_PIPELINE_NAME,
+)
 from tests.cdm_data_loaders.pipelines.helpers import (
     BUFFER_SIZES,
     LOADER_FILE_FORMATS,
@@ -34,7 +39,7 @@ CHUNK_DIRS = ("chunk_4", "chunk_10", "chunk_52")
 
 
 @pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
-@pytest.mark.parametrize("pipeline_kind", ["extract_validate", "extract_jsonschema_validate"], ids=str)
+@pytest.mark.parametrize("pipeline_kind", [PYDANTIC_PIPELINE_NAME, JSONSCHEMA_PIPELINE_NAME], ids=str)
 def test_jsonlines_validation_pass_reference_records_load(
     run_reference_pipeline: Callable[..., Any], loader_file_format: str
 ) -> None:
@@ -297,7 +302,7 @@ def test_jsonlines_pass_nesting_matches_pipeline_contract(
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     data_tables = {name for name in tables if not name.startswith("_dlt")}
     columns = set().union(*(row.keys() for row in tables["dataset"]))
-    if pipeline_kind != "extract":
+    if pipeline_kind != EXTRACT_PIPELINE_NAME:
         assert data_tables == {"dataset"}
         assert {"organism", "assembly_info", "additional_submitters"} <= columns
     else:

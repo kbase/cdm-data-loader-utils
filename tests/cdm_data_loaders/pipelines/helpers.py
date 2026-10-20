@@ -96,7 +96,8 @@ def settings_to_argv(settings: Any) -> list[str]:
     """Derive CLI arguments from a settings instance.
 
     Every serialized field becomes a ``--kebab-case`` flag, with bools rendered
-    as their ``true``/``false`` CLI spelling and None-valued fields skipped.
+    as their ``true``/``false`` CLI spelling, sequence fields expanded after the
+    flag, and None-valued or computed fields skipped.
 
     :param settings: a CtsSettings (or derivative) instance
     :type settings: Any
@@ -104,12 +105,16 @@ def settings_to_argv(settings: Any) -> list[str]:
     :rtype: list[str]
     """
     argv: list[str] = []
-    for name, value in settings.model_dump().items():
+    computed_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys())
+    for name, value in settings.model_dump(exclude=computed_fields).items():
         flag = f"--{name.replace('_', '-')}"
         if isinstance(value, bool):
             argv.extend([flag, "true" if value else "false"])
         elif value is None:
             continue
+        elif isinstance(value, list | tuple):
+            if value:
+                argv.extend([flag, *(str(item) for item in value)])
         else:
             argv.extend([flag, str(value)])
     return argv

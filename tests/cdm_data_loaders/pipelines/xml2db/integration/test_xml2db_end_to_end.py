@@ -1,16 +1,14 @@
 """End-to-end tests for the xml2db pipeline, using a small library.xsd schema."""
 
-import sys
 from collections.abc import Callable
 from pathlib import Path
 
-import pytest
 from dlt.common.pipeline import LoadInfo
 from pandas import DataFrame
 
-from cdm_data_loaders.pipelines.xml2db.pipeline import cli, run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
+from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
@@ -32,6 +30,7 @@ def check_book_list_results(load_info: LoadInfo | None) -> tuple[DataFrame, Data
 
 def test_run_xml2db_pipeline_pass_writes_expected_output(
     settings_factory: Callable[..., Xml2DbSettings],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Running the pipeline loads one row per library root and one row per book."""
     settings = settings_factory()
@@ -39,7 +38,7 @@ def test_run_xml2db_pipeline_pass_writes_expected_output(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml2db_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
@@ -50,6 +49,7 @@ def test_run_xml2db_pipeline_pass_writes_expected_output(
 def test_run_xml2db_pipeline_pass_gzip_files_are_loaded(
     settings_factory: Callable[..., Xml2DbSettings],
     write_gzip_file: Callable[[Path, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Gzip-compressed xml files matching the glob are decompressed and loaded.
 
@@ -64,7 +64,7 @@ def test_run_xml2db_pipeline_pass_gzip_files_are_loaded(
     (input_dir / "plain.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
     write_gzip_file(input_dir, "library.xml.gz", SIMPLE_LIBRARY_XML)
 
-    load_info = run_xml2db_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
     library_df, book_df = check_book_list_results(load_info)
     # one root row from each of the two files: the root table is never compacted
     assert len(library_df) == EXPECTED_LIBRARY_ROOT_COUNT_TWO_FILES
@@ -74,12 +74,13 @@ def test_run_xml2db_pipeline_pass_gzip_files_are_loaded(
 
 def test_run_xml2db_pipeline_pass_no_matching_files_yields_no_data_table(
     settings_factory: Callable[..., Xml2DbSettings],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """An input dir with no matching xml files does not fail the run and creates no data table."""
     settings = settings_factory()
     Path(settings.input_dir).mkdir(exist_ok=True)
 
-    load_info = run_xml2db_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
     assert load_info is not None
     assert load_info.has_failed_jobs is False
     dataset = load_info.pipeline.dataset()
@@ -90,6 +91,7 @@ def test_run_xml2db_pipeline_pass_no_matching_files_yields_no_data_table(
 
 def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
     settings_factory: Callable[..., Xml2DbSettings],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """The `short_name` setting only affects the virtual root table name for multi-root schemas.
 
@@ -102,7 +104,7 @@ def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
     input_dir.mkdir(exist_ok=True)
     (input_dir / "library.xml").write_text(SIMPLE_LIBRARY_XML, encoding="utf-8")
 
-    load_info = run_xml2db_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]
@@ -110,9 +112,9 @@ def test_run_xml2db_pipeline_pass_custom_short_name_used_for_root_table(
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     dlt_destination_config: str,
     library_xsd: Path,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
     input_dir = tmp_path / "cli_input"
@@ -142,9 +144,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "--dlt-dev-mode",
         "false",
     ]
-    monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli.run()
+    load_info = pipeline_runner.run(PIPELINE_NAME, cli_args=argv[1:])
     library_df, book_df = check_book_list_results(load_info)
     assert len(library_df) == 1
     assert sorted(book_df["id"].tolist()) == ["1", "2", "3"]

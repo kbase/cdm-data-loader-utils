@@ -131,7 +131,7 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     log_config_file.write_text('{"version": 1}')
 
     argv = [
-        "jsonlines",
+        EXTRACT_PIPELINE_NAME,
         "--input-dir",
         str(input_dir),
         "--output-dir",

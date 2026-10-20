@@ -22,6 +22,12 @@ from cdm_data_loaders.pipelines.core import (
     LOAD_INFO_TABLE_NAME,
 )
 from cdm_data_loaders.utils import cdm_logger
+from tests.cdm_data_loaders.pipelines.framework import (
+    EXECUTION_MODES,
+    ExecutionMode,
+    PipelineTestRunner,
+    ensure_docker_image,
+)
 from tests.conftest import LOCAL_FS, S3
 
 DEFAULT_DLT_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", LOAD_INFO_TABLE_NAME}
@@ -120,11 +126,32 @@ def mock_dlt(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     return mock
 
 
+@pytest.fixture(params=EXECUTION_MODES)
+def execution_mode(request: pytest.FixtureRequest) -> ExecutionMode:
+    """Execution mode for pipeline end-to-end tests (core, cli, or docker)."""
+    return request.param
+
+
+@pytest.fixture(scope="session")
+def docker_image(request: pytest.FixtureRequest) -> str:
+    """Build or resolve the Docker image tag used for @pytest.mark.docker pipeline tests."""
+    configured_tag = request.config.getoption("--docker-image")
+    return ensure_docker_image(configured_tag)
+
+
+@pytest.fixture
+def pipeline_runner(execution_mode: ExecutionMode, request: pytest.FixtureRequest) -> PipelineTestRunner:
+    """Provide a PipelineTestRunner configured for the active execution_mode."""
+    image_tag = request.config.getoption("--docker-image") if execution_mode == ExecutionMode.DOCKER else None
+    return PipelineTestRunner(mode=execution_mode, docker_image=image_tag)
+
+
 def isolated_run(
     tmp_path: Path,
     dataset_prefix: str,
     run_fn: Callable[..., LoadInfo | None],
     base_kwargs: dict[str, Any],
+    pipeline_runner: PipelineTestRunner | None = None,
 ) -> Callable[..., tuple[LoadInfo | None, Path]]:
     """Return a factory that runs a pipeline with per-run isolated output state.
 
@@ -139,6 +166,8 @@ def isolated_run(
     :type run_fn: Callable[..., LoadInfo | None]
     :param base_kwargs: base settings kwargs; keys open to override per call
     :type base_kwargs: dict[str, Any]
+    :param pipeline_runner: optional PipelineTestRunner to dispatch through
+    :type pipeline_runner: PipelineTestRunner | None
     :return: factory(chunk_dir=None, **overrides) -> (load_info, output_dir)
     :rtype: Callable[..., tuple[LoadInfo | None, Path]]
     """
@@ -160,7 +189,7 @@ def isolated_run(
         settings_cls = kwargs.pop("settings_cls")
         settings = settings_cls(**kwargs)
         with dlt.config.values({"destination.local_fs.bucket_url": str(settings.output_dir)}):
-            load_info = run_fn(settings)
+            load_info = pipeline_runner.run(run_fn, settings) if pipeline_runner is not None else run_fn(settings)
         return load_info, settings.output_dir
 
     return _factory
@@ -171,9 +200,12 @@ def isolated_run_factory(tmp_path: Path) -> Callable[..., Callable[..., tuple[Lo
     """Return a builder for isolated pipeline run factories bound to this test's tmp_path."""
 
     def _build(
-        dataset_prefix: str, run_fn: Callable[..., LoadInfo | None], base_kwargs: dict[str, Any]
+        dataset_prefix: str,
+        run_fn: Callable[..., LoadInfo | None],
+        base_kwargs: dict[str, Any],
+        pipeline_runner: PipelineTestRunner | None = None,
     ) -> Callable[..., tuple[LoadInfo | None, Path]]:
-        return isolated_run(tmp_path, dataset_prefix, run_fn, base_kwargs)
+        return isolated_run(tmp_path, dataset_prefix, run_fn, base_kwargs, pipeline_runner=pipeline_runner)
 
     return _build
 

@@ -15,14 +15,15 @@ from datetime import UTC, datetime
 from ftplib import error_temp
 from logging import Logger, getLogger
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Final
 
 import tqdm
 from pydantic import AliasChoices, Field
+from pydantic_settings import SettingsConfigDict
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from cdm_data_loaders.core.fields import INPUT_MOUNT, OUTPUT_MOUNT
-from cdm_data_loaders.core.settings import LoggerSettings
+from cdm_data_loaders.core.settings import LoggerSettings, default_settings_with_shortcuts
 from cdm_data_loaders.ncbi_ftp.assembly import (
     FTP_HOST,
     build_accession_path,
@@ -36,12 +37,14 @@ from cdm_data_loaders.utils.file_transfer.s3.object_utils import upload_file
 
 logger: Logger = getLogger(__name__)
 
-
+PIPELINE_NAME: Final[str] = "ncbi_ftp_sync"
 DEFAULT_STAGING_KEY_PREFIX: PurePosixPath = PurePosixPath("staging")
 
 
 class DownloadSettings(LoggerSettings):
     """Configuration for the NCBI FTP assembly download pipeline."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_prog_name=PIPELINE_NAME)
 
     manifest: Path = Field(
         default=Path(INPUT_MOUNT) / "transfer_manifest.txt",

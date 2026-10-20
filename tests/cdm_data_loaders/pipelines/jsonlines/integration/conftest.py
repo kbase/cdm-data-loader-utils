@@ -18,6 +18,9 @@ from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline imp
     run_jsonlines_with_validation_pipeline,
 )
 from cdm_data_loaders.pipelines.jsonlines.settings import (
+    EXTRACT_PIPELINE_NAME,
+    JSONSCHEMA_PIPELINE_NAME,
+    PYDANTIC_PIPELINE_NAME,
     JsonlExtractSettings,
     JsonlJsonschemaIngestSettings,
     JsonlPydanticIngestSettings,
@@ -33,7 +36,7 @@ type PipelineRunner = Callable[..., tuple[LoadInfo | None, Path]]
 type PrepareReference = Callable[[dict[str, Any]], dict[str, Any]]
 
 
-@pytest.fixture(params=["extract", "extract_validate", "extract_jsonschema_validate"], ids=str)
+@pytest.fixture(params=[EXTRACT_PIPELINE_NAME, PYDANTIC_PIPELINE_NAME, JSONSCHEMA_PIPELINE_NAME], ids=str)
 def pipeline_kind(request: pytest.FixtureRequest) -> str:
     """Run the same reference contract against all three JSONL pipelines."""
     return request.param
@@ -48,14 +51,14 @@ def run_reference_pipeline(
 ) -> PipelineRunner:
     """Run the selected JSONL pipeline on a chunk dir with per-run isolated output directories."""
     settings_cls, registry_kwarg, dataset_prefix, file_glob = {
-        "extract": (JsonlExtractSettings, {"table_name": "dataset"}, "jsonl_extract_run", "**/*.jsonl*"),
-        "extract_validate": (
+        EXTRACT_PIPELINE_NAME: (JsonlExtractSettings, {"table_name": "dataset"}, "jsonl_extract_run", "**/*.jsonl*"),
+        PYDANTIC_PIPELINE_NAME: (
             JsonlPydanticIngestSettings,
             {"entity_models_module": "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models"},
             "jsonl_extract_validate_run",
             "*.jsonl*",
         ),
-        "extract_jsonschema_validate": (
+        JSONSCHEMA_PIPELINE_NAME: (
             JsonlJsonschemaIngestSettings,
             {"schema_files_module": "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas"},
             "jsonschema_run",
@@ -63,9 +66,9 @@ def run_reference_pipeline(
         ),
     }[pipeline_kind]
     run_fn = {
-        "extract": run_jsonlines_pipeline,
-        "extract_validate": run_jsonlines_with_validation_pipeline,
-        "extract_jsonschema_validate": run_jsonschema_pipeline,
+        EXTRACT_PIPELINE_NAME: run_jsonlines_pipeline,
+        PYDANTIC_PIPELINE_NAME: run_jsonlines_with_validation_pipeline,
+        JSONSCHEMA_PIPELINE_NAME: run_jsonschema_pipeline,
     }[pipeline_kind]
     base_kwargs: dict[str, Any] = {
         "buffer_size": 10,
@@ -90,7 +93,7 @@ def prepare_reference(pipeline_kind: str) -> PrepareReference:
     """Apply Pydantic defaults only for model validation; other pipelines preserve input."""
 
     def _prepare(entry: dict[str, Any]) -> dict[str, Any]:
-        if pipeline_kind == "extract_validate":
+        if pipeline_kind == PYDANTIC_PIPELINE_NAME:
             return ENTITY_MODELS["dataset"].model_validate(entry).model_dump(mode="json")
         return entry
 
@@ -106,13 +109,13 @@ def reference_registry_factory(
     """Register the requested tables using the selected pipeline's assembly contract."""
 
     def _factory(table_names: list[str]) -> dict[str, str]:
-        if pipeline_kind == "extract_validate":
+        if pipeline_kind == PYDANTIC_PIPELINE_NAME:
             return {
                 "entity_models_module": entity_models_module_factory(
                     dict.fromkeys(table_names, ENTITY_MODELS["dataset"])
                 )
             }
-        if pipeline_kind == "extract_jsonschema_validate":
+        if pipeline_kind == JSONSCHEMA_PIPELINE_NAME:
             return {"schema_files_module": schema_module_factory(dict.fromkeys(table_names, ENTITY_SCHEMAS["dataset"]))}
         return {}
 

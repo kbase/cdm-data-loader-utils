@@ -62,6 +62,32 @@ DEFAULT_VCR_CONFIG = frozendict(
 _notebook_utils_available: bool | None = None
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register custom command-line options for running Docker container pipeline tests."""
+    parser.addoption(
+        "--run-docker",
+        action="store_true",
+        default=False,
+        help="Build and run Docker container tests marked with @pytest.mark.docker.",
+    )
+    parser.addoption(
+        "--docker-image",
+        action="store",
+        default=None,
+        help="Pre-built Docker image tag to use for @pytest.mark.docker tests instead of building.",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip tests marked with ``docker`` unless ``--run-docker`` was passed on the command line."""
+    if config.getoption("--run-docker"):
+        return
+    skip_docker = pytest.mark.skip(reason="need --run-docker option to run Docker container tests")
+    for item in items:
+        if "docker" in item.keywords:
+            item.add_marker(skip_docker)
+
+
 def _find_notebook_utils() -> bool:
     """Check whether the current environment has the KBase Lakehouse notebook_utils lib available.
 

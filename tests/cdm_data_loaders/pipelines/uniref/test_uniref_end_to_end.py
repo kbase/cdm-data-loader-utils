@@ -4,21 +4,20 @@ The fixture file contains three clusters; exact per-table counts below are
 derived from that fixture. Every test runs once per valid UniRef variant.
 """
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines import uniref as uniref_module
 from cdm_data_loaders.pipelines.uniref import (
     UNIREF_VARIANTS,
     UnirefSettings,
-    cli,
     parse_uniref,
 )
-from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
+from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline, read_destination_rows
+from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
+from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 from tests.conftest import LOCAL_FS, TEST_DATA_DIR
 
 TEST_DEFAULT_UNIREF_VARIANT = "50"
@@ -49,7 +48,7 @@ def duckdb_uniref_settings(tmp_path: Path, request: pytest.FixtureRequest) -> Un
         input_dir=str(UNIREF_FIXTURE_DIR),
         output_dir=str(output_dir),
         use_destination=LOCAL_FS,
-        use_output_dir_for_pipeline_metadata=False,
+        use_output_dir_for_pipeline_metadata=True,
     )  # pyright: ignore[reportCallIssue]
 
 
@@ -118,48 +117,18 @@ def test_integration_uniref_pipeline_entity_and_cluster_content(
 
 def test_integration_cli_uniref_pipeline_output_validated(
     duckdb_uniref_settings: UnirefSettings,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
-    """Exercise the real ``cli.run()`` wiring end-to-end against a DuckDB destination."""
-    captured: dict[str, Any] = {}
+    """Exercise the UniRef pipeline end-to-end across core, cli, and docker execution modes."""
+    load_info = pipeline_runner.run("uniref", settings=duckdb_uniref_settings)
 
-    def fake_run_cli(
-        settings_cls: type[UnirefSettings],
-        pipeline_fn: Callable[..., Any],
-        cli_args: list[str] | None = None,
-        settings_kwargs: dict[str, Any] | None = None,
-    ) -> Any:
-        """Replacement for core.run_cli that dispatches to pipeline_fn with the fixture settings."""
-        assert settings_cls is UnirefSettings
-        return pipeline_fn(duckdb_uniref_settings)
-
-    def fake_run_pipeline(
-        *,
-        settings: UnirefSettings,
-        resource: Any,
-        pipeline_kwargs: dict[str, Any],
-    ) -> None:
-        """Replacement for core.run_pipeline that runs the resource through DuckDB."""
-        assert settings is duckdb_uniref_settings
-        assert pipeline_kwargs == {
-            "pipeline_name": "uniref",
-            "dataset_name": f"uniref_{duckdb_uniref_settings.variant}",
-        }
-        pipeline = duckdb_pipeline(
-            tmp_path, f"test_uniref_cli_pipeline_{duckdb_uniref_settings.variant}", "test_uniref_cli"
-        )
-        captured["load_info"] = pipeline.run(resource)
-        captured["pipeline"] = pipeline
-
-    monkeypatch.setattr("cdm_data_loaders.pipelines.core.run_cli", fake_run_cli)
-    monkeypatch.setattr(uniref_module, "run_pipeline", fake_run_pipeline)
-
-    cli.run()
-
-    load_info = captured["load_info"]
-    pipeline = captured["pipeline"]
+    assert load_info is not None
     assert not load_info.has_failed_jobs
+    assert load_info.pipeline.pipeline_name == "uniref"
+    assert load_info.dataset_name == f"uniref_{duckdb_uniref_settings.variant}"
+    assert_pipeline_report_written(Path(duckdb_uniref_settings.output_dir), load_info, metadata_moved=True)
 
-    ((entity_count,),) = _fetch_all(pipeline, "SELECT COUNT(*) FROM entity")
-    assert entity_count == UNIREF_CLUSTER_COUNT
+    dataset_dir = Path(duckdb_uniref_settings.output_dir) / load_info.dataset_name
+    for table_name, expected_count in EXPECTED_ROW_COUNTS.items():
+        rows = read_destination_rows(dataset_dir, table_name)
+        assert len(rows) == expected_count, f"expected {expected_count} rows in '{table_name}', got {len(rows)}"

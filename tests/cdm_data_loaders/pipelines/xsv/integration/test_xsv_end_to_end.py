@@ -1,6 +1,5 @@
 """End-to-end tests for the xsv pipeline, using a real qsv binary and local_fs destination."""
 
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from uuid import uuid4
@@ -8,9 +7,9 @@ from uuid import uuid4
 import pandas as pd
 import pytest
 
-from cdm_data_loaders.pipelines.xsv.pipeline import cli, run_xsv_pipeline
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
+from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import assert_pipeline_report_written
 from tests.cdm_data_loaders.pipelines.xsv.integration.conftest import (
     ALL_RAGGED_ROWS,
@@ -29,12 +28,13 @@ REJECTED_TABLE = "my_table_rejected"
 def test_run_xsv_pipeline_pass_writes_expected_output(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """A clean, valid file is loaded, with every row cast to its declared schema types."""
     settings = settings_factory()
     write_xsv_file(settings, "data.csv", rows_to_csv(VALID_ROWS))
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -52,13 +52,14 @@ def test_run_xsv_pipeline_pass_writes_expected_output(
 def test_run_xsv_pipeline_pass_multiple_files_loaded_together(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Every file matching file_glob is cleaned, validated, and loaded into the same table."""
     settings = settings_factory()
     write_xsv_file(settings, "part_1.csv", rows_to_csv([VALID_ROWS[0]]))
     write_xsv_file(settings, "part_2.csv", rows_to_csv([VALID_ROWS[1]]))
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -69,6 +70,7 @@ def test_run_xsv_pipeline_pass_multiple_files_loaded_together(
 def test_run_xsv_pipeline_pass_partial_ragged_file_recovers_valid_rows(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """A file with one ragged row loads its surviving valid rows AND records the row loss.
 
@@ -79,7 +81,7 @@ def test_run_xsv_pipeline_pass_partial_ragged_file_recovers_valid_rows(
     settings = settings_factory()
     write_xsv_file(settings, "data.csv", rows_to_csv(PARTIAL_RAGGED_ROWS))
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -98,12 +100,13 @@ def test_run_xsv_pipeline_pass_partial_ragged_file_recovers_valid_rows(
 def test_run_xsv_pipeline_pass_fully_ragged_file_is_entirely_rejected(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """A file where every row is ragged yields no valid rows; the failure is recorded as rejected."""
     settings = settings_factory()
     write_xsv_file(settings, "bad.csv", rows_to_csv(ALL_RAGGED_ROWS))
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -118,11 +121,12 @@ def test_run_xsv_pipeline_pass_fully_ragged_file_is_entirely_rejected(
 
 def test_run_xsv_pipeline_pass_no_matching_files_yields_no_data_table(
     settings_factory: Callable[..., XsvIngestSettings],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """An input dir with no matching data files does not fail the run and creates no data table."""
     settings = settings_factory()
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -133,6 +137,7 @@ def test_run_xsv_pipeline_pass_no_matching_files_yields_no_data_table(
 def test_run_xsv_pipeline_pass_configured_null_regex_replaces_placeholder(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """A schema-configured null_regex placeholder is replaced with a null value before loading."""
     schema = {
@@ -148,7 +153,7 @@ def test_run_xsv_pipeline_pass_configured_null_regex_replaces_placeholder(
         ),
     )
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -161,6 +166,7 @@ def test_run_xsv_pipeline_pass_configured_null_regex_replaces_placeholder(
 def test_run_xsv_pipeline_pass_parquet_format_loads_expected_row_count(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """The pipeline also loads successfully when loader_file_format is parquet.
 
@@ -171,7 +177,7 @@ def test_run_xsv_pipeline_pass_parquet_format_loads_expected_row_count(
     settings = settings_factory(loader_file_format="parquet")
     write_xsv_file(settings, "data.csv", rows_to_csv(VALID_ROWS))
 
-    load_info = run_xsv_pipeline(settings)
+    load_info = pipeline_runner.run(PIPELINE_NAME, settings=settings)
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
@@ -182,7 +188,7 @@ def test_run_xsv_pipeline_pass_parquet_format_loads_expected_row_count(
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     settings_factory: Callable[..., XsvIngestSettings],
     write_xsv_file: Callable[[XsvIngestSettings, str, str], Path],
-    monkeypatch: pytest.MonkeyPatch,
+    pipeline_runner: PipelineTestRunner,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline, producing the expected output."""
     settings = settings_factory(dataset_name=f"cli_dataset_{uuid4().hex}")
@@ -207,9 +213,8 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         "--dlt-dev-mode",
         "false",
     ]
-    monkeypatch.setattr(sys, "argv", argv)
 
-    load_info = cli.run()
+    load_info = pipeline_runner.run(PIPELINE_NAME, cli_args=argv[1:])
 
     assert load_info is not None
     assert load_info.has_failed_jobs is False
