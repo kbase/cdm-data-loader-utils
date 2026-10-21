@@ -8,8 +8,15 @@ import pytest
 from dlt.common.pipeline import LoadInfo
 from pandas import DataFrame
 
-from cdm_data_loaders.pipelines.xmltopyarrow.settings import PIPELINE_NAME, XmlToPyArrowSettings
-from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES
+from cdm_data_loaders.pipelines.xmltopyarrow.settings import (
+    PIPELINE_NAME,
+    UNIPROT_PIPELINE_NAME,
+    UNIREF_PIPELINE_NAME,
+    UniProtXmlToPyArrowSettings,
+    UniRefXmlToPyArrowSettings,
+    XmlToPyArrowSettings,
+)
+from tests.cdm_data_loaders.pipelines.conftest import DEFAULT_DLT_TABLES, copy_test_files
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
@@ -141,4 +148,32 @@ def test_run_xmltopyarrow_pipeline_pass_uniref_chunk_5_el(
     expected_rows = [normalize_uniref_entry_for_xsd(entry) for entry in reference_xml_entries]
     assert len(loaded_rows) == N_REFERENCE_XML_ENTRIES
     assert sorted_json(loaded_rows) == sorted_json(expected_rows)
+    assert_pipeline_report_written(Path(settings.output_dir), load_info)
+
+
+@pytest.mark.parametrize(
+    ("target_name", "settings_cls", "sample_xml_rel_dir"),
+    [
+        (UNIPROT_PIPELINE_NAME, UniProtXmlToPyArrowSettings, "xsd/examples/uniprot"),
+        (UNIREF_PIPELINE_NAME, UniRefXmlToPyArrowSettings, "xsd/examples/uniref"),
+    ],
+)
+def test_run_subclass_pipeline_pass_end_to_end(
+    settings_factory: Callable[..., XmlToPyArrowSettings],
+    test_data_dir: Path,
+    pipeline_runner: PipelineTestRunner,
+    *,
+    target_name: str,
+    settings_cls: type[XmlToPyArrowSettings],
+    sample_xml_rel_dir: str,
+) -> None:
+    """UniProt and UniRef pipelines load XML entries into the 'entry' table using precomputed PyArrow schemas."""
+    settings = settings_factory(settings_cls)
+    copy_test_files(test_data_dir / sample_xml_rel_dir, ["minimal.xml.gz"], Path(settings.input_dir))
+
+    load_info = assert_run_ok(pipeline_runner.run(target_name, settings=settings))
+    dataset = load_info.pipeline.dataset()
+    assert set(dataset.tables) == {"entry", *DEFAULT_DLT_TABLES}
+    entry_df = dataset.table("entry").df()
+    assert len(entry_df) == 1
     assert_pipeline_report_written(Path(settings.output_dir), load_info)

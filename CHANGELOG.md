@@ -1,6 +1,8 @@
 # CDM Data Loaders Changelog
 
 - [CDM Data Loaders Changelog](#cdm-data-loaders-changelog)
+    - [v0.1.12](#v0112)
+    - [v0.1.11](#v0111)
     - [v0.1.10](#v0110)
     - [v0.1.9](#v019)
     - [v0.1.8](#v018)
@@ -13,6 +15,14 @@
     - [v0.1.1](#v011)
     - [v0.1.0](#v010)
 
+
+### v0.1.12
+
+- Dedicated UniProt and UniRef XML import pipelines using custom XSD-aware XML-to-JSON converter.
+
+### v0.1.11
+
+- Preliminary XSV, XML, and JSONLines importers
 
 ### v0.1.10
 

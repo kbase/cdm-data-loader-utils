@@ -50,19 +50,27 @@ def settings_factory(
     dlt_destination_config: str,
     library_xsd: Path,
 ) -> Callable[..., XmlToPyArrowSettings]:
-    """Return a factory that builds a valid XmlToPyArrowSettings, with fields open to override."""
+    """Return a factory that builds a valid XmlToPyArrowSettings (or subclass), with fields open to override."""
 
-    def _factory(**overrides: Any) -> XmlToPyArrowSettings:  # noqa: ANN401
+    def _factory(
+        settings_cls: type[XmlToPyArrowSettings] = XmlToPyArrowSettings,
+        **overrides: Any,  # noqa: ANN401
+    ) -> XmlToPyArrowSettings:
         defaults: dict[str, Any] = {
             **DEFAULT_XMLTOPYARROW_SETTINGS,
-            "dataset_name": "xml_test_dataset",
-            "table_name": "book",
             "use_destination": dlt_destination_config,
-            "xml_tag": "book",
-            "xsd_file": str(library_xsd),
         }
+        if settings_cls is XmlToPyArrowSettings:
+            defaults.update(
+                {
+                    "dataset_name": "xml_test_dataset",
+                    "table_name": "book",
+                    "xml_tag": "book",
+                    "xsd_file": str(library_xsd),
+                }
+            )
         defaults.update(overrides)
-        return make_cts_settings(XmlToPyArrowSettings, tmp_path, **defaults)
+        return make_cts_settings(settings_cls, tmp_path, **defaults)
 
     return _factory
 

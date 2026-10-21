@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltopyarrow.settings import XmlToPyArrowSettings
 from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 from tests.xml_samples import LIBRARY_XSD
@@ -21,20 +22,29 @@ def library_xsd(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def settings_factory(tmp_path: Path, library_xsd: Path) -> Callable[..., XmlToPyArrowSettings]:
-    """Return a factory that builds a valid XmlToPyArrowSettings, with fields open to override."""
+def settings_factory(tmp_path: Path, library_xsd: Path) -> Callable[..., Any]:
+    """Return a factory that builds a valid XmlToPyArrowSettings (or CtsSettings), with fields open to override."""
 
-    def _factory(**overrides: Any) -> XmlToPyArrowSettings:  # noqa: ANN401
+    def _factory(
+        settings_cls: type[CtsSettings] = XmlToPyArrowSettings,
+        **overrides: Any,  # noqa: ANN401
+    ) -> Any:  # noqa: ANN401
         defaults: dict[str, Any] = {
             "dlt_dev_mode": True,
-            "dataset_name": "xml_test_dataset",
-            "table_name": "book",
-            "xml_tag": "book",
-            "xsd_file": str(library_xsd),
-            "file_glob": "*.xml*",
         }
+        if issubclass(settings_cls, XmlToPyArrowSettings):
+            defaults["file_glob"] = "*.xml*"
+        if settings_cls is XmlToPyArrowSettings:
+            defaults.update(
+                {
+                    "dataset_name": "xml_test_dataset",
+                    "table_name": "book",
+                    "xml_tag": "book",
+                    "xsd_file": str(library_xsd),
+                }
+            )
         defaults.update(overrides)
-        return make_cts_settings(XmlToPyArrowSettings, tmp_path, **defaults)
+        return make_cts_settings(settings_cls, tmp_path, **defaults)
 
     return _factory
 
