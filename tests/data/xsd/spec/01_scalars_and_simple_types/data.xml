@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+    <record id="rec1" status="active" evidence="1 4 9" version="2">
+        <flag>true</flag>
+        <smallInt>-5</smallInt>
+        <medInt>1024</medInt>
+        <stdInt>100000</stdInt>
+        <bigInt>999999999999</bigInt>
+        <uByte>255</uByte>
+        <uShort>65535</uShort>
+        <uInt>4000000000</uInt>
+        <uLong>18446744073709551615</uLong>
+        <f32>1.5</f32>
+        <f64>2.718281828</f64>
+        <dec>3.14</dec>
+        <created>2025-06-15</created>
+        <updatedAt>2025-06-15T12:30:00Z</updatedAt>
+        <published>2025-06</published>
+        <homogeneousUnion>42000000000</homogeneousUnion>
+        <scores>10 20 30</scores>
+        <tokens>alpha beta gamma</tokens>
+        <rawHex>48656c6c6f</rawHex>
+        <rawB64>SGVsbG8=</rawB64>
+    </record>
+    <record id="rec2" status="archived" version="1">
+        <flag>0</flag>
+    </record>
+    <record id="rec3" status="active" evidence="  10   20  " version="-42">
+        <flag>1</flag>
+        <smallInt>-128</smallInt>
+        <medInt>-32768</medInt>
+        <stdInt>-2147483648</stdInt>
+        <bigInt>-999999999999</bigInt>
+        <uByte>0</uByte>
+        <uShort>0</uShort>
+        <uInt>0</uInt>
+        <uLong>0</uLong>
+        <f32>-0.5</f32>
+        <f64>1.25e-4</f64>
+        <dec>42</dec>
+        <created>2025-06-15Z</created>
+        <updatedAt>2025-06-15T12:30:00.123+02:00</updatedAt>
+        <published>1999</published>
+        <homogeneousUnion>-42</homogeneousUnion>
+        <scores>  100   200  </scores>
+        <tokens>  one   two  </tokens>
+        <rawHex>48656C6C6F</rawHex>
+        <rawB64>SGVsbG8=</rawB64>
+    </record>
+</dataset>

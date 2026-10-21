@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<articles>
+    <article>
+        <title>Ca<sup>2+</sup> signaling in <i>E. <b>coli</b></i> cells</title>
+        <abstractText Label="BACKGROUND">Studied <b>bold</b> &amp; <i>italic</i> text where x &lt; y.</abstractText>
+        <abstractText>Unlabelled paragraph with <sub>2</sub>O and empty <sup/> tag.</abstractText>
+        <abstractText Label="EMPTY"/>
+        <abstractText/>
+    </article>
+    <article>
+        <title/>
+    </article>
+</articles>

@@ -77,6 +77,7 @@ PIPELINE_TARGETS: Final[dict[str, tuple[str, str]]] = {
     "uniprot_cdm": ("uniprot_cdm", "cdm_data_loaders.pipelines.uniprot_kb_cdm"),
     "uniref_cdm": ("uniref_cdm", "cdm_data_loaders.pipelines.uniref_cdm"),
     "xmltodict": ("xmltodict", "cdm_data_loaders.pipelines.xmltodict.pipeline"),
+    "xmltopyarrow": ("xmltopyarrow", "cdm_data_loaders.pipelines.xmltopyarrow.pipeline"),
     "xml2db": ("xml2db", "cdm_data_loaders.pipelines.xml2db.pipeline"),
     "xsv": ("xsv", "cdm_data_loaders.pipelines.xsv.pipeline"),
 }

@@ -1,0 +1,13 @@
+[
+  {
+    "_id": "UniRef100_P04637",
+    "_updated": "2025-02-05",
+    "name": "Cluster: Glycogen synthase",
+    "representativeMember": {
+      "dbReference": {
+        "_type": "UniProtKB ID",
+        "_id": "P53_HUMAN"
+      }
+    }
+  }
+]

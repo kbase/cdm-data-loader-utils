@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="http://example.org/ns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <entry id="e1">
+        <title xsi:nil="true"/>
+        <label lang="en" xsi:nil="true"/>
+        <comment type="function" xsi:nil="true"/>
+        <comment type="subunit">
+            <text>Homodimer</text>
+        </comment>
+    </entry>
+    <entry id="e2">
+        <title>Normal Title</title>
+        <label xsi:nil="true"/>
+    </entry>
+</root>

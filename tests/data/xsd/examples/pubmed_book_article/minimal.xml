@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PubmedBookArticleSet xmlns="http://www.w3.org/namespace/">
+  <PubmedBookArticle>
+    <BookDocument>
+      <PMID Version="1">38123456</PMID>
+      <ArticleIdList>
+        <ArticleId>38123456</ArticleId>
+      </ArticleIdList>
+      <Book>
+        <Publisher>
+          <PublisherName>Cold Spring Harbor Laboratory Press</PublisherName>
+        </Publisher>
+        <BookTitle>Molecular Biology of the Cell, <i>7th Edition</i></BookTitle>
+        <PubDate>
+          <MedlineDate>Sample_MedlineDate_1</MedlineDate>
+        </PubDate>
+      </Book>
+    </BookDocument>
+  </PubmedBookArticle>
+</PubmedBookArticleSet>

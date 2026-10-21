@@ -1,0 +1,10 @@
+[
+    {
+        "_id": "C1",
+        "name": "First Cluster"
+    },
+    {
+        "_id": "C2",
+        "name": "Second Cluster"
+    }
+]

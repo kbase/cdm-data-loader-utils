@@ -59,18 +59,6 @@ def test_run_xmltodict_pipeline_pass_binds_reader_before_run_pipeline(
     resource = mock_run_pipeline.call_args.kwargs["resource"]
     assert resource.name == "xmltodict_reader"
     assert resource._pipe.parent.name == "filesystem"  # noqa: SLF001
-
-
-def test_run_xmltodict_pipeline_pass_resource_is_reader_piped_into_source(
-    settings_factory: Callable[..., XmlToDictSettings],
-) -> None:
-    """The resource passed to run_pipeline combines the filesystem source with the bound reader."""
-    settings = settings_factory()
-
-    with patch.object(xmltodict_module, "run_pipeline") as mock_run_pipeline:
-        run_xmltodict_pipeline(settings)
-
-    resource = mock_run_pipeline.call_args.kwargs["resource"]
     assert isinstance(resource, dlt.sources.DltResource)
 
 

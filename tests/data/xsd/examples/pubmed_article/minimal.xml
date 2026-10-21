@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PubmedArticleSet xmlns="http://www.w3.org/namespace/">
+  <PubmedArticle>
+    <MedlineCitation Status="MEDLINE">
+      <PMID Version="1">38123456</PMID>
+      <Article PubModel="Print-Electronic">
+        <Journal>
+          <JournalIssue CitedMedium="Internet">
+            <PubDate>
+              <MedlineDate>Sample_MedlineDate_1</MedlineDate>
+            </PubDate>
+          </JournalIssue>
+        </Journal>
+        <ArticleTitle>Structural basis of <i>TP53</i> tetramerization and Ca<sup>2+</sup> signaling</ArticleTitle>
+        <ELocationID EIdType="doi">10.1038/s41586-024-07123-x</ELocationID>
+        <Language>eng</Language>
+        <PublicationTypeList>
+          <PublicationType UI="D016428">Journal Article</PublicationType>
+        </PublicationTypeList>
+      </Article>
+      <MedlineJournalInfo>
+        <MedlineTA>Nature</MedlineTA>
+      </MedlineJournalInfo>
+    </MedlineCitation>
+  </PubmedArticle>
+</PubmedArticleSet>

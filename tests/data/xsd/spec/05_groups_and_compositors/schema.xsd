@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:attributeGroup name="auditAttrs">
+        <xs:attribute name="createdBy" type="xs:string"/>
+        <xs:attribute name="version" type="xs:int"/>
+    </xs:attributeGroup>
+
+    <xs:group name="kvGroup">
+        <xs:sequence>
+            <xs:element name="k" type="xs:string"/>
+            <xs:element name="v" type="xs:int"/>
+        </xs:sequence>
+    </xs:group>
+
+    <xs:complexType name="paginationType">
+        <xs:choice>
+            <xs:sequence>
+                <xs:element name="StartPage" type="xs:string"/>
+                <xs:element name="EndPage" type="xs:string" minOccurs="0"/>
+                <xs:element name="MedlinePgn" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+            <xs:element name="MedlinePgn" type="xs:string"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="interactionType">
+        <xs:sequence>
+            <xs:element name="interactant" type="xs:string"/>
+            <xs:element name="interactant" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="metadataAllType">
+        <xs:all>
+            <xs:element name="author" type="xs:string"/>
+            <xs:element name="year" type="xs:int" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:element name="dataset">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="item" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="pagination" type="paginationType" minOccurs="0"/>
+                            <xs:element name="interaction" type="interactionType" minOccurs="0"/>
+                            <xs:element name="meta" type="metadataAllType" minOccurs="0"/>
+                            <xs:element name="pairs" minOccurs="0">
+                                <xs:complexType>
+                                    <xs:group ref="kvGroup" maxOccurs="unbounded"/>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attributeGroup ref="auditAttrs"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

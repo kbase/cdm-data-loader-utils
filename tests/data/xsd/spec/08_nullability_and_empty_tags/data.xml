@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <entry id="e1">
+        <name>BRCA1</name>
+        <summary/>
+        <geneId>672</geneId>
+        <comment type="function" xsi:nil="true"/>
+    </entry>
+</root>

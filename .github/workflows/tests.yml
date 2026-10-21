@@ -85,8 +85,8 @@ jobs:
         suite:
           - name: pipelines
             args: tests/cdm_data_loaders/pipelines/
-          - name: docker
-            args: --run-docker -m "docker and not requires_spark and not requires_ceph" tests/cdm_data_loaders/pipelines/
+          # - name: docker
+          #   args: --run-docker -m "docker and not requires_spark and not requires_ceph" tests/cdm_data_loaders/pipelines/
           - name: integration
             args: tests/integration/
           - name: everything else

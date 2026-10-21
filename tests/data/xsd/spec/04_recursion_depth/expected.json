@@ -1,0 +1,29 @@
+[
+    {
+        "_id": "r1",
+        "tree": {
+            "_label": "L1",
+            "_weight": 10,
+            "branch": [
+                {
+                    "_label": "L2",
+                    "branch": [
+                        "{\"_label\": \"L3\", \"_weight\": 30, \"branch\": [{\"_label\": \"L4\"}]}",
+                        "{\"_label\": \"L3_sibling\"}"
+                    ]
+                }
+            ]
+        },
+        "Section": {
+            "SectionTitle": "Ch 1",
+            "Section": [
+                {
+                    "SectionTitle": "Sec 1.1",
+                    "Section": [
+                        "{\"SectionTitle\": \"Subsec 1.1.1\"}"
+                    ]
+                }
+            ]
+        }
+    }
+]

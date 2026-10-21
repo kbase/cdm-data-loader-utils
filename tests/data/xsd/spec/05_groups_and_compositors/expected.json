@@ -1,0 +1,36 @@
+[
+    {
+        "_createdBy": "alice",
+        "_version": 1,
+        "pagination": {
+            "StartPage": "10",
+            "EndPage": "20",
+            "MedlinePgn": "10-20"
+        },
+        "interaction": {
+            "interactant": [
+                "P12345",
+                "Q67890"
+            ]
+        },
+        "meta": {
+            "author": "Bob",
+            "year": 2025
+        },
+        "pairs": {
+            "k": [
+                "a",
+                "b"
+            ],
+            "v": [
+                1,
+                2
+            ]
+        }
+    },
+    {
+        "pagination": {
+            "MedlinePgn": "e12345"
+        }
+    }
+]
