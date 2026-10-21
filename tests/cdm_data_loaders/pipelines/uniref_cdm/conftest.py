@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.uniref import (
+from cdm_data_loaders.pipelines.uniref_cdm import (
     UNIREF_VARIANTS,
     VARIANT,
     UnirefSettings,

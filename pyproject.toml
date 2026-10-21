@@ -46,8 +46,8 @@ ncbi_ftp_promote = "cdm_data_loaders.pipelines.ncbi_ftp_promote:cli"
 ncbi_ftp_sync = "cdm_data_loaders.pipelines.ncbi_ftp_download:cli"
 ncbi_rest_api = "cdm_data_loaders.pipelines.ncbi_rest_api:cli"
 pdb_manifest = "cdm_data_loaders.pipelines.pdb_manifest:cli"
-uniprot = "cdm_data_loaders.pipelines.uniprot_kb:cli"
-uniref = "cdm_data_loaders.pipelines.uniref:cli"
+uniprot_cdm = "cdm_data_loaders.pipelines.uniprot_kb_cdm:cli"
+uniref_cdm = "cdm_data_loaders.pipelines.uniref_cdm:cli"
 xmltodict = "cdm_data_loaders.pipelines.xmltodict.pipeline:cli"
 xml2db = "cdm_data_loaders.pipelines.xml2db.pipeline:cli"
 xsv = "cdm_data_loaders.pipelines.xsv.pipeline:cli"
@@ -224,6 +224,7 @@ pytest_add_cli_args_test_selection= [ "-m", "not requires_spark", "-m", "not slo
 
 
 [tool.pytest]
+testpaths = ["tests"]
 pythonpath = ["src"]
 log_cli = true
 log_cli_level = "WARNING"

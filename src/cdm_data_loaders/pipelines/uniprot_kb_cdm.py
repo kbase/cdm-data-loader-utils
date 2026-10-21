@@ -21,7 +21,7 @@ from cdm_data_loaders.pipelines.core import (
 )
 from cdm_data_loaders.readers.xml import build_xml_file_resource
 
-PIPELINE_NAME: Final[str] = "uniprot"
+PIPELINE_NAME: Final[str] = "uniprot_cdm"
 UNIPROT_LOG_INTERVAL: Final[int] = 1000
 
 

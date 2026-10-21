@@ -7,13 +7,13 @@ from frozendict import frozendict
 from pydantic import ValidationError
 from pydantic_settings import CliApp
 
-from cdm_data_loaders.pipelines.uniref import (
+from cdm_data_loaders.pipelines.uniref_cdm import (
     UNIREF_VARIANTS,
     VARIANT,
     UnirefSettings,
 )
 from tests.cdm_data_loaders.conftest import check_settings
-from tests.cdm_data_loaders.pipelines.uniref.conftest import (
+from tests.cdm_data_loaders.pipelines.uniref_cdm.conftest import (
     UNIREF_VARIANT_ALIASES,
 )
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes, make_cli_arg

@@ -10,7 +10,8 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.uniprot_kb import (
+from cdm_data_loaders.pipelines.uniprot_kb_cdm import (
+    PIPELINE_NAME,
     UniProtSettings,
     parse_uniprot,
 )
@@ -112,9 +113,9 @@ def test_integration_cli_uniprot_pipeline_output_validated(
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Exercise the UniProt pipeline end-to-end across core, cli, and docker execution modes."""
-    load_info = assert_run_ok(pipeline_runner.run("uniprot", settings=duckdb_uniprot_settings))
-    assert load_info.pipeline.pipeline_name == "uniprot"
-    assert load_info.dataset_name == "uniprot"
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=duckdb_uniprot_settings))
+    assert load_info.pipeline.pipeline_name == PIPELINE_NAME
+    assert load_info.dataset_name == PIPELINE_NAME
     assert_pipeline_report_written(Path(duckdb_uniprot_settings.output_dir), load_info, metadata_moved=True)
 
     dataset_dir = Path(duckdb_uniprot_settings.output_dir) / load_info.dataset_name
