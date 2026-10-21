@@ -238,4 +238,3 @@ def test_cli_fail_missing_required_args_raise(
         cli()
 
     mock_run_pipeline.assert_not_called()
-

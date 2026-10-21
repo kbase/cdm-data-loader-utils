@@ -168,4 +168,3 @@ def test_xmltopyarrow_pass_reconstructed_matches_duckdb_reference(
     ]
     assert len(from_duckdb) == EXPECTED_ENTRY_COUNT
     assert sorted_json(reconstructed) == sorted_json(from_duckdb)
-

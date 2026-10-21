@@ -45,4 +45,3 @@ class XmlToDictSettings(FileFormatIngestSettings):
             description="XML tag to capture the contents of",
         ),
     ]
-

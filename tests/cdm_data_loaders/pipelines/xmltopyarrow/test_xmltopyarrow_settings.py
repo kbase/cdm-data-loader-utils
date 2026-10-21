@@ -211,4 +211,3 @@ def test_xmltopyarrow_settings_pass_xml_tag_shortcut(
     settings = CliApp.run(XmlToPyArrowSettings, cli_args=argv)
     assert settings.file_glob == "*.xml.gz"
     assert settings.xml_tag == "book"
-

@@ -142,4 +142,3 @@ def test_run_xmltopyarrow_pipeline_pass_uniref_chunk_5_el(
     assert len(loaded_rows) == N_REFERENCE_XML_ENTRIES
     assert sorted_json(loaded_rows) == sorted_json(expected_rows)
     assert_pipeline_report_written(Path(settings.output_dir), load_info)
-

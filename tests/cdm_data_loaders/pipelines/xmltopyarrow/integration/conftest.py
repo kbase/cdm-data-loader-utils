@@ -204,4 +204,3 @@ def normalize_uniref_entry_for_xsd(raw_entry: dict[str, Any]) -> dict[str, Any]:
 def reconstruct_xsd_entries(tables: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Extract normalized XSD entry dicts from the single Arrow-backed entry table."""
     return [strip_xsd_arrow_row(row) for row in tables.get("entry", [])]
-

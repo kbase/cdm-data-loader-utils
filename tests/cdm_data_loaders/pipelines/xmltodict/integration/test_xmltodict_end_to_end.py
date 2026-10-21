@@ -111,5 +111,3 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     book_df = check_book_list_results(load_info)
     assert sorted(book_df["book___id"].tolist()) == ["1", "2", "3"]
     assert_pipeline_report_written(Path(settings.output_dir), load_info)
-
-

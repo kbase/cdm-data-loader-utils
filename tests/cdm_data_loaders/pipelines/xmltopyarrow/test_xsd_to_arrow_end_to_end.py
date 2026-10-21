@@ -195,4 +195,3 @@ def test_process_xml_file_to_pyarrow_pass_yields_arrow_tables_for_spec_and_examp
 
     actual_rows = json.loads(json.dumps(_strip_none(table.to_pylist()), default=_json_default))
     assert actual_rows == expected
-

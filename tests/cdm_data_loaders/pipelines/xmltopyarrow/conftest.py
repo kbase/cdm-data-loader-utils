@@ -51,4 +51,3 @@ def copy_xsd_fixture(tmp_path: Path, test_data_dir: Path) -> Callable[[str], str
         return str(dest)
 
     return _copy
-

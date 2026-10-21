@@ -417,7 +417,10 @@ def _is_empty_marker_complex_type(complex_type: XsdComplexType) -> bool:
     """Return True if ``complex_type`` has no attributes, no child elements, not simpleContent, and not mixed."""
     if complex_type.has_simple_content() or complex_type.mixed:
         return False
-    if any(isinstance(a, XsdAttribute) and getattr(a, "use", None) != "prohibited" for a in complex_type.attributes.values()):
+    if any(
+        isinstance(a, XsdAttribute) and getattr(a, "use", None) != "prohibited"
+        for a in complex_type.attributes.values()
+    ):
         return False
     if complex_type.model_group is None:
         return True
@@ -756,9 +759,7 @@ def _serialize_mixed_node(node: Element) -> str:
     """Serialize an inline child element inside a ``mixed='true'`` element without namespace declarations."""
     local = _local_name(node.tag)
     attrs = "".join(
-        f' {_local_name(k)}="{_escape_xml_attr(v)}"'
-        for k, v in node.attrib.items()
-        if not _is_ignored_attr(k)
+        f' {_local_name(k)}="{_escape_xml_attr(v)}"' for k, v in node.attrib.items() if not _is_ignored_attr(k)
     )
     inner = _serialize_inner_xml(node)
     if not inner and len(node) == 0 and node.text is None:
@@ -814,11 +815,7 @@ def _coerce_scalar_text(raw_text: str, simple_type: XsdType | None) -> Any:  # n
 def _extract_struct_attributes(element: Element, complex_type: XsdComplexType) -> dict[str, Any]:
     """Extract and coerce declared XML attributes from ``element`` into ``_<name>`` dictionary entries."""
     declared_attrs = {attr.local_name: attr for attr in _collect_attributes(complex_type) if attr.local_name}
-    raw_attrs = {
-        _local_name(k): v
-        for k, v in element.attrib.items()
-        if not _is_ignored_attr(k)
-    }
+    raw_attrs = {_local_name(k): v for k, v in element.attrib.items() if not _is_ignored_attr(k)}
     return {
         f"_{attr_name}": _coerce_scalar_text(raw_attrs[attr_name], attr_decl.type)
         for attr_name, attr_decl in declared_attrs.items()
@@ -878,8 +875,7 @@ def _convert_complex_struct(
 
         if is_list:
             result[child_name] = [
-                _convert_child_occurrence(ctx, el, child_decl, nullable=True)
-                for el in matching_elements
+                _convert_child_occurrence(ctx, el, child_decl, nullable=True) for el in matching_elements
             ]
         else:
             val = _convert_child_occurrence(ctx, matching_elements[0], child_decl, nullable=nullable)
