@@ -452,6 +452,19 @@ def _write_docker_dlt_config(config_path: Path, use_destination: str) -> None:
     config_path.write_text("\n".join(blocks), encoding="utf-8")
 
 
+def _make_container_accessible(root: Path, *, writable: bool = True) -> None:
+    """Ensure bind-mounted host paths are accessible to the container's nonroot user on Linux."""
+    dir_mode = 0o777 if writable else 0o755
+    file_mode = 0o666 if writable else 0o644
+    if root.is_dir():
+        root.chmod(dir_mode)
+        for child in root.rglob("*"):
+            if not child.is_symlink():
+                child.chmod(dir_mode if child.is_dir() else file_mode)
+    elif root.is_file() and not root.is_symlink():
+        root.chmod(file_mode)
+
+
 class PipelineTestRunner:
     """Execute any CDM ingestion pipeline in ``core``, ``cli``, or ``docker`` mode."""
 
@@ -635,6 +648,13 @@ class PipelineTestRunner:
         _write_docker_dlt_config(staged_input_dir / "dlt_conf" / "config.toml", use_destination)
 
         container_args = self._translate_args_for_docker(args, aux_dir, pymodules_dir)
+
+        _make_container_accessible(staged_input_dir, writable=True)
+        _make_container_accessible(host_output_dir, writable=True)
+        if aux_dir.is_dir():
+            _make_container_accessible(aux_dir, writable=False)
+        if pymodules_dir.is_dir():
+            _make_container_accessible(pymodules_dir, writable=False)
 
         docker_cmd: list[str] = [
             "docker",
