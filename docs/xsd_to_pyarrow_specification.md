@@ -211,27 +211,37 @@ Covers built-in numeric/boolean/date/binary scalars, `xs:restriction` enumeratio
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("_id", pa.string(), nullable=False, metadata={"xsd_type": "xs:ID"}),
-    pa.field("_status", pa.string(), nullable=False, metadata={"xsd_type": "xs:string"}),
-    pa.field("_evidence", pa.list_(pa.field("item", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"})), nullable=True),
-    pa.field("_version", pa.int32(), nullable=False, metadata={"xsd_type": "xs:int"}),
-    pa.field("flag", pa.bool_(), nullable=False, metadata={"xsd_type": "xs:boolean"}),
-    pa.field("smallInt", pa.int8(), nullable=True, metadata={"xsd_type": "xs:byte"}),
-    pa.field("medInt", pa.int16(), nullable=True, metadata={"xsd_type": "xs:short"}),
-    pa.field("stdInt", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"}),
-    pa.field("bigInt", pa.int64(), nullable=True, metadata={"xsd_type": "xs:integer"}),
-    pa.field("ulong", pa.uint64(), nullable=True, metadata={"xsd_type": "xs:unsignedLong"}),
-    pa.field("f32", pa.float64(), nullable=True, metadata={"xsd_type": "xs:float"}),
-    pa.field("f64", pa.float64(), nullable=True, metadata={"xsd_type": "xs:double"}),
-    pa.field("dec", pa.float64(), nullable=True, metadata={"xsd_type": "xs:decimal"}),
-    pa.field("created", pa.date32(), nullable=True, metadata={"xsd_type": "xs:date"}),
-    pa.field("published", pa.string(), nullable=True, metadata={"xsd_type": "xs:date | xs:gYearMonth | xs:gYear"}),
-    pa.field("code", pa.string(), nullable=True, metadata={"xsd_type": "xs:int | xs:short"}),
-    pa.field("scores", pa.list_(pa.field("item", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"})), nullable=True),
-    pa.field("rawHex", pa.binary(), nullable=True, metadata={"xsd_type": "xs:hexBinary"}),
-    pa.field("rawB64", pa.binary(), nullable=True, metadata={"xsd_type": "xs:base64Binary"}),
-])
+pa.schema(
+    [
+        pa.field("_id", pa.string(), nullable=False, metadata={"xsd_type": "xs:ID"}),
+        pa.field("_status", pa.string(), nullable=False, metadata={"xsd_type": "xs:string"}),
+        pa.field(
+            "_evidence",
+            pa.list_(pa.field("item", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"})),
+            nullable=True,
+        ),
+        pa.field("_version", pa.int32(), nullable=False, metadata={"xsd_type": "xs:int"}),
+        pa.field("flag", pa.bool_(), nullable=False, metadata={"xsd_type": "xs:boolean"}),
+        pa.field("smallInt", pa.int8(), nullable=True, metadata={"xsd_type": "xs:byte"}),
+        pa.field("medInt", pa.int16(), nullable=True, metadata={"xsd_type": "xs:short"}),
+        pa.field("stdInt", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"}),
+        pa.field("bigInt", pa.int64(), nullable=True, metadata={"xsd_type": "xs:integer"}),
+        pa.field("ulong", pa.uint64(), nullable=True, metadata={"xsd_type": "xs:unsignedLong"}),
+        pa.field("f32", pa.float64(), nullable=True, metadata={"xsd_type": "xs:float"}),
+        pa.field("f64", pa.float64(), nullable=True, metadata={"xsd_type": "xs:double"}),
+        pa.field("dec", pa.float64(), nullable=True, metadata={"xsd_type": "xs:decimal"}),
+        pa.field("created", pa.date32(), nullable=True, metadata={"xsd_type": "xs:date"}),
+        pa.field("published", pa.string(), nullable=True, metadata={"xsd_type": "xs:date | xs:gYearMonth | xs:gYear"}),
+        pa.field("code", pa.string(), nullable=True, metadata={"xsd_type": "xs:int | xs:short"}),
+        pa.field(
+            "scores",
+            pa.list_(pa.field("item", pa.int32(), nullable=True, metadata={"xsd_type": "xs:int"})),
+            nullable=True,
+        ),
+        pa.field("rawHex", pa.binary(), nullable=True, metadata={"xsd_type": "xs:hexBinary"}),
+        pa.field("rawB64", pa.binary(), nullable=True, metadata={"xsd_type": "xs:base64Binary"}),
+    ]
+)
 ```
 *(In Examples 2–9 below, `metadata={"xsd_type": ...}` on scalar fields is omitted for brevity.)*
 
@@ -324,18 +334,34 @@ Covers `targetNamespace`, `elementFormDefault="qualified"`, stripping `xmlns` / 
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("_id", pa.string(), nullable=False),
-    pa.field("title", pa.string(), nullable=True),
-    pa.field("label", pa.struct([
-        pa.field("_lang", pa.string(), nullable=True),
-        pa.field("#text", pa.string(), nullable=True),
-    ]), nullable=True),
-    pa.field("comment", pa.list_(pa.struct([
-        pa.field("_type", pa.string(), nullable=False),
-        pa.field("text", pa.string(), nullable=True),
-    ])), nullable=True),
-])
+pa.schema(
+    [
+        pa.field("_id", pa.string(), nullable=False),
+        pa.field("title", pa.string(), nullable=True),
+        pa.field(
+            "label",
+            pa.struct(
+                [
+                    pa.field("_lang", pa.string(), nullable=True),
+                    pa.field("#text", pa.string(), nullable=True),
+                ]
+            ),
+            nullable=True,
+        ),
+        pa.field(
+            "comment",
+            pa.list_(
+                pa.struct(
+                    [
+                        pa.field("_type", pa.string(), nullable=False),
+                        pa.field("text", pa.string(), nullable=True),
+                    ]
+                )
+            ),
+            nullable=True,
+        ),
+    ]
+)
 ```
 
 ---
@@ -422,13 +448,23 @@ Covers `mixed="true"` elements with inline HTML/formatting tags (`<b>`, `<i>`, `
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("title", pa.string(), nullable=False),
-    pa.field("abstractText", pa.list_(pa.struct([
-        pa.field("_Label", pa.string(), nullable=True),
-        pa.field("#text", pa.string(), nullable=True),
-    ])), nullable=True),
-])
+pa.schema(
+    [
+        pa.field("title", pa.string(), nullable=False),
+        pa.field(
+            "abstractText",
+            pa.list_(
+                pa.struct(
+                    [
+                        pa.field("_Label", pa.string(), nullable=True),
+                        pa.field("#text", pa.string(), nullable=True),
+                    ]
+                )
+            ),
+            nullable=True,
+        ),
+    ]
+)
 ```
 
 ---
@@ -511,16 +547,34 @@ With `max_recursion_depth = 2`:
 
 #### PyArrow Schema (`max_recursion_depth=2`)
 ```python
-pa.schema([
-    pa.field("_id", pa.string(), nullable=False),
-    pa.field("tree", pa.struct([                                   # depth 1 of TreeType
-        pa.field("_label", pa.string(), nullable=True),
-        pa.field("branch", pa.list_(pa.struct([                    # depth 2 of TreeType
-            pa.field("_label", pa.string(), nullable=True),
-            pa.field("branch", pa.list_(pa.string()), nullable=True),  # depth > 2 -> JSON string per item
-        ])), nullable=True),
-    ]), nullable=True),
-])
+pa.schema(
+    [
+        pa.field("_id", pa.string(), nullable=False),
+        pa.field(
+            "tree",
+            pa.struct(
+                [  # depth 1 of TreeType
+                    pa.field("_label", pa.string(), nullable=True),
+                    pa.field(
+                        "branch",
+                        pa.list_(
+                            pa.struct(
+                                [  # depth 2 of TreeType
+                                    pa.field("_label", pa.string(), nullable=True),
+                                    pa.field(
+                                        "branch", pa.list_(pa.string()), nullable=True
+                                    ),  # depth > 2 -> JSON string per item
+                                ]
+                            )
+                        ),
+                        nullable=True,
+                    ),
+                ]
+            ),
+            nullable=True,
+        ),
+    ]
+)
 ```
 
 ---
@@ -648,23 +702,43 @@ Covers:
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("_createdBy", pa.string(), nullable=True),
-    pa.field("_version", pa.int32(), nullable=True),
-    pa.field("pagination", pa.struct([
-        pa.field("StartPage", pa.string(), nullable=True),
-        pa.field("EndPage", pa.string(), nullable=True),
-        pa.field("MedlinePgn", pa.string(), nullable=True),
-    ]), nullable=True),
-    pa.field("meta", pa.struct([
-        pa.field("author", pa.string(), nullable=False),
-        pa.field("year", pa.int32(), nullable=True),
-    ]), nullable=True),
-    pa.field("pairs", pa.struct([
-        pa.field("k", pa.list_(pa.string()), nullable=False),
-        pa.field("v", pa.list_(pa.int32()), nullable=False),
-    ]), nullable=True),
-])
+pa.schema(
+    [
+        pa.field("_createdBy", pa.string(), nullable=True),
+        pa.field("_version", pa.int32(), nullable=True),
+        pa.field(
+            "pagination",
+            pa.struct(
+                [
+                    pa.field("StartPage", pa.string(), nullable=True),
+                    pa.field("EndPage", pa.string(), nullable=True),
+                    pa.field("MedlinePgn", pa.string(), nullable=True),
+                ]
+            ),
+            nullable=True,
+        ),
+        pa.field(
+            "meta",
+            pa.struct(
+                [
+                    pa.field("author", pa.string(), nullable=False),
+                    pa.field("year", pa.int32(), nullable=True),
+                ]
+            ),
+            nullable=True,
+        ),
+        pa.field(
+            "pairs",
+            pa.struct(
+                [
+                    pa.field("k", pa.list_(pa.string()), nullable=False),
+                    pa.field("v", pa.list_(pa.int32()), nullable=False),
+                ]
+            ),
+            nullable=True,
+        ),
+    ]
+)
 ```
 
 ---
@@ -760,21 +834,55 @@ Because the full ancestor path from `xml_tag` (`("root", "left", "node")` vs `("
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("left", pa.struct([
-        pa.field("node", pa.struct([
-            pa.field("leaf", pa.string(), nullable=False),
-        ]), nullable=False),
-    ]), nullable=False),
-    pa.field("right", pa.struct([
-        pa.field("node", pa.struct([
-            pa.field("leaf", pa.list_(pa.struct([
-                pa.field("_lang", pa.string(), nullable=True),
-                pa.field("#text", pa.string(), nullable=True),
-            ])), nullable=False),
-        ]), nullable=False),
-    ]), nullable=False),
-])
+pa.schema(
+    [
+        pa.field(
+            "left",
+            pa.struct(
+                [
+                    pa.field(
+                        "node",
+                        pa.struct(
+                            [
+                                pa.field("leaf", pa.string(), nullable=False),
+                            ]
+                        ),
+                        nullable=False,
+                    ),
+                ]
+            ),
+            nullable=False,
+        ),
+        pa.field(
+            "right",
+            pa.struct(
+                [
+                    pa.field(
+                        "node",
+                        pa.struct(
+                            [
+                                pa.field(
+                                    "leaf",
+                                    pa.list_(
+                                        pa.struct(
+                                            [
+                                                pa.field("_lang", pa.string(), nullable=True),
+                                                pa.field("#text", pa.string(), nullable=True),
+                                            ]
+                                        )
+                                    ),
+                                    nullable=False,
+                                ),
+                            ]
+                        ),
+                        nullable=False,
+                    ),
+                ]
+            ),
+            nullable=False,
+        ),
+    ]
+)
 ```
 
 ---
@@ -854,19 +962,27 @@ Covers:
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("_id", pa.string(), nullable=False),          # use="required"
-    pa.field("_source", pa.string(), nullable=True),       # use="optional"
-    pa.field("name", pa.string(), nullable=False),         # minOccurs=1, non-nillable
-    pa.field("summary", pa.string(), nullable=False),      # minOccurs=1, non-nillable
-    pa.field("optionalNote", pa.string(), nullable=True),  # minOccurs=0
-    pa.field("geneId", pa.int32(), nullable=True),         # inside xs:choice -> nullable=True
-    pa.field("proteinId", pa.string(), nullable=True),     # inside xs:choice -> nullable=True
-    pa.field("comment", pa.struct([
-        pa.field("_type", pa.string(), nullable=False),    # use="required"
-        pa.field("text", pa.string(), nullable=True),      # parent is nillable="true" -> nullable=True
-    ]), nullable=True),                                    # nillable="true" -> nullable=True
-])
+pa.schema(
+    [
+        pa.field("_id", pa.string(), nullable=False),  # use="required"
+        pa.field("_source", pa.string(), nullable=True),  # use="optional"
+        pa.field("name", pa.string(), nullable=False),  # minOccurs=1, non-nillable
+        pa.field("summary", pa.string(), nullable=False),  # minOccurs=1, non-nillable
+        pa.field("optionalNote", pa.string(), nullable=True),  # minOccurs=0
+        pa.field("geneId", pa.int32(), nullable=True),  # inside xs:choice -> nullable=True
+        pa.field("proteinId", pa.string(), nullable=True),  # inside xs:choice -> nullable=True
+        pa.field(
+            "comment",
+            pa.struct(
+                [
+                    pa.field("_type", pa.string(), nullable=False),  # use="required"
+                    pa.field("text", pa.string(), nullable=True),  # parent is nillable="true" -> nullable=True
+                ]
+            ),
+            nullable=True,
+        ),  # nillable="true" -> nullable=True
+    ]
+)
 ```
 
 ---
@@ -931,11 +1047,13 @@ Covers DTD-derived empty marker elements like [`pubmed.xsd` L1312](file:///Users
 
 #### PyArrow Schema
 ```python
-pa.schema([
-    pa.field("title", pa.string(), nullable=False),
-    pa.field("BookInProcess", pa.string(), nullable=True),
-    pa.field("flag", pa.list_(pa.string()), nullable=True),
-])
+pa.schema(
+    [
+        pa.field("title", pa.string(), nullable=False),
+        pa.field("BookInProcess", pa.string(), nullable=True),
+        pa.field("flag", pa.list_(pa.string()), nullable=True),
+    ]
+)
 ```
 
 ---

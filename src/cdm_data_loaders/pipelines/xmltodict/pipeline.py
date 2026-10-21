@@ -1,7 +1,6 @@
 """XML to dictionary pipeline for the KBase CTS."""
 
 from collections.abc import Generator, Iterator
-from logging import Logger, getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,8 +16,6 @@ from cdm_data_loaders.readers.xml import process_xml_file_to_dict
 
 if TYPE_CHECKING:
     from dlt.extract import DltResource
-
-logger: Logger = getLogger(__name__)
 
 
 def _read_xmltodict_items(
