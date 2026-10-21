@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cdm_data_loaders.parsers.uniprot.uniprot_kb import ENTRY_XML_TAG
-from cdm_data_loaders.pipelines import uniprot_kb as uniprot_module
+from cdm_data_loaders.pipelines import uniprot_kb_cdm as uniprot_module
 from cdm_data_loaders.pipelines.core import PipelineCli
-from cdm_data_loaders.pipelines.uniprot_kb import (
+from cdm_data_loaders.pipelines.uniprot_kb_cdm import (
+    PIPELINE_NAME,
     UniProtSettings,
     cli,
     parse_uniprot,
@@ -33,8 +34,8 @@ def test_run_uniprot_pipeline_args_set_correctly(test_settings: UniProtSettings)
     _, kwargs = mock_run_pipeline.call_args
     assert kwargs.keys() == {"settings", "resource", "pipeline_kwargs"}
     assert kwargs["pipeline_kwargs"] == {
-        "pipeline_name": "uniprot",
-        "dataset_name": "uniprot",
+        "pipeline_name": PIPELINE_NAME,
+        "dataset_name": PIPELINE_NAME,
     }
     assert kwargs["settings"] == test_settings
     assert isinstance(kwargs["resource"], Callable)
@@ -57,8 +58,8 @@ def test_run_uniprot_pipeline_sets_core_run_pipeline_args_correctly(
 
     mock_dlt.destination.assert_called_once_with(test_settings.use_destination)
     mock_dlt.pipeline.assert_called_once_with(
-        pipeline_name="uniprot",
-        dataset_name="uniprot",
+        pipeline_name=PIPELINE_NAME,
+        dataset_name=PIPELINE_NAME,
     )
     assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
     first_run, load_info_save_run = mock_dlt.pipeline.return_value.run.call_args_list

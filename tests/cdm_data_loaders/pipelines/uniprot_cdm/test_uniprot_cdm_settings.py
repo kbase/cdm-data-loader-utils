@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.uniprot_kb import UniProtSettings
+from cdm_data_loaders.pipelines.uniprot_kb_cdm import UniProtSettings
 from tests.cdm_data_loaders.conftest import check_settings
 from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes
 

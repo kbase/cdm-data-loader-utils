@@ -25,7 +25,7 @@ from cdm_data_loaders.pipelines.core import (
 )
 from cdm_data_loaders.readers.xml import build_xml_file_resource
 
-PIPELINE_NAME: Final[str] = "uniref"
+PIPELINE_NAME: Final[str] = "uniref_cdm"
 UNIREF_LOG_INTERVAL: Final[int] = 10000
 VARIANT: Final[str] = "variant"
 FIFTY: Final[str] = "50"

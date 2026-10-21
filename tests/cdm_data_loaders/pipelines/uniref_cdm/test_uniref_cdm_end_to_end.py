@@ -10,7 +10,8 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.uniref import (
+from cdm_data_loaders.pipelines.uniref_cdm import (
+    PIPELINE_NAME,
     UNIREF_VARIANTS,
     UnirefSettings,
     parse_uniref,
@@ -117,8 +118,8 @@ def test_integration_cli_uniref_pipeline_output_validated(
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """Exercise the UniRef pipeline end-to-end across core, cli, and docker execution modes."""
-    load_info = assert_run_ok(pipeline_runner.run("uniref", settings=duckdb_uniref_settings))
-    assert load_info.pipeline.pipeline_name == "uniref"
+    load_info = assert_run_ok(pipeline_runner.run(PIPELINE_NAME, settings=duckdb_uniref_settings))
+    assert load_info.pipeline.pipeline_name == PIPELINE_NAME
     assert load_info.dataset_name == f"uniref_{duckdb_uniref_settings.variant}"
     assert_pipeline_report_written(Path(duckdb_uniref_settings.output_dir), load_info, metadata_moved=True)
 

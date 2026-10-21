@@ -28,7 +28,6 @@ XREF = "xref"
 # XML namespace mapping for UniProt entries
 HTTPS_NS = "https://uniprot.org/uniprot"
 NS = {"ns": HTTPS_NS, "": HTTPS_NS}
-APP_NAME = "uniprotkb_importer"
 ENTRY_XML_TAG = f"{{{HTTPS_NS}}}entry"
 
 

@@ -6,14 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cdm_data_loaders.parsers.uniprot.uniref import ENTRY_XML_TAG
-from cdm_data_loaders.pipelines import uniref as uniref_module
+from cdm_data_loaders.pipelines import uniref_cdm as uniref_cdm_module
 from cdm_data_loaders.pipelines.core import PipelineCli
-from cdm_data_loaders.pipelines.uniref import (
-    UnirefSettings,
-    cli,
-    parse_uniref,
-    run_uniref_pipeline,
-)
+from cdm_data_loaders.pipelines.uniref_cdm import PIPELINE_NAME, UnirefSettings, cli, parse_uniref, run_uniref_pipeline
 
 
 def test_cli_passes_settings_class_to_run_cli() -> None:
@@ -26,14 +21,14 @@ def test_cli_passes_settings_class_to_run_cli() -> None:
 # Tests for running the pipeline itself
 def test_run_uniref_pipeline_args_set_correctly(test_settings: UnirefSettings) -> None:
     """Ensure that the pipeline arguments are set correctly, and each pipeline has a different name."""
-    with patch.object(uniref_module, "run_pipeline") as mock_run_pipeline:
+    with patch.object(uniref_cdm_module, "run_pipeline") as mock_run_pipeline:
         run_uniref_pipeline(test_settings)
 
     assert mock_run_pipeline.call_count == 1
     _, kwargs = mock_run_pipeline.call_args
     assert kwargs.keys() == {"settings", "resource", "pipeline_kwargs"}
     assert kwargs["pipeline_kwargs"] == {
-        "pipeline_name": "uniref",
+        "pipeline_name": PIPELINE_NAME,
         "dataset_name": f"uniref_{test_settings.variant}",
     }
     assert kwargs["settings"] == test_settings
@@ -45,7 +40,7 @@ def test_run_uniref_pipeline_sets_core_run_pipeline_args_correctly(
 ) -> None:
     """Ensure that run_uniref_pipeline calls core.run_pipeline with the correct args."""
     mock_parse_uniref = MagicMock()
-    monkeypatch.setattr(uniref_module, "parse_uniref", mock_parse_uniref)
+    monkeypatch.setattr(uniref_cdm_module, "parse_uniref", mock_parse_uniref)
 
     run_uniref_pipeline(test_settings)
 
@@ -57,7 +52,7 @@ def test_run_uniref_pipeline_sets_core_run_pipeline_args_correctly(
 
     mock_dlt.destination.assert_called_once_with(test_settings.use_destination)
     mock_dlt.pipeline.assert_called_once_with(
-        pipeline_name="uniref",
+        pipeline_name=PIPELINE_NAME,
         dataset_name=f"uniref_{test_settings.variant}",
     )
     assert mock_dlt.pipeline.return_value.destination == mock_dlt.destination.return_value
@@ -70,7 +65,7 @@ def test_run_uniref_pipeline_sets_core_run_pipeline_args_correctly(
 
 def test_parse_uniref_resource(test_settings: UnirefSettings) -> None:
     """Ensure that parse_uniref calls build_xml_file_resource with the namespaced UniRef XML tag."""
-    with patch.object(uniref_module, "build_xml_file_resource") as mock_build:
+    with patch.object(uniref_cdm_module, "build_xml_file_resource") as mock_build:
         resource = parse_uniref(test_settings)
 
     assert resource is mock_build.return_value

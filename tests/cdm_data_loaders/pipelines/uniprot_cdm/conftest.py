@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 from frozendict import frozendict
 
-from cdm_data_loaders.pipelines.uniprot_kb import UNIPROT_LOG_INTERVAL, UniProtSettings
+from cdm_data_loaders.pipelines.uniprot_kb_cdm import UNIPROT_LOG_INTERVAL, UniProtSettings
 
 
 @pytest.fixture
