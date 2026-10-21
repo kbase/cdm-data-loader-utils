@@ -30,4 +30,3 @@ cli = PipelineCli(UniRefXmlToPyArrowSettings, run_uniref_pipeline)
 
 if __name__ == "__main__":
     cli()
-

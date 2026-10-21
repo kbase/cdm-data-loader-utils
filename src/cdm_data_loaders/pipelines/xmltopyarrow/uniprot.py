@@ -30,4 +30,3 @@ cli = PipelineCli(UniProtXmlToPyArrowSettings, run_uniprot_pipeline)
 
 if __name__ == "__main__":
     cli()
-
