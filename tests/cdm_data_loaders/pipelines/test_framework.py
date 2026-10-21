@@ -8,7 +8,7 @@ from types import ModuleType
 import pytest
 from pydantic import BaseModel
 
-from cdm_data_loaders.pipelines import uniprot_kb
+from cdm_data_loaders.pipelines import uniprot_kb_cdm
 from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import (
     cli as jsonl_extract_cli,
 )
@@ -61,10 +61,10 @@ def test_resolve_pipeline_pass_all_registered_targets(target_key: str) -> None:
 
 def test_resolve_pipeline_pass_from_module_cli_spec_and_callable() -> None:
     """resolve_pipeline accepts ModuleType, PipelineCli, PipelineSpec, and pipeline run functions."""
-    from_module = resolve_pipeline(uniprot_kb)
-    assert from_module.cli_command == "uniprot"
-    assert from_module.settings_cls is uniprot_kb.UniProtSettings
-    assert from_module.pipeline_fn is uniprot_kb.run_uniprot_pipeline
+    from_module = resolve_pipeline(uniprot_kb_cdm)
+    assert from_module.cli_command == "uniprot_cdm"
+    assert from_module.settings_cls is uniprot_kb_cdm.UniProtSettings
+    assert from_module.pipeline_fn is uniprot_kb_cdm.run_uniprot_pipeline
 
     from_cli = resolve_pipeline(jsonl_extract_cli)
     assert from_cli.cli_command == "jsonlines_extract"
@@ -75,8 +75,8 @@ def test_resolve_pipeline_pass_from_module_cli_spec_and_callable() -> None:
     assert from_callable.cli_command == "jsonlines_extract"
     assert from_callable.pipeline_fn is run_jsonlines_pipeline
 
-    from_full_module_str = resolve_pipeline("cdm_data_loaders.pipelines.uniprot_kb")
-    assert from_full_module_str.cli_command == "uniprot"
+    from_full_module_str = resolve_pipeline("cdm_data_loaders.pipelines.uniprot_kb_cdm")
+    assert from_full_module_str.cli_command == "uniprot_cdm"
 
     from_spec = resolve_pipeline(from_cli)
     assert from_spec is from_cli
