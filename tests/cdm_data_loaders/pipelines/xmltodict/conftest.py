@@ -26,3 +26,4 @@ def settings_factory(tmp_path: Path) -> Callable[..., XmlToDictSettings]:
         return make_cts_settings(XmlToDictSettings, tmp_path, **defaults)
 
     return _factory
+

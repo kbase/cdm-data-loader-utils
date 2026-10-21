@@ -1,0 +1,3525 @@
+[
+  {
+    "_dataset": "Swiss-Prot",
+    "_created": "1986-08-13",
+    "_modified": "2024-05-29",
+    "_version": 285,
+    "accession": [
+      "P04637",
+      "Q9V2L2"
+    ],
+    "name": [
+      "P53_HUMAN",
+      "1A1D_PYRAB"
+    ],
+    "protein": {
+      "recommendedName": {
+        "fullName": {
+          "_evidence": [
+            1,
+            2
+          ],
+          "#text": "Cellular tumor antigen p53"
+        },
+        "shortName": [
+          {
+            "_evidence": [
+              1,
+              3
+            ],
+            "#text": "p53"
+          },
+          {
+            "_evidence": [
+              2,
+              3
+            ],
+            "#text": "TP53-alpha"
+          }
+        ],
+        "ecNumber": [
+          {
+            "_evidence": [
+              1,
+              4
+            ],
+            "#text": "2.7.11.1"
+          },
+          {
+            "_evidence": [
+              2,
+              4
+            ],
+            "#text": "3.5.99.7"
+          }
+        ]
+      },
+      "alternativeName": [
+        {
+          "fullName": {
+            "_evidence": [
+              3,
+              4
+            ],
+            "#text": "Antigen NY-CO-13"
+          },
+          "shortName": [
+            {
+              "_evidence": [
+                1,
+                2,
+                3
+              ],
+              "#text": "NY-CO-13"
+            },
+            {
+              "_evidence": [
+                1,
+                2,
+                4
+              ],
+              "#text": "Pp53"
+            }
+          ],
+          "ecNumber": [
+            {
+              "_evidence": [
+                2,
+                3,
+                4
+              ],
+              "#text": "3.1.3.16"
+            },
+            {
+              "_evidence": [
+                1,
+                5
+              ],
+              "#text": "3.1.3.48"
+            }
+          ]
+        },
+        {
+          "fullName": {
+            "_evidence": [
+              2,
+              5
+            ],
+            "#text": "Phosphoprotein p53"
+          },
+          "shortName": [
+            {
+              "_evidence": [
+                3,
+                5
+              ],
+              "#text": "TRP53"
+            },
+            {
+              "_evidence": [
+                4,
+                6,
+                9
+              ],
+              "#text": "p53-iso1"
+            }
+          ],
+          "ecNumber": [
+            {
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "#text": "2.7.10.2"
+            },
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "2.7.12.1"
+            }
+          ]
+        }
+      ],
+      "submittedName": [
+        {
+          "fullName": {
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "#text": "Cellular phosphoprotein p53"
+          },
+          "ecNumber": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "2.7.11.22"
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "2.7.11.24"
+            }
+          ]
+        },
+        {
+          "fullName": {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "#text": "Mutant-type p53 antigen"
+          },
+          "ecNumber": [
+            {
+              "_evidence": [
+                2,
+                4,
+                7
+              ],
+              "#text": "3.2.2.6"
+            },
+            {
+              "_evidence": [
+                3,
+                5,
+                8
+              ],
+              "#text": "3.2.2.20"
+            }
+          ]
+        }
+      ],
+      "allergenName": {
+        "_evidence": [
+          4,
+          6,
+          9
+        ],
+        "#text": "Hom s p53"
+      },
+      "biotechName": {
+        "_evidence": [
+          5,
+          7,
+          1
+        ],
+        "#text": "Recombinant human p53 (rHu-p53)"
+      },
+      "cdAntigenName": [
+        {
+          "_evidence": [
+            6,
+            8,
+            2
+          ],
+          "#text": "CD-p53a"
+        },
+        {
+          "_evidence": [
+            7,
+            9,
+            3
+          ],
+          "#text": "CD-p53b"
+        }
+      ],
+      "innName": [
+        {
+          "_evidence": [
+            8,
+            1,
+            4
+          ],
+          "#text": "p53-alfa"
+        },
+        {
+          "_evidence": [
+            9,
+            2,
+            5
+          ],
+          "#text": "p53-beta"
+        }
+      ],
+      "domain": [
+        {
+          "recommendedName": {
+            "fullName": {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "DNA-binding core domain"
+            },
+            "shortName": [
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "p53-DBD"
+              },
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "DBD-core"
+              }
+            ],
+            "ecNumber": [
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "3.2.2.-"
+              },
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "3.1.3.16"
+              }
+            ]
+          },
+          "alternativeName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Tumor suppressor p53"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    7,
+                    9,
+                    3
+                  ],
+                  "#text": "CD-A1"
+                },
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "CD-A2"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "3.4.19.12"
+                },
+                {
+                  "_evidence": [
+                    1,
+                    3,
+                    6
+                  ],
+                  "#text": "3.4.22.68"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Transformation-related protein 53"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "CD-B1"
+                },
+                {
+                  "_evidence": [
+                    4,
+                    6,
+                    9
+                  ],
+                  "#text": "CD-B2"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    5,
+                    7,
+                    1
+                  ],
+                  "#text": "2.4.2.30"
+                },
+                {
+                  "_evidence": [
+                    6,
+                    8,
+                    2
+                  ],
+                  "#text": "2.1.1.43"
+                }
+              ]
+            }
+          ],
+          "submittedName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "Zinc-coordinated DNA binding region"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "3.5.1.98"
+                },
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "3.5.1.104"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Conserved box II-V domain"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    2,
+                    4,
+                    7
+                  ],
+                  "#text": "6.3.2.25"
+                },
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "6.3.2.27"
+                }
+              ]
+            }
+          ],
+          "allergenName": {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Hom s p53-DBD"
+          },
+          "biotechName": {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Engineered p53 core domain"
+          },
+          "cdAntigenName": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "CD-DBD1"
+            },
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "CD-DBD2"
+            }
+          ],
+          "innName": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "p53-gamma"
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "p53-delta"
+            }
+          ]
+        },
+        {
+          "recommendedName": {
+            "fullName": {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "Tetramerization domain"
+            },
+            "shortName": [
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "p53-TD"
+              },
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "TD-domain"
+              }
+            ],
+            "ecNumber": [
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "2.3.1.48"
+              },
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "3.4.21.-"
+              }
+            ]
+          },
+          "alternativeName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Core domain isoform A"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    7,
+                    9,
+                    3
+                  ],
+                  "#text": "OR-1a"
+                },
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "OR-1b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "1.1.1.1"
+                },
+                {
+                  "_evidence": [
+                    1,
+                    3,
+                    6
+                  ],
+                  "#text": "1.2.1.12"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Core domain isoform B"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "OR-2a"
+                },
+                {
+                  "_evidence": [
+                    4,
+                    6,
+                    9
+                  ],
+                  "#text": "OR-2b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    5,
+                    7,
+                    1
+                  ],
+                  "#text": "3.1.3.16 (11)"
+                },
+                {
+                  "_evidence": [
+                    6,
+                    8,
+                    2
+                  ],
+                  "#text": "3.1.3.48 (12)"
+                }
+              ]
+            }
+          ],
+          "submittedName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "C-terminal tetramerization helix"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "2.7.1.37"
+                },
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "2.7.4.3"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Nuclear export signal region"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    2,
+                    4,
+                    7
+                  ],
+                  "#text": "2.7.11.22 (11)"
+                },
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "2.7.11.24 (12)"
+                }
+              ]
+            }
+          ],
+          "allergenName": {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Hom s p53-TD"
+          },
+          "biotechName": {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Stabilized p53 tetramer domain"
+          },
+          "cdAntigenName": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "CD-TD1"
+            },
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "CD-TD2"
+            }
+          ],
+          "innName": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "p53-epsilon"
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "p53-zeta"
+            }
+          ]
+        }
+      ],
+      "component": [
+        {
+          "recommendedName": {
+            "fullName": {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "Cleaved p53 N-terminal peptide"
+            },
+            "shortName": [
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "p53-N"
+              },
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "N-pep"
+              }
+            ],
+            "ecNumber": [
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "2.7.7.7"
+              },
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "3.6.4.12"
+              }
+            ]
+          },
+          "alternativeName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Oligomerization region 1"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    7,
+                    9,
+                    3
+                  ],
+                  "#text": "TA-1a"
+                },
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "TA-1b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "2.7.10.2 (13)"
+                },
+                {
+                  "_evidence": [
+                    1,
+                    3,
+                    6
+                  ],
+                  "#text": "2.7.12.1 (14)"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Oligomerization region 2"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "TA-2a"
+                },
+                {
+                  "_evidence": [
+                    4,
+                    6,
+                    9
+                  ],
+                  "#text": "TA-2b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    5,
+                    7,
+                    1
+                  ],
+                  "#text": "3.4.19.12 (15)"
+                },
+                {
+                  "_evidence": [
+                    6,
+                    8,
+                    2
+                  ],
+                  "#text": "3.4.22.68 (16)"
+                }
+              ]
+            }
+          ],
+          "submittedName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "N-terminal TAD1 peptide"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "3.2.2.6 (13)"
+                },
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "3.2.2.20 (14)"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "N-terminal TAD2 peptide"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    2,
+                    4,
+                    7
+                  ],
+                  "#text": "3.5.1.98 (15)"
+                },
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "3.5.1.104 (16)"
+                }
+              ]
+            }
+          ],
+          "allergenName": {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Hom s p53-N"
+          },
+          "biotechName": {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Synthetic TAD peptide"
+          },
+          "cdAntigenName": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "CD-TAD1"
+            },
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "CD-TAD2"
+            }
+          ],
+          "innName": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "p53-eta"
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "p53-theta"
+            }
+          ]
+        },
+        {
+          "recommendedName": {
+            "fullName": {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "Cleaved p53 C-terminal regulatory chain"
+            },
+            "shortName": [
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "p53-C"
+              },
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "C-chain"
+              }
+            ],
+            "ecNumber": [
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "1.14.11.-"
+              },
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "6.3.2.19"
+              }
+            ]
+          },
+          "alternativeName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Transactivation subunit alpha"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    7,
+                    9,
+                    3
+                  ],
+                  "#text": "CT-1a"
+                },
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "CT-1b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "2.4.2.30 (17)"
+                },
+                {
+                  "_evidence": [
+                    1,
+                    3,
+                    6
+                  ],
+                  "#text": "2.1.1.43 (18)"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Transactivation subunit beta"
+              },
+              "shortName": [
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "CT-2a"
+                },
+                {
+                  "_evidence": [
+                    4,
+                    6,
+                    9
+                  ],
+                  "#text": "CT-2b"
+                }
+              ],
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    5,
+                    7,
+                    1
+                  ],
+                  "#text": "1.1.1.1 (19)"
+                },
+                {
+                  "_evidence": [
+                    6,
+                    8,
+                    2
+                  ],
+                  "#text": "1.2.1.12 (20)"
+                }
+              ]
+            }
+          ],
+          "submittedName": [
+            {
+              "fullName": {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "Basic regulatory region"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    8,
+                    1,
+                    4
+                  ],
+                  "#text": "6.3.2.25 (17)"
+                },
+                {
+                  "_evidence": [
+                    9,
+                    2,
+                    5
+                  ],
+                  "#text": "6.3.2.27 (18)"
+                }
+              ]
+            },
+            {
+              "fullName": {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Apoptosis cofactor peptide"
+              },
+              "ecNumber": [
+                {
+                  "_evidence": [
+                    2,
+                    4,
+                    7
+                  ],
+                  "#text": "2.7.1.37 (19)"
+                },
+                {
+                  "_evidence": [
+                    3,
+                    5,
+                    8
+                  ],
+                  "#text": "2.7.4.3 (20)"
+                }
+              ]
+            }
+          ],
+          "allergenName": {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Hom s p53-C"
+          },
+          "biotechName": {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Fusion C-terminal peptide"
+          },
+          "cdAntigenName": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "CD-REG1"
+            },
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "CD-REG2"
+            }
+          ],
+          "innName": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "p53-iota"
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "p53-kappa"
+            }
+          ]
+        }
+      ]
+    },
+    "gene": [
+      {
+        "name": [
+          {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "_type": "primary",
+            "#text": "TP53"
+          },
+          {
+            "_evidence": [
+              2,
+              4,
+              7
+            ],
+            "_type": "synonym",
+            "#text": "P53"
+          }
+        ]
+      },
+      {
+        "name": [
+          {
+            "_evidence": [
+              3,
+              5,
+              8
+            ],
+            "_type": "ordered locus",
+            "#text": "PYRAB00630"
+          },
+          {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "_type": "ORF",
+            "#text": "PAB2303"
+          }
+        ]
+      }
+    ],
+    "organism": {
+      "_evidence": [
+        1
+      ],
+      "name": [
+        {
+          "_type": "synonym",
+          "#text": "Homo sapiens"
+        },
+        {
+          "_type": "synonym",
+          "#text": "Human"
+        }
+      ],
+      "dbReference": [
+        {
+          "_type": "UniProtKB ID",
+          "_id": "P53_HUMAN",
+          "_evidence": [
+            5,
+            7,
+            1
+          ],
+          "molecule": {
+            "_id": "P04637-1",
+            "#text": "Isoform 1"
+          },
+          "property": [
+            {
+              "_type": "member count",
+              "_value": "3"
+            },
+            {
+              "_type": "common taxon",
+              "_value": "Homo sapiens"
+            }
+          ]
+        },
+        {
+          "_type": "UniParc ID",
+          "_id": "UPI000002ED67",
+          "_evidence": [
+            6,
+            8,
+            2
+          ],
+          "molecule": {
+            "_id": "P04637-2",
+            "#text": "Isoform 2"
+          },
+          "property": [
+            {
+              "_type": "common taxon ID",
+              "_value": "9606"
+            },
+            {
+              "_type": "GO Molecular Function",
+              "_value": "GO:0003677"
+            }
+          ]
+        }
+      ],
+      "lineage": {
+        "taxon": [
+          "Eukaryota",
+          "Metazoa"
+        ]
+      }
+    },
+    "organismHost": [
+      {
+        "_evidence": [
+          1,
+          2
+        ],
+        "name": [
+          {
+            "_type": "synonym",
+            "#text": "Pyrococcus abyssi (strain GE5 / Orsay)"
+          },
+          {
+            "_type": "synonym",
+            "#text": "Pyrococcus abyssi"
+          }
+        ],
+        "dbReference": [
+          {
+            "_type": "RefSeq",
+            "_id": "NP_000537.3",
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "molecule": {
+              "_id": "P04637-3",
+              "#text": "Isoform 3"
+            },
+            "property": [
+              {
+                "_type": "UniProtKB accession",
+                "_value": "P04637"
+              },
+              {
+                "_type": "UniParc ID",
+                "_value": "UPI000002ED67"
+              }
+            ]
+          },
+          {
+            "_type": "NCBI Taxonomy",
+            "_id": "9606",
+            "_evidence": [
+              8,
+              1,
+              4
+            ],
+            "molecule": {
+              "_id": "Q9V2L2-1",
+              "#text": "Chain A"
+            },
+            "property": [
+              {
+                "_type": "UniRef100 ID",
+                "_value": "UniRef100_P04637"
+              },
+              {
+                "_type": "UniRef90 ID",
+                "_value": "UniRef90_P04637"
+              }
+            ]
+          }
+        ],
+        "lineage": {
+          "taxon": [
+            "Archaea",
+            "Thermococci"
+          ]
+        }
+      },
+      {
+        "_evidence": [
+          2,
+          3
+        ],
+        "name": [
+          {
+            "_type": "synonym",
+            "#text": "Methanocella arvoryzae (strain DSM 22066 / NBRC 105507 / MRE50)"
+          },
+          {
+            "_type": "synonym",
+            "#text": "Rice cluster I archaeon"
+          }
+        ],
+        "dbReference": [
+          {
+            "_type": "Proteomes",
+            "_id": "UP000005640",
+            "_evidence": [
+              9,
+              2,
+              5
+            ],
+            "molecule": {
+              "_id": "Q0W5C8-1",
+              "#text": "Chain B"
+            },
+            "property": [
+              {
+                "_type": "protein name",
+                "_value": "Cellular tumor antigen p53"
+              },
+              {
+                "_type": "source organism",
+                "_value": "Homo sapiens (Human)"
+              }
+            ]
+          },
+          {
+            "_type": "EMBL",
+            "_id": "X02469",
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "molecule": {
+              "_id": "A3CTY6-1",
+              "#text": "Monomer"
+            },
+            "property": [
+              {
+                "_type": "NCBI taxonomy",
+                "_value": "9606"
+              },
+              {
+                "_type": "length",
+                "_value": "393"
+              }
+            ]
+          }
+        ],
+        "lineage": {
+          "taxon": [
+            "Methanomicrobia",
+            "Methanocellales"
+          ]
+        }
+      }
+    ],
+    "geneLocation": [
+      {
+        "_type": "mitochondrion",
+        "_evidence": [
+          2,
+          4,
+          7
+        ],
+        "name": [
+          {
+            "_status": "known",
+            "#text": "17p13.1"
+          },
+          {
+            "_status": "known",
+            "#text": "chr17:7668402-7687550"
+          }
+        ]
+      },
+      {
+        "_type": "plasmid",
+        "_evidence": [
+          3,
+          5,
+          8
+        ],
+        "name": [
+          {
+            "_status": "known",
+            "#text": "pBR322"
+          },
+          {
+            "_status": "known",
+            "#text": "pMRE50"
+          }
+        ]
+      }
+    ],
+    "reference": [
+      {
+        "_evidence": [
+          4,
+          6,
+          9
+        ],
+        "_key": "1",
+        "citation": {
+          "_type": "journal article",
+          "_date": "2003-09-15",
+          "_name": "Mol. Microbiol.",
+          "_volume": "47",
+          "_first": "1495",
+          "_last": "1512",
+          "_publisher": "Wiley-Blackwell",
+          "_city": "Oxford",
+          "_db": "EMBL/GenBank/DDBJ",
+          "_number": "US20230123456",
+          "_institute": "MRC Laboratory of Molecular Biology",
+          "_country": "United Kingdom",
+          "title": "An integrated analysis of the genome of the hyperthermophilic archaeon Pyrococcus abyssi.",
+          "editorList": {
+            "consortium": [
+              {
+                "_name": "The UniProt Consortium"
+              }
+            ],
+            "person": [
+              {
+                "_name": "Cohen G.N."
+              }
+            ]
+          },
+          "authorList": {
+            "consortium": [
+              {
+                "_name": "International Cancer Genome Consortium"
+              }
+            ],
+            "person": [
+              {
+                "_name": "Forterre P."
+              }
+            ]
+          },
+          "locator": "10.1046/j.1365-2958.2003.03381.x",
+          "dbReference": [
+            {
+              "_type": "GO",
+              "_id": "GO:0003677",
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "molecule": {
+                "_id": "P04637-1 (7)",
+                "#text": "Homotetramer"
+              },
+              "property": [
+                {
+                  "_type": "isSeed",
+                  "_value": "true"
+                },
+                {
+                  "_type": "protein sequence ID",
+                  "_value": "CAB48986.1"
+                }
+              ]
+            },
+            {
+              "_type": "Pfam",
+              "_id": "PF00870",
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "molecule": {
+                "_id": "P04637-2 (8)",
+                "#text": "Core domain"
+              },
+              "property": [
+                {
+                  "_type": "molecule type",
+                  "_value": "Genomic_DNA"
+                },
+                {
+                  "_type": "entry name",
+                  "_value": "ACCD_DCysDesulf"
+                }
+              ]
+            }
+          ]
+        },
+        "scope": [
+          "NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]",
+          "X-RAY CRYSTALLOGRAPHY (2.2 ANGSTROMS) OF 102-292"
+        ],
+        "source": {
+          "strain": [
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "GE5 / Orsay"
+            }
+          ],
+          "plasmid": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "pAB1"
+            }
+          ],
+          "transposon": [
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "Tn10"
+            }
+          ],
+          "tissue": [
+            {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "Liver"
+            }
+          ]
+        }
+      },
+      {
+        "_evidence": [
+          2,
+          4,
+          7
+        ],
+        "_key": "2",
+        "citation": {
+          "_type": "book",
+          "_date": "1999",
+          "_name": "Curr. Microbiol.",
+          "_volume": "64",
+          "_first": "118",
+          "_last": "129",
+          "_publisher": "Springer",
+          "_city": "Heidelberg",
+          "_db": "UniProtKB",
+          "_number": "EP3987654A1",
+          "_institute": "Max Planck Institute for Biochemistry",
+          "_country": "Germany",
+          "title": "Genome of rice cluster I archaea -- the key methane producers in the rice rhizosphere.",
+          "editorList": {
+            "consortium": [
+              {
+                "_name": "Archaea Genome Sequencing Project"
+              }
+            ],
+            "person": [
+              {
+                "_name": "Erkel C."
+              }
+            ]
+          },
+          "authorList": {
+            "consortium": [
+              {
+                "_name": "The UniProt Consortium (4)"
+              }
+            ],
+            "person": [
+              {
+                "_name": "Liesack W."
+              }
+            ]
+          },
+          "locator": "10.1126/science.1127062",
+          "dbReference": [
+            {
+              "_type": "InterPro",
+              "_id": "IPR011615",
+              "_evidence": [
+                3,
+                5,
+                8
+              ],
+              "molecule": {
+                "_id": "P04637-3 (9)",
+                "#text": "Precursor"
+              },
+              "property": [
+                {
+                  "_type": "match status",
+                  "_value": "1"
+                },
+                {
+                  "_type": "nucleotide sequence ID",
+                  "_value": "NC_000868.1"
+                }
+              ]
+            },
+            {
+              "_type": "PDB",
+              "_id": "1TUP",
+              "_evidence": [
+                4,
+                6,
+                9
+              ],
+              "molecule": {
+                "_id": "Q9V2L2-1 (10)",
+                "#text": "Mature peptide"
+              },
+              "property": [
+                {
+                  "_type": "taxonomic scope",
+                  "_value": "Archaea"
+                },
+                {
+                  "_type": "component",
+                  "_value": "Chromosome"
+                }
+              ]
+            }
+          ]
+        },
+        "scope": [
+          "GENOME REANNOTATION",
+          "FUNCTION AND CATALYTIC ACTIVITY"
+        ],
+        "source": {
+          "strain": [
+            {
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "#text": "DSM 22066 / NBRC 105507 / MRE50"
+            }
+          ],
+          "plasmid": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "pMRE50"
+            }
+          ],
+          "transposon": [
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "Tn5"
+            }
+          ],
+          "tissue": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "Colon epithelium"
+            }
+          ]
+        }
+      },
+      {
+        "_evidence": [
+          1,
+          5,
+          9
+        ],
+        "_key": "3",
+        "citation": {
+          "_type": "submission",
+          "_date": "2007-10",
+          "_db": "EMBL/GenBank/DDBJ databases"
+        },
+        "scope": [
+          "NUCLEOTIDE SEQUENCE [GENOMIC DNA]"
+        ]
+      }
+    ],
+    "comment": [
+      {
+        "_type": "biophysicochemical properties",
+        "_locationType": "topology",
+        "_name": "UV-Vis absorption profile",
+        "_mass": 43653.5,
+        "_error": "Frameshift at position 112",
+        "_method": "Electrospray ionization",
+        "_evidence": [
+          9,
+          2,
+          5
+        ],
+        "molecule": {
+          "_id": "Q0W5C8-1 (11)",
+          "#text": "Isoform 1 (11)"
+        },
+        "absorption": {
+          "max": {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "#text": "280"
+          },
+          "text": [
+            {
+              "_evidence": [
+                2,
+                4,
+                7
+              ],
+              "#text": "Absorbs UV light with a primary peak at 280 nm."
+            },
+            {
+              "_evidence": [
+                3,
+                5,
+                8
+              ],
+              "#text": "Secondary shoulder observed at 292 nm in native buffer."
+            }
+          ]
+        },
+        "kinetics": {
+          "KM": [
+            {
+              "_evidence": [
+                4,
+                6,
+                9
+              ],
+              "#text": "12.5 uM for ATP"
+            },
+            {
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "#text": "48.0 uM for 1-aminocyclopropane-1-carboxylate"
+            }
+          ],
+          "Vmax": [
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "450 nmol/min/mg enzyme"
+            },
+            {
+              "_evidence": [
+                7,
+                9,
+                3
+              ],
+              "#text": "1280 nmol/min/mg in presence of PLP cofactor"
+            }
+          ],
+          "text": [
+            {
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "#text": "Follows classical Michaelis-Menten kinetics at pH 7.4."
+            },
+            {
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "#text": "Shows positive cooperativity upon tetramerization."
+            }
+          ]
+        },
+        "phDependence": {
+          "text": [
+            {
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "#text": "Optimum pH is 7.4-7.8 in phosphate buffer."
+            },
+            {
+              "_evidence": [
+                2,
+                4,
+                7
+              ],
+              "#text": "Rapidly loses DNA-binding activity below pH 6.0."
+            }
+          ]
+        },
+        "redoxPotential": {
+          "text": [
+            {
+              "_evidence": [
+                3,
+                5,
+                8
+              ],
+              "#text": "Midpoint potential E0 is -240 mV at pH 7.0."
+            },
+            {
+              "_evidence": [
+                4,
+                6,
+                9
+              ],
+              "#text": "Oxidation of Cys-277 abolishes sequence-specific binding."
+            }
+          ]
+        },
+        "temperatureDependence": {
+          "text": [
+            {
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "#text": "Optimum temperature is 37 degrees Celsius."
+            },
+            {
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "#text": "Unfolds irreversibly above 44 degrees Celsius (Tm = 42.5 C)."
+            }
+          ]
+        },
+        "location": [
+          {
+            "_sequence": "VSP_006535",
+            "begin": {
+              "_position": 1,
+              "_status": "certain",
+              "_evidence": [
+                7,
+                9,
+                3
+              ]
+            },
+            "end": {
+              "_position": 42,
+              "_status": "certain",
+              "_evidence": [
+                8,
+                1,
+                4
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006536",
+            "position": {
+              "_position": 15,
+              "_status": "certain",
+              "_evidence": [
+                9,
+                2,
+                5
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "#text": "Biophysical measurements performed on purified recombinant core domain."
+          },
+          {
+            "_evidence": [
+              2,
+              4,
+              7
+            ],
+            "#text": "Exhibits high-affinity sequence-specific DNA binding."
+          }
+        ]
+      },
+      {
+        "_type": "catalytic activity",
+        "_locationType": "transmembrane",
+        "_name": "ACC deaminase reaction",
+        "_mass": 35755.25,
+        "_error": "Erroneous initiation at residue 1",
+        "_method": "MALDI-TOF",
+        "_evidence": [
+          3,
+          5,
+          8
+        ],
+        "molecule": {
+          "_id": "A3CTY6-1 (12)",
+          "#text": "Isoform 2 (12)"
+        },
+        "reaction": {
+          "_evidence": [
+            4,
+            6,
+            9
+          ],
+          "text": "1-aminocyclopropane-1-carboxylate + H2O = 2-oxobutanoate + NH4(+)",
+          "dbReference": [
+            {
+              "_type": "PubMed",
+              "_id": "12622808",
+              "_evidence": [
+                5,
+                7,
+                1
+              ],
+              "molecule": {
+                "_id": "P04637-1 (13)",
+                "#text": "Isoform 3 (13)"
+              },
+              "property": [
+                {
+                  "_type": "term",
+                  "_value": "F:DNA-binding transcription factor activity"
+                },
+                {
+                  "_type": "evidence",
+                  "_value": "ECO:0007669"
+                }
+              ]
+            },
+            {
+              "_type": "DOI",
+              "_id": "10.1046/j.1365-2958.2003.03381.x",
+              "_evidence": [
+                6,
+                8,
+                2
+              ],
+              "molecule": {
+                "_id": "P04637-2 (14)",
+                "#text": "Chain A (14)"
+              },
+              "property": [
+                {
+                  "_type": "project",
+                  "_value": "UniProtKB-KW"
+                },
+                {
+                  "_type": "chains",
+                  "_value": "A/B=102-292"
+                }
+              ]
+            }
+          ]
+        },
+        "physiologicalReaction": [
+          {
+            "_direction": "left-to-right",
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "dbReference": {
+              "_type": "Rhea",
+              "_id": "RHEA:16933",
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "molecule": {
+                "_id": "P04637-3 (15)",
+                "#text": "Chain B (15)"
+              },
+              "property": [
+                {
+                  "_type": "resolution",
+                  "_value": "2.20 A"
+                },
+                {
+                  "_type": "method",
+                  "_value": "X-ray"
+                }
+              ]
+            }
+          },
+          {
+            "_direction": "right-to-left",
+            "_evidence": [
+              9,
+              2,
+              5
+            ],
+            "dbReference": {
+              "_type": "ChEBI",
+              "_id": "CHEBI:15377",
+              "_evidence": [
+                1,
+                3,
+                6
+              ],
+              "molecule": {
+                "_id": "Q9V2L2-1 (16)",
+                "#text": "Monomer (16)"
+              },
+              "property": [
+                {
+                  "_type": "member count (27)",
+                  "_value": "Q9V2L2"
+                },
+                {
+                  "_type": "common taxon (28)",
+                  "_value": "UPI0000061B2A"
+                }
+              ]
+            }
+          }
+        ],
+        "location": [
+          {
+            "_sequence": "VSP_006537",
+            "position": {
+              "_position": 20,
+              "_status": "uncertain",
+              "_evidence": [
+                2,
+                4,
+                7
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006538",
+            "begin": {
+              "_position": 43,
+              "_status": "uncertain",
+              "_evidence": [
+                3,
+                5,
+                8
+              ]
+            },
+            "end": {
+              "_position": 63,
+              "_status": "uncertain",
+              "_evidence": [
+                4,
+                6,
+                9
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Catalyzes the ring-opening deamination of ACC."
+          },
+          {
+            "_evidence": [
+              6,
+              8,
+              2
+            ],
+            "#text": "Activity is strictly dependent on divalent cations."
+          }
+        ]
+      },
+      {
+        "_type": "cofactor",
+        "_locationType": "intramembrane",
+        "_name": "Zinc-binding site",
+        "_mass": 21879.75,
+        "_error": "Stop codon readthrough at residue 341",
+        "_method": "Analytical ultracentrifugation",
+        "_evidence": [
+          7,
+          9,
+          3
+        ],
+        "molecule": {
+          "_id": "Q0W5C8-1 (17)",
+          "#text": "Homotetramer (17)"
+        },
+        "cofactor": [
+          {
+            "_evidence": [
+              8,
+              1,
+              4
+            ],
+            "name": "pyridoxal 5'-phosphate",
+            "dbReference": {
+              "_type": "EC",
+              "_id": "3.5.99.7",
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "molecule": {
+                "_id": "A3CTY6-1 (18)",
+                "#text": "Core domain (18)"
+              },
+              "property": [
+                {
+                  "_type": "common taxon ID (29)",
+                  "_value": "UniRef100_Q9V2L2"
+                },
+                {
+                  "_type": "GO Molecular Function (30)",
+                  "_value": "Putative 1-aminocyclopropane-1-carboxylate deaminase"
+                }
+              ]
+            }
+          },
+          {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "name": "Zn(2+)",
+            "dbReference": {
+              "_type": "IntAct",
+              "_id": "EBI-366083",
+              "_evidence": [
+                2,
+                4,
+                7
+              ],
+              "molecule": {
+                "_id": "P04637-1 (19)",
+                "#text": "Precursor (19)"
+              },
+              "property": [
+                {
+                  "_type": "UniProtKB accession (31)",
+                  "_value": "Pyrococcus abyssi (strain GE5 / Orsay)"
+                },
+                {
+                  "_type": "UniParc ID (32)",
+                  "_value": "272844"
+                }
+              ]
+            }
+          }
+        ],
+        "location": [
+          {
+            "_sequence": "VSP_006539",
+            "begin": {
+              "_position": 65,
+              "_status": "less than",
+              "_evidence": [
+                3,
+                5,
+                8
+              ]
+            },
+            "end": {
+              "_position": 92,
+              "_status": "less than",
+              "_evidence": [
+                4,
+                6,
+                9
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006540",
+            "position": {
+              "_position": 37,
+              "_status": "less than",
+              "_evidence": [
+                5,
+                7,
+                1
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              6,
+              8,
+              2
+            ],
+            "#text": "Zinc coordination stabilizes loop-sheet-helix motif."
+          },
+          {
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "#text": "Depletion of zinc induces molten-globule conformation."
+          }
+        ]
+      },
+      {
+        "_type": "subcellular location",
+        "_locationType": "topological domain",
+        "_name": "Nuclear-cytoplasmic shuttling",
+        "_mass": 42110.125,
+        "_error": "Intron retention in exon 4",
+        "_method": "Size-exclusion chromatography",
+        "_evidence": [
+          8,
+          1,
+          4
+        ],
+        "molecule": {
+          "_id": "P04637-2 (20)",
+          "#text": "Mature peptide (20)"
+        },
+        "subcellularLocation": [
+          {
+            "location": [
+              {
+                "_evidence": [
+                  9,
+                  2,
+                  5
+                ],
+                "#text": "Nucleus"
+              },
+              {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Nucleolus"
+              }
+            ],
+            "topology": [
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Peripheral membrane protein"
+              },
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "Single-pass membrane protein"
+              }
+            ],
+            "orientation": [
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "Cytoplasmic side"
+              },
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "Extracellular side"
+              }
+            ]
+          },
+          {
+            "location": [
+              {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Cytoplasm"
+              },
+              {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "Mitochondrion"
+              }
+            ],
+            "topology": [
+              {
+                "_evidence": [
+                  8,
+                  1,
+                  4
+                ],
+                "#text": "Multi-pass membrane protein"
+              },
+              {
+                "_evidence": [
+                  9,
+                  2,
+                  5
+                ],
+                "#text": "Lipid-anchor"
+              }
+            ],
+            "orientation": [
+              {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Matrix side"
+              },
+              {
+                "_evidence": [
+                  2,
+                  4,
+                  7
+                ],
+                "#text": "Lumenal side"
+              }
+            ]
+          }
+        ],
+        "location": [
+          {
+            "_sequence": "VSP_006541",
+            "position": {
+              "_position": 54,
+              "_status": "greater than",
+              "_evidence": [
+                3,
+                5,
+                8
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006542",
+            "begin": {
+              "_position": 102,
+              "_status": "greater than",
+              "_evidence": [
+                4,
+                6,
+                9
+              ]
+            },
+            "end": {
+              "_position": 292,
+              "_status": "greater than",
+              "_evidence": [
+                5,
+                7,
+                1
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              6,
+              8,
+              2
+            ],
+            "#text": "Shuttles between nucleus and cytoplasm in a CRM1-dependent manner."
+          },
+          {
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "#text": "Accumulates in the nucleus following ionizing radiation."
+          }
+        ]
+      },
+      {
+        "_type": "sequence caution",
+        "_locationType": "chain",
+        "_name": "Frameshift discrepancy",
+        "_mass": 39850.0,
+        "_error": "Sequencing artifact at position 215",
+        "_method": "X-ray crystallography",
+        "_evidence": [
+          8,
+          1,
+          4
+        ],
+        "molecule": {
+          "_id": "P04637-3 (21)",
+          "#text": "Isoform 1 (21)"
+        },
+        "conflict": {
+          "_type": "frameshift",
+          "_ref": "1",
+          "sequence": {
+            "_resource": "EMBL-CDS",
+            "_id": "CAB48986",
+            "_version": 1
+          }
+        },
+        "location": [
+          {
+            "_sequence": "VSP_006543",
+            "begin": {
+              "_position": 113,
+              "_status": "unknown",
+              "_evidence": [
+                9,
+                2,
+                5
+              ]
+            },
+            "end": {
+              "_position": 185,
+              "_status": "unknown",
+              "_evidence": [
+                1,
+                3,
+                6
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006544",
+            "position": {
+              "_position": 72,
+              "_status": "unknown",
+              "_evidence": [
+                2,
+                4,
+                7
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              3,
+              5,
+              8
+            ],
+            "#text": "Sequence differs from genomic reference at codon 112."
+          },
+          {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Verified by mass spectrometry of tryptic peptides."
+          }
+        ]
+      },
+      {
+        "_type": "online information",
+        "_locationType": "domain",
+        "_name": "UniProtKB entry page",
+        "_mass": 41200.5,
+        "_error": "Mismatch at codon 72",
+        "_method": "Cryo-electron microscopy",
+        "_evidence": [
+          5,
+          7,
+          1
+        ],
+        "molecule": {
+          "_id": "Q9V2L2-1 (22)",
+          "#text": "Isoform 2 (22)"
+        },
+        "link": [
+          {
+            "_uri": "https://www.uniprot.org/uniprotkb/P04637"
+          },
+          {
+            "_uri": "https://www.ebi.ac.uk/pdbe/entry/pdb/1tup"
+          }
+        ],
+        "location": [
+          {
+            "_sequence": "VSP_006535 (11)",
+            "position": {
+              "_position": 175,
+              "_status": "certain",
+              "_evidence": [
+                6,
+                8,
+                2
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006536 (12)",
+            "begin": {
+              "_position": 195,
+              "_status": "certain",
+              "_evidence": [
+                7,
+                9,
+                3
+              ]
+            },
+            "end": {
+              "_position": 240,
+              "_status": "certain",
+              "_evidence": [
+                8,
+                1,
+                4
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              9,
+              2,
+              5
+            ],
+            "#text": "Full structural and clinical annotations available online."
+          },
+          {
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "#text": "Cross-referenced with PDBe macromolecular database."
+          }
+        ]
+      },
+      {
+        "_type": "alternative products",
+        "_locationType": "region",
+        "_name": "TP53 splice variants",
+        "_mass": 38915.25,
+        "_error": "Alternative exon boundary",
+        "_method": "NMR spectroscopy",
+        "_evidence": [
+          2,
+          4,
+          7
+        ],
+        "molecule": {
+          "_id": "Q0W5C8-1 (23)",
+          "#text": "Isoform 3 (23)"
+        },
+        "event": [
+          {
+            "_type": "alternative splicing"
+          },
+          {
+            "_type": "alternative initiation"
+          }
+        ],
+        "isoform": [
+          {
+            "id": [
+              "P04637-1",
+              "P04637-alpha"
+            ],
+            "name": [
+              {
+                "_evidence": [
+                  3,
+                  5,
+                  8
+                ],
+                "#text": "Alpha"
+              },
+              {
+                "_evidence": [
+                  4,
+                  6,
+                  9
+                ],
+                "#text": "Canonical"
+              }
+            ],
+            "sequence": {
+              "_type": "displayed",
+              "_ref": "VSP_006535"
+            },
+            "text": [
+              {
+                "_evidence": [
+                  5,
+                  7,
+                  1
+                ],
+                "#text": "Chosen as the canonical sequence."
+              },
+              {
+                "_evidence": [
+                  6,
+                  8,
+                  2
+                ],
+                "#text": "Expressed ubiquitously in normal tissues."
+              }
+            ]
+          },
+          {
+            "id": [
+              "P04637-2",
+              "P04637-beta"
+            ],
+            "name": [
+              {
+                "_evidence": [
+                  7,
+                  9,
+                  3
+                ],
+                "#text": "Beta"
+              },
+              {
+                "_evidence": [
+                  8,
+                  1,
+                  4
+                ],
+                "#text": "Alternative"
+              }
+            ],
+            "sequence": {
+              "_type": "external",
+              "_ref": "VSP_006536"
+            },
+            "text": [
+              {
+                "_evidence": [
+                  9,
+                  2,
+                  5
+                ],
+                "#text": "Produced by alternative splicing at intron 9."
+              },
+              {
+                "_evidence": [
+                  1,
+                  3,
+                  6
+                ],
+                "#text": "Lacks the C-terminal oligomerization domain."
+              }
+            ]
+          }
+        ],
+        "location": [
+          {
+            "_sequence": "VSP_006537 (13)",
+            "begin": {
+              "_position": 248,
+              "_status": "uncertain",
+              "_evidence": [
+                2,
+                4,
+                7
+              ]
+            },
+            "end": {
+              "_position": 270,
+              "_status": "uncertain",
+              "_evidence": [
+                3,
+                5,
+                8
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006538 (14)",
+            "position": {
+              "_position": 245,
+              "_status": "uncertain",
+              "_evidence": [
+                4,
+                6,
+                9
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Contains 12 characterized splice isoforms."
+          },
+          {
+            "_evidence": [
+              6,
+              8,
+              2
+            ],
+            "#text": "Alternative promoter usage produces delta133 isoforms."
+          }
+        ]
+      },
+      {
+        "_type": "interaction",
+        "_locationType": "motif",
+        "_name": "p53-MDM2 complex",
+        "_mass": 44102.75,
+        "_error": "Premature termination at 305",
+        "_method": "Surface plasmon resonance",
+        "_evidence": [
+          7,
+          9,
+          3
+        ],
+        "molecule": {
+          "_id": "A3CTY6-1 (24)",
+          "#text": "Chain A (24)"
+        },
+        "interactant": [
+          {
+            "_intactId": "EBI-366083",
+            "id": "P04637",
+            "label": "TP53",
+            "dbReference": {
+              "_type": "MIM",
+              "_id": "151623",
+              "_evidence": [
+                8,
+                1,
+                4
+              ],
+              "molecule": {
+                "_id": "P04637-1 (25)",
+                "#text": "Chain B (25)"
+              },
+              "property": [
+                {
+                  "_type": "UniRef100 ID (33)",
+                  "_value": "330"
+                },
+                {
+                  "_type": "UniRef90 ID (34)",
+                  "_value": "false"
+                }
+              ]
+            }
+          },
+          {
+            "_intactId": "EBI-389668",
+            "id": "Q00987",
+            "label": "MDM2",
+            "dbReference": {
+              "_type": "Reactome",
+              "_id": "R-HSA-3700989",
+              "_evidence": [
+                9,
+                2,
+                5
+              ],
+              "molecule": {
+                "_id": "P04637-2 (26)",
+                "#text": "Monomer (26)"
+              },
+              "property": [
+                {
+                  "_type": "protein name (35)",
+                  "_value": "CAJ36415.1"
+                },
+                {
+                  "_type": "source organism (36)",
+                  "_value": "mRNA"
+                }
+              ]
+            }
+          }
+        ],
+        "organismsDiffer": false,
+        "experiments": 14,
+        "location": [
+          {
+            "_sequence": "VSP_006539 (15)",
+            "position": {
+              "_position": 248,
+              "_status": "less than",
+              "_evidence": [
+                1,
+                3,
+                6
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006540 (16)",
+            "begin": {
+              "_position": 273,
+              "_status": "less than",
+              "_evidence": [
+                2,
+                4,
+                7
+              ]
+            },
+            "end": {
+              "_position": 299,
+              "_status": "less than",
+              "_evidence": [
+                3,
+                5,
+                8
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              4,
+              6,
+              9
+            ],
+            "#text": "Forms a tight complex with E3 ubiquitin-protein ligase MDM2."
+          },
+          {
+            "_evidence": [
+              5,
+              7,
+              1
+            ],
+            "#text": "Phosphorylation at Ser-15 disrupts MDM2 binding."
+          }
+        ]
+      },
+      {
+        "_type": "disease",
+        "_locationType": "site",
+        "_name": "Li-Fraumeni predisposition",
+        "_mass": 43590.875,
+        "_error": "Missense substitution R175H",
+        "_method": "Isothermal titration calorimetry",
+        "_evidence": [
+          6,
+          8,
+          2
+        ],
+        "molecule": {
+          "_id": "P04637-3 (27)",
+          "#text": "Homotetramer (27)"
+        },
+        "disease": {
+          "_id": "DI-00682",
+          "name": "Li-Fraumeni syndrome",
+          "acronym": "LFS1",
+          "description": "An autosomal dominant familial cancer syndrome caused by germline TP53 mutations.",
+          "dbReference": {
+            "_type": "AlphaFoldDB",
+            "_id": "AF-P04637-F1",
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "molecule": {
+              "_id": "Q9V2L2-1 (28)",
+              "#text": "Core domain (28)"
+            },
+            "property": [
+              {
+                "_type": "NCBI taxonomy (37)",
+                "_value": "Pur_DNA_glyco"
+              },
+              {
+                "_type": "length (38)",
+                "_value": "2"
+              }
+            ]
+          }
+        },
+        "location": [
+          {
+            "_sequence": "VSP_006541 (17)",
+            "begin": {
+              "_position": 301,
+              "_status": "greater than",
+              "_evidence": [
+                8,
+                1,
+                4
+              ]
+            },
+            "end": {
+              "_position": 322,
+              "_status": "greater than",
+              "_evidence": [
+                9,
+                2,
+                5
+              ]
+            }
+          },
+          {
+            "_sequence": "VSP_006542 (18)",
+            "position": {
+              "_position": 249,
+              "_status": "greater than",
+              "_evidence": [
+                1,
+                3,
+                6
+              ]
+            }
+          }
+        ],
+        "text": [
+          {
+            "_evidence": [
+              2,
+              4,
+              7
+            ],
+            "#text": "Mutations in the DNA-binding domain account for 80% of LFS cases."
+          },
+          {
+            "_evidence": [
+              3,
+              5,
+              8
+            ],
+            "#text": "Associated with early-onset sarcomas and breast carcinomas."
+          }
+        ]
+      },
+      {
+        "_type": "miscellaneous"
+      }
+    ],
+    "dbReference": [
+      {
+        "_type": "SMART",
+        "_id": "SM00325",
+        "_evidence": [
+          4,
+          6,
+          9
+        ],
+        "molecule": {
+          "_id": "Q0W5C8-1 (29)",
+          "#text": "Precursor (29)"
+        },
+        "property": [
+          {
+            "_type": "isSeed (39)",
+            "_value": "NC_009464.1"
+          },
+          {
+            "_type": "protein sequence ID (40)",
+            "_value": "Eukaryota"
+          }
+        ]
+      },
+      {
+        "_type": "SUPFAM",
+        "_id": "SSF49417",
+        "_evidence": [
+          5,
+          7,
+          1
+        ],
+        "molecule": {
+          "_id": "A3CTY6-1 (30)",
+          "#text": "Mature peptide (30)"
+        },
+        "property": [
+          {
+            "_type": "molecule type (41)",
+            "_value": "Mitochondrion"
+          },
+          {
+            "_type": "entry name (42)",
+            "_value": "P:regulation of cell cycle"
+          }
+        ]
+      }
+    ],
+    "proteinExistence": {
+      "_type": "evidence at protein level"
+    },
+    "keyword": [
+      {
+        "_evidence": [
+          6,
+          8,
+          2
+        ],
+        "_id": "KW-0002",
+        "#text": "3D-structure"
+      },
+      {
+        "_evidence": [
+          7,
+          9,
+          3
+        ],
+        "_id": "KW-0227",
+        "#text": "DNA damage"
+      }
+    ],
+    "feature": [
+      {
+        "_type": "domain",
+        "_id": "PRO_0000080560",
+        "_description": "p53 DNA-binding core domain",
+        "_evidence": [
+          8,
+          1,
+          4
+        ],
+        "_ref": "1",
+        "original": "R",
+        "variation": [
+          "H",
+          "Q"
+        ],
+        "location": {
+          "_sequence": "VSP_006543 (19)",
+          "begin": {
+            "_position": 325,
+            "_status": "unknown",
+            "_evidence": [
+              9,
+              2,
+              5
+            ]
+          },
+          "end": {
+            "_position": 355,
+            "_status": "unknown",
+            "_evidence": [
+              1,
+              3,
+              6
+            ]
+          }
+        },
+        "ligand": {
+          "name": "Mg(2+)",
+          "dbReference": {
+            "_type": "PANTHER",
+            "_id": "PTHR11447",
+            "_evidence": [
+              2,
+              4,
+              7
+            ],
+            "molecule": {
+              "_id": "P04637-1 (31)",
+              "#text": "Isoform 1 (31)"
+            },
+            "property": [
+              {
+                "_type": "match status (43)",
+                "_value": "ECO:0000314"
+              },
+              {
+                "_type": "nucleotide sequence ID (44)",
+                "_value": "GO_Central"
+              }
+            ]
+          },
+          "label": "ZN-1",
+          "note": "Coordinated by Cys-176, His-179, Cys-238, and Cys-242."
+        },
+        "ligandPart": {
+          "name": "catalytic zinc site",
+          "dbReference": {
+            "_type": "Gene3D",
+            "_id": "2.60.40.720",
+            "_evidence": [
+              3,
+              5,
+              8
+            ],
+            "molecule": {
+              "_id": "P04637-2 (32)",
+              "#text": "Isoform 2 (32)"
+            },
+            "property": [
+              {
+                "_type": "taxonomic scope (45)",
+                "_value": "3 (45)"
+              },
+              {
+                "_type": "component (46)",
+                "_value": "Homo sapiens (46)"
+              }
+            ]
+          },
+          "label": "ZN-coord",
+          "note": "Essential for structural integrity of L2/L3 loops."
+        }
+      },
+      {
+        "_type": "mutagenesis site",
+        "_id": "PRO_0000184521",
+        "_description": "Loss of sequence-specific DNA binding",
+        "_evidence": [
+          4,
+          6,
+          9
+        ],
+        "_ref": "2",
+        "original": "S",
+        "variation": [
+          "A",
+          "E"
+        ],
+        "location": {
+          "_sequence": "VSP_006544 (20)",
+          "position": {
+            "_position": 273,
+            "_status": "unknown",
+            "_evidence": [
+              5,
+              7,
+              1
+            ]
+          }
+        },
+        "ligand": {
+          "name": "S-adenosyl-L-methionine",
+          "dbReference": {
+            "_type": "CDD",
+            "_id": "cd08367",
+            "_evidence": [
+              6,
+              8,
+              2
+            ],
+            "molecule": {
+              "_id": "P04637-3 (33)",
+              "#text": "Isoform 3 (33)"
+            },
+            "property": [
+              {
+                "_type": "term (47)",
+                "_value": "9606 (47)"
+              },
+              {
+                "_type": "evidence (48)",
+                "_value": "GO:0003677 (48)"
+              }
+            ]
+          },
+          "label": "PLP-54",
+          "note": "Covalently linked via Schiff base to Lys-54."
+        },
+        "ligandPart": {
+          "name": "phosphate binding pocket",
+          "dbReference": {
+            "_type": "HAMAP-Rule",
+            "_id": "MF_00527",
+            "_evidence": [
+              7,
+              9,
+              3
+            ],
+            "molecule": {
+              "_id": "Q9V2L2-1 (34)",
+              "#text": "Chain A (34)"
+            },
+            "property": [
+              {
+                "_type": "project (49)",
+                "_value": "P04637 (49)"
+              },
+              {
+                "_type": "chains (50)",
+                "_value": "UPI000002ED67 (50)"
+              }
+            ]
+          },
+          "label": "PLP-OPO3",
+          "note": "Stabilized by hydrogen bonding with Gly-188 and Thr-190."
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "_type": "ECO:0000269",
+        "_key": 1,
+        "source": {
+          "_ref": 1,
+          "dbReference": {
+            "_type": "PIR",
+            "_id": "A25224",
+            "_evidence": [
+              8,
+              1,
+              4
+            ],
+            "molecule": {
+              "_id": "Q0W5C8-1 (35)",
+              "#text": "Chain B (35)"
+            },
+            "property": [
+              {
+                "_type": "resolution (51)",
+                "_value": "UniRef100_P04637 (51)"
+              },
+              {
+                "_type": "method (52)",
+                "_value": "UniRef90_P04637 (52)"
+              }
+            ]
+          }
+        },
+        "importedFrom": {
+          "dbReference": {
+            "_type": "KEGG",
+            "_id": "hsa:7157",
+            "_evidence": [
+              9,
+              2,
+              5
+            ],
+            "molecule": {
+              "_id": "A3CTY6-1 (36)",
+              "#text": "Monomer (36)"
+            },
+            "property": [
+              {
+                "_type": "member count (53)",
+                "_value": "Cellular tumor antigen p53 (53)"
+              },
+              {
+                "_type": "common taxon (54)",
+                "_value": "Homo sapiens (Human) (54)"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "_type": "ECO:0000305",
+        "_key": 2,
+        "source": {
+          "_ref": 2,
+          "dbReference": {
+            "_type": "STRING",
+            "_id": "9606.ENSP00000269305",
+            "_evidence": [
+              1,
+              3,
+              6
+            ],
+            "molecule": {
+              "_id": "P04637-1 (37)",
+              "#text": "Homotetramer (37)"
+            },
+            "property": [
+              {
+                "_type": "common taxon ID (55)",
+                "_value": "9606 (55)"
+              },
+              {
+                "_type": "GO Molecular Function (56)",
+                "_value": "393 (56)"
+              }
+            ]
+          }
+        },
+        "importedFrom": {
+          "dbReference": {
+            "_type": "OrthoDB",
+            "_id": "119234at2759",
+            "_evidence": [
+              2,
+              4,
+              7
+            ],
+            "molecule": {
+              "_id": "P04637-2 (38)",
+              "#text": "Core domain (38)"
+            },
+            "property": [
+              {
+                "_type": "UniProtKB accession (57)",
+                "_value": "true (57)"
+              },
+              {
+                "_type": "UniParc ID (58)",
+                "_value": "CAB48986.1 (58)"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "sequence": {
+      "_length": 393,
+      "_mass": 43653,
+      "_checksum": "AD5C149FD8106131",
+      "_modified": "2009-11-24",
+      "_version": 2,
+      "_precursor": true,
+      "_fragment": "single",
+      "#text": "MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP"
+    }
+  }
+]

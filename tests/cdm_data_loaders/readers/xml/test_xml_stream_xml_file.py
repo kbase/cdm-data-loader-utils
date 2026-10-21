@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
-from lxml.etree import XMLSyntaxError
+from lxml.etree import XMLSyntaxError, tostring
 
 from cdm_data_loaders.readers.xml import stream_xml_file
 from tests.xml_samples import SIMPLE_LIBRARY_XML
@@ -205,3 +205,76 @@ def test_stream_xml_file_fail_non_gzip_content_with_gz_extension_raises_error(tm
 
     with pytest.raises(OSError, match="Not a gzipped file"):
         list(stream_xml_file(fake_gz_path, "book"))
+
+
+@pytest.mark.parametrize(
+    ("xml", "tag", "expected"),
+    [
+        pytest.param("<root/>", "node", [], id="no-match"),
+        pytest.param(
+            '<root><node id="1"/><node id="2"/></root>',
+            "node",
+            [b'<node id="1"/>', b'<node id="2"/>'],
+            id="siblings",
+        ),
+        pytest.param(
+            '<root><a><node id="1"/></a><b><node id="2"/></b></root>',
+            "node",
+            [b'<node id="1"/>', b'<node id="2"/>'],
+            id="matches-under-different-parents",
+        ),
+        pytest.param(
+            '<root><node id="1"><node id="2"/></node></root>',
+            "node",
+            [b'<node id="1"><node id="2"/></node>'],
+            id="nested-once",
+        ),
+        pytest.param(
+            '<root><node id="1"><a>x</a><node id="2"/><node id="3"/></node></root>',
+            "node",
+            [b'<node id="1"><a>x</a><node id="2"/><node id="3"/></node>'],
+            id="nested-with-earlier-siblings",
+        ),
+        pytest.param(
+            '<root><node id="1"><node id="2"><node id="3"/></node></node></root>',
+            "node",
+            [b'<node id="1"><node id="2"><node id="3"/></node></node>'],
+            id="nested-three-levels",
+        ),
+        pytest.param(
+            '<root><node id="1"><node id="1a"/></node><node id="2"/></root>',
+            "node",
+            [b'<node id="1"><node id="1a"/></node>', b'<node id="2"/>'],
+            id="nested-then-sibling",
+        ),
+        pytest.param(
+            '<node id="r"><node id="c"/></node>',
+            "node",
+            [b'<node id="r"><node id="c"/></node>'],
+            id="root-is-a-match",
+        ),
+        pytest.param(
+            '<root xmlns="urn:x"><node id="1"><node id="2"/></node></root>',
+            "{urn:x}node",
+            [b'<node xmlns="urn:x" id="1"><node id="2"/></node>'],
+            id="nested-in-default-namespace",
+        ),
+    ],
+)
+@pytest.mark.parametrize("compressed", [False, True], ids=["plain", "gzip"])
+def test_stream_xml_file_pass_yields_outermost_matches(  # noqa: PLR0917
+    tmp_path: Path,
+    write_gzip_file: Callable[[Path, str, str], Path],
+    xml: str,
+    tag: str,
+    expected: list[bytes],
+    compressed: bool,
+) -> None:
+    """Only the outermost matching elements are yielded, each with all of its content."""
+    if compressed:
+        file_path = write_gzip_file(tmp_path, "doc.xml.gz", xml)
+    else:
+        file_path = tmp_path / "doc.xml"
+        file_path.write_text(xml, encoding="utf-8")
+
+    assert [tostring(elem, with_tail=False) for elem in stream_xml_file(file_path, tag)] == expected

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:group name="inlineFormatting">
+        <xs:choice>
+            <xs:element name="b" type="formattedText"/>
+            <xs:element name="i" type="formattedText"/>
+            <xs:element name="sup" type="formattedText"/>
+            <xs:element name="sub" type="formattedText"/>
+        </xs:choice>
+    </xs:group>
+
+    <xs:complexType name="formattedText" mixed="true">
+        <xs:group ref="inlineFormatting" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:complexType>
+
+    <xs:complexType name="abstractTextType" mixed="true">
+        <xs:group ref="inlineFormatting" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:attribute name="Label" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:element name="articles">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="article" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="title" type="formattedText"/>
+                            <xs:element name="abstractText" type="abstractTextType" minOccurs="0" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

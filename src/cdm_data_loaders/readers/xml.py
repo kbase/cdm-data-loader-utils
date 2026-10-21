@@ -16,8 +16,10 @@ from lxml.etree import Element, iterparse, tostring
 from cdm_data_loaders.core.fields import DEFAULT_XML_FILE_GLOB
 from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
+from cdm_data_loaders.pipelines.xmltopyarrow.settings import XmlToPyArrowSettings
+from cdm_data_loaders.readers.xsd import convert_xml_element
 from cdm_data_loaders.utils.batcher import get_file_batches
-from cdm_data_loaders.utils.buffer import DictBuffer, ListBuffer
+from cdm_data_loaders.utils.buffer import ArrowListBuffer, DictBuffer, ListBuffer
 from cdm_data_loaders.utils.gz import open_maybe_gzip
 
 logger: Logger = getLogger(__name__)
@@ -64,7 +66,9 @@ def parse_head_matter(file_path: str | Path) -> dict[str, str]:
 
 
 def stream_xml_file(file_path: str | Path, element_with_ns: str) -> Generator[Element, Any]:
-    """Stream XML elements from a file.
+    """Stream the outermost matching XML elements from a file.
+
+    A matching element nested inside another matching element is yielded as part of the outer element.
 
     :param file_path: path to the XML file; file can be gzipped or not.
     :type  file_path: str | Path
@@ -76,10 +80,21 @@ def stream_xml_file(file_path: str | Path, element_with_ns: str) -> Generator[El
     logger.debug("Streaming XML from %s", file_path)
 
     with open_maybe_gzip(file_path) as f:
-        for _, elem in iterparse(f, tag=(element_with_ns), remove_blank_text=True):
+        # number of open matching elements; 0 means the parser is outside any match
+        depth = 0
+        for event, elem in iterparse(f, events=("start", "end"), tag=element_with_ns, remove_blank_text=True):
+            if event == "start":
+                depth += 1
+                continue
+            depth -= 1
+            if depth:
+                # nested match: leave it in place as part of the enclosing match
+                continue
             logger.debug(elem)
             yield elem
             elem.clear()
+            while elem.getprevious() is not None:
+                del elem.getparent()[0]
 
 
 def _log_interval_progress(n_entries: int, log_interval: int) -> None:
@@ -94,16 +109,59 @@ def _log_interval_final(n_entries: int, file_path: Path, log_interval: int) -> N
         logger.debug("Processed %d entries from %s", n_entries + 1, file_path.name)
 
 
-def process_xml_file_to_dict(settings: XmlToDictSettings, file_path: Path) -> Generator[DataItemWithMeta]:
-    """Convert XML to dictionary form.
+def process_xml_file_to_pyarrow(settings: XmlToPyArrowSettings, file_path: Path) -> Generator[DataItemWithMeta]:
+    """Convert XML elements to PyArrow table batches using an XSD schema.
 
-    Note: each incoming element produces a single dictionary as output.
+    Each matching element is converted using ``settings.xsd_schema`` and buffered into PyArrow
+    tables matching ``settings.pyarrow_schema``.
+
+    Use process_xml_file for parsing functions that return data spread across several tables.
+
+    :param settings: pipeline config, including xml_tag, table_name, xsd_schema, pyarrow_schema, and buffer_size
+    :type settings: XmlToPyArrowSettings
+    :param file_path: file path, as a Path
+    :type file_path: Path
+    :yield: pages of PyArrow tables
+    :rtype: Generator[DataItemWithMeta]
+    """
+    logger.info("Reading from %s", str(file_path))
+    n_entries = -1
+
+    stream_tag = settings.xml_tag
+    if not stream_tag.startswith("{"):
+        default_ns = parse_head_matter(file_path).get("")
+        if default_ns:
+            stream_tag = f"{{{default_ns}}}{stream_tag}"
+
+    arrow_buffer = ArrowListBuffer(
+        table_to_schema_map={settings.table_name: settings.pyarrow_schema},
+        max_items=settings.buffer_size,
+    )
+    for n_entries, element in enumerate(stream_xml_file(file_path, stream_tag)):
+        parsed_row = convert_xml_element(
+            element,
+            settings.xsd_schema,
+            settings.xml_tag,
+            max_recursion_depth=settings.max_recursion_depth,
+        )
+        yield from arrow_buffer.add_item(parsed_row)
+        _log_interval_progress(n_entries, settings.log_interval)
+
+    _log_interval_final(n_entries, file_path, settings.log_interval)
+    yield from arrow_buffer.flush()
+    return
+
+
+def process_xml_file_to_dict(settings: XmlToDictSettings, file_path: Path) -> Generator[DataItemWithMeta]:
+    """Convert XML elements to dictionary form using ``xmltodict.parse``.
+
+    Each matching element is converted with ``xmltodict.parse`` and buffered as dicts.
 
     Use process_xml_file for parsing functions that return data spread across several tables.
 
     :param settings: pipeline config, including xml_tag, table_name, and buffer_size
     :type settings: XmlToDictSettings
-    :param file_path: file path, as a string
+    :param file_path: file path, as a Path
     :type file_path: Path
     :yield: pages of dictionary items
     :rtype: Generator[DataItemWithMeta]
@@ -113,7 +171,7 @@ def process_xml_file_to_dict(settings: XmlToDictSettings, file_path: Path) -> Ge
 
     buffer = ListBuffer(table_name=settings.table_name, max_items=settings.buffer_size)
     for n_entries, element in enumerate(stream_xml_file(file_path, settings.xml_tag)):
-        parsed_element = xmltodict.parse(tostring(element), **DEFAULT_XMLTODICT_ARGS, **settings.xmltodict_args)
+        parsed_element = xmltodict.parse(tostring(element), **DEFAULT_XMLTODICT_ARGS)
         if parsed_element:
             for k, v in parsed_element.items():
                 # remove the xmlns declarations

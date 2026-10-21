@@ -21,12 +21,14 @@ if TYPE_CHECKING:
 logger: Logger = getLogger(__name__)
 
 
-def _read_items(items: Iterator[FileItemDict], settings: XmlToDictSettings) -> Generator[TDataItems, Any, Any]:
+def _read_xmltodict_items(
+    items: Iterator[FileItemDict], settings: XmlToDictSettings
+) -> Generator[TDataItems, Any, Any]:
     """Read each file in items. Yields one dict per `xml_tag` element.
 
     :param items: file items to read
     :type  items: Iterator[FileItemDict]
-    :param settings: pipeline config, including xml_tag and xsd-derived paths
+    :param settings: pipeline config, including xml_tag
     :type  settings: XmlToDictSettings
     :yield: one dict per matched element
     :rtype: Generator[TDataItems, Any, Any]
@@ -41,8 +43,7 @@ def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     :param settings: pipeline configuration
     :type  settings: XmlToDictSettings
     """
-    reader = dlt.transformer(_read_items, name="xmltodict_reader", parallelized=True)
-
+    reader = dlt.transformer(_read_xmltodict_items, name="xmltodict_reader", parallelized=True)
     files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xmltodict_resource: DltResource = files | reader(settings)

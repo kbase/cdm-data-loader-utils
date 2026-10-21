@@ -1,0 +1,21 @@
+[
+    {
+        "title": "Ca<sup>2+</sup> signaling in <i>E. <b>coli</b></i> cells",
+        "abstractText": [
+            {
+                "_Label": "BACKGROUND",
+                "#text": "Studied <b>bold</b> &amp; <i>italic</i> text where x &lt; y."
+            },
+            {
+                "#text": "Unlabelled paragraph with <sub>2</sub>O and empty <sup/> tag."
+            },
+            {
+                "_Label": "EMPTY"
+            },
+            null
+        ]
+    },
+    {
+        "title": ""
+    }
+]

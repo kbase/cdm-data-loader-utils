@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+    <item createdBy="alice" version="1">
+        <pagination>
+            <StartPage>10</StartPage>
+            <EndPage>20</EndPage>
+            <MedlinePgn>10-20</MedlinePgn>
+        </pagination>
+        <interaction>
+            <interactant>P12345</interactant>
+            <interactant>Q67890</interactant>
+        </interaction>
+        <meta>
+            <year>2025</year>
+            <author>Bob</author>
+        </meta>
+        <pairs>
+            <k>a</k>
+            <v>1</v>
+            <k>b</k>
+            <v>2</v>
+        </pairs>
+    </item>
+    <item>
+        <pagination>
+            <MedlinePgn>e12345</MedlinePgn>
+        </pagination>
+    </item>
+</dataset>

@@ -1,0 +1,482 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PubmedBookArticleSet xmlns="http://www.w3.org/namespace/">
+  <PubmedBookArticle>
+    <BookDocument>
+      <PMID Version="1">38123456</PMID>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">38123456</ArticleId>
+        <ArticleId IdType="doi">10.1038/s41586-024-07123-x</ArticleId>
+      </ArticleIdList>
+      <Book>
+        <Publisher>
+          <PublisherName>Cold Spring Harbor Laboratory Press</PublisherName>
+          <PublisherLocation>Cold Spring Harbor (NY)</PublisherLocation>
+        </Publisher>
+        <BookTitle book="nbk21054" part="part1" sec="sec1.1">Molecular Biology of the Cell, <i>7th Edition</i></BookTitle>
+        <PubDate>
+          <Year>2024</Year>
+          <Month>05</Month>
+          <Day>29</Day>
+        </PubDate>
+        <BeginningDate>
+          <Year>2025</Year>
+          <Month>01</Month>
+          <Day>16</Day>
+        </BeginningDate>
+        <EndingDate>
+          <Year>2023</Year>
+          <Month>09</Month>
+          <Day>15</Day>
+        </EndingDate>
+        <AuthorList CompleteYN="Y" Type="authors">
+          <Author ValidYN="Y" EqualContrib="Y">
+            <LastName>Morris</LastName>
+            <ForeName>Charlotte</ForeName>
+            <Initials>C</Initials>
+            <Suffix>Jr</Suffix>
+            <Identifier Source="ORCID">0000-0002-9047-0481</Identifier>
+            <Identifier Source="ISNI">0000-0001-6450-5815</Identifier>
+            <AffiliationInfo>
+              <Affiliation>The University of Manchester, Division of Population Health, Manchester, United Kingdom.</Affiliation>
+              <Identifier Source="VIAF">0000-0003-2804-1181</Identifier>
+              <Identifier Source="GND">0000-0002-0939-9842</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>National Institute for Health and Care Research School for Primary Care Research, Manchester, United Kingdom.</Affiliation>
+              <Identifier Source="RINGGOLD">0000-0001-5784-7403</Identifier>
+              <Identifier Source="GRID">0000-0002-1825-0097</Identifier>
+            </AffiliationInfo>
+          </Author>
+          <Author ValidYN="N" EqualContrib="N">
+            <CollectiveName Investigators="INV_1">International Cancer Genome Consortium</CollectiveName>
+            <Identifier Source="ROR">https://ror.org/027m9bs27</Identifier>
+            <Identifier Source="ORCID (8)">https://ror.org/01ej9dk98</Identifier>
+            <AffiliationInfo>
+              <Affiliation>Newcastle University Faculty of Medical Sciences, Population Health Sciences Institute, Newcastle upon Tyne, United Kingdom.</Affiliation>
+              <Identifier Source="ISNI (9)">https://ror.org/00za53h95</Identifier>
+              <Identifier Source="VIAF (10)">https://ror.org/03vek6s52</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>Sidney Kimmel Comprehensive Cancer Center, Johns Hopkins University, Baltimore, MD, USA.</Affiliation>
+              <Identifier Source="GND (11)">0000-0002-9047-0481 (11)</Identifier>
+              <Identifier Source="RINGGOLD (12)">0000-0001-6450-5815 (12)</Identifier>
+            </AffiliationInfo>
+          </Author>
+        </AuthorList>
+        <AuthorList CompleteYN="N" Type="editors">
+          <Author ValidYN="Y" EqualContrib="Y">
+            <CollectiveName Investigators="INV_1">UK Primary Care Dementia Research Group</CollectiveName>
+            <Identifier Source="GRID (13)">0000-0003-2804-1181 (13)</Identifier>
+            <Identifier Source="ROR (14)">0000-0002-0939-9842 (14)</Identifier>
+            <AffiliationInfo>
+              <Affiliation>MRC Laboratory of Molecular Biology, Francis Crick Avenue, Cambridge, United Kingdom.</Affiliation>
+              <Identifier Source="ORCID (15)">0000-0001-5784-7403 (15)</Identifier>
+              <Identifier Source="ISNI (16)">0000-0002-1825-0097 (16)</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>Cold Spring Harbor Laboratory, One Bungtown Road, Cold Spring Harbor, NY, USA.</Affiliation>
+              <Identifier Source="VIAF (17)">https://ror.org/027m9bs27 (17)</Identifier>
+              <Identifier Source="GND (18)">https://ror.org/01ej9dk98 (18)</Identifier>
+            </AffiliationInfo>
+          </Author>
+          <Author ValidYN="N" EqualContrib="N">
+            <LastName>Kontopantelis</LastName>
+            <ForeName>Evangelos</ForeName>
+            <Initials>E</Initials>
+            <Suffix>III</Suffix>
+            <Identifier Source="RINGGOLD (19)">https://ror.org/00za53h95 (19)</Identifier>
+            <Identifier Source="GRID (20)">https://ror.org/03vek6s52 (20)</Identifier>
+            <AffiliationInfo>
+              <Affiliation>Institute for Advanced Study, Einstein Drive, Princeton, NJ, USA.</Affiliation>
+              <Identifier Source="ROR (21)">0000-0002-9047-0481 (21)</Identifier>
+              <Identifier Source="ORCID (22)">0000-0001-6450-5815 (22)</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>Department of Molecular Biology, Princeton University, Princeton, NJ, USA.</Affiliation>
+              <Identifier Source="ISNI (23)">0000-0003-2804-1181 (23)</Identifier>
+              <Identifier Source="VIAF (24)">0000-0002-0939-9842 (24)</Identifier>
+            </AffiliationInfo>
+          </Author>
+        </AuthorList>
+        <InvestigatorList ID="INV_1">
+          <Investigator ValidYN="Y">
+            <LastName>Robinson</LastName>
+            <ForeName>Louise</ForeName>
+            <Initials>L</Initials>
+            <Suffix>Sr</Suffix>
+            <Identifier Source="GND (25)">0000-0001-5784-7403 (25)</Identifier>
+            <Identifier Source="RINGGOLD (26)">0000-0002-1825-0097 (26)</Identifier>
+            <AffiliationInfo>
+              <Affiliation>The University of Manchester, Division of Population Health, Manchester, United Kingdom. (9)</Affiliation>
+              <Identifier Source="GRID (27)">https://ror.org/027m9bs27 (27)</Identifier>
+              <Identifier Source="ROR (28)">https://ror.org/01ej9dk98 (28)</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>National Institute for Health and Care Research School for Primary Care Research, Manchester, United Kingdom. (10)</Affiliation>
+              <Identifier Source="ORCID (29)">https://ror.org/00za53h95 (29)</Identifier>
+              <Identifier Source="ISNI (30)">https://ror.org/03vek6s52 (30)</Identifier>
+            </AffiliationInfo>
+          </Investigator>
+          <Investigator ValidYN="N">
+            <LastName>Ashcroft</LastName>
+            <ForeName>Darren</ForeName>
+            <Initials>D</Initials>
+            <Suffix>II</Suffix>
+            <Identifier Source="VIAF (31)">0000-0002-9047-0481 (31)</Identifier>
+            <Identifier Source="GND (32)">0000-0001-6450-5815 (32)</Identifier>
+            <AffiliationInfo>
+              <Affiliation>Newcastle University Faculty of Medical Sciences, Population Health Sciences Institute, Newcastle upon Tyne, United Kingdom. (11)</Affiliation>
+              <Identifier Source="RINGGOLD (33)">0000-0003-2804-1181 (33)</Identifier>
+              <Identifier Source="GRID (34)">0000-0002-0939-9842 (34)</Identifier>
+            </AffiliationInfo>
+            <AffiliationInfo>
+              <Affiliation>Sidney Kimmel Comprehensive Cancer Center, Johns Hopkins University, Baltimore, MD, USA. (12)</Affiliation>
+              <Identifier Source="ROR (35)">0000-0001-5784-7403 (35)</Identifier>
+              <Identifier Source="ORCID (36)">0000-0002-1825-0097 (36)</Identifier>
+            </AffiliationInfo>
+          </Investigator>
+        </InvestigatorList>
+        <Volume>629</Volume>
+        <VolumeTitle>Part I: Introduction to the Cell</VolumeTitle>
+        <Edition>7th</Edition>
+        <CollectionTitle book="nbk21054" part="seriesA" sec="vol1">NCBI Bookshelf Classics</CollectionTitle>
+        <Isbn>978-0-8153-4432-2</Isbn>
+        <Isbn>978-0-8153-4464-3</Isbn>
+        <ELocationID EIdType="doi" ValidYN="Y">10.1038/s41586-024-07123-x</ELocationID>
+        <ELocationID EIdType="pii" ValidYN="N">S0028-0836(24)00123-4</ELocationID>
+        <Medium>Internet</Medium>
+        <ReportNumber>NBK21054</ReportNumber>
+      </Book>
+      <LocationLabel Type="chapter">Chapter 1</LocationLabel>
+      <LocationLabel Type="section">Part I</LocationLabel>
+      <ArticleTitle book="nbk21054" part="part1" sec="sec1.1">Structural basis of <i>TP53</i> tetramerization and Ca<sup>2+</sup> signaling</ArticleTitle>
+      <VernacularTitle>Bases structurales de la tetramerisation de <i>TP53</i></VernacularTitle>
+      <Pagination>
+        <StartPage>410</StartPage>
+        <EndPage>418</EndPage>
+        <MedlinePgn>410-418</MedlinePgn>
+      </Pagination>
+      <Language>eng</Language>
+      <Language>fre</Language>
+      <AuthorList CompleteYN="Y" Type="authors">
+        <Author ValidYN="Y" EqualContrib="Y">
+          <LastName>Blakeman</LastName>
+          <ForeName>Thomas</ForeName>
+          <Initials>T</Initials>
+          <Suffix>IV</Suffix>
+          <Identifier Source="ISNI (37)">https://ror.org/027m9bs27 (37)</Identifier>
+          <Identifier Source="VIAF (38)">https://ror.org/01ej9dk98 (38)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>MRC Laboratory of Molecular Biology, Francis Crick Avenue, Cambridge, United Kingdom. (13)</Affiliation>
+            <Identifier Source="GND (39)">https://ror.org/00za53h95 (39)</Identifier>
+            <Identifier Source="RINGGOLD (40)">https://ror.org/03vek6s52 (40)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>Cold Spring Harbor Laboratory, One Bungtown Road, Cold Spring Harbor, NY, USA. (14)</Affiliation>
+            <Identifier Source="GRID (41)">0000-0002-9047-0481 (41)</Identifier>
+            <Identifier Source="ROR (42)">0000-0001-6450-5815 (42)</Identifier>
+          </AffiliationInfo>
+        </Author>
+        <Author ValidYN="N" EqualContrib="N">
+          <CollectiveName Investigators="INV_1">Asia-Pacific HIV Prevention Network</CollectiveName>
+          <Identifier Source="ORCID (43)">0000-0003-2804-1181 (43)</Identifier>
+          <Identifier Source="ISNI (44)">0000-0002-0939-9842 (44)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>Institute for Advanced Study, Einstein Drive, Princeton, NJ, USA. (15)</Affiliation>
+            <Identifier Source="VIAF (45)">0000-0001-5784-7403 (45)</Identifier>
+            <Identifier Source="GND (46)">0000-0002-1825-0097 (46)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>Department of Molecular Biology, Princeton University, Princeton, NJ, USA. (16)</Affiliation>
+            <Identifier Source="RINGGOLD (47)">https://ror.org/027m9bs27 (47)</Identifier>
+            <Identifier Source="GRID (48)">https://ror.org/01ej9dk98 (48)</Identifier>
+          </AffiliationInfo>
+        </Author>
+      </AuthorList>
+      <AuthorList CompleteYN="N" Type="editors">
+        <Author ValidYN="Y" EqualContrib="Y">
+          <CollectiveName Investigators="INV_1">European TP53 Structural Biology Consortium</CollectiveName>
+          <Identifier Source="ROR (49)">https://ror.org/00za53h95 (49)</Identifier>
+          <Identifier Source="ORCID (50)">https://ror.org/03vek6s52 (50)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>The University of Manchester, Division of Population Health, Manchester, United Kingdom. (17)</Affiliation>
+            <Identifier Source="ISNI (51)">0000-0002-9047-0481 (51)</Identifier>
+            <Identifier Source="VIAF (52)">0000-0001-6450-5815 (52)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>National Institute for Health and Care Research School for Primary Care Research, Manchester, United Kingdom. (18)</Affiliation>
+            <Identifier Source="GND (53)">0000-0003-2804-1181 (53)</Identifier>
+            <Identifier Source="RINGGOLD (54)">0000-0002-0939-9842 (54)</Identifier>
+          </AffiliationInfo>
+        </Author>
+        <Author ValidYN="N" EqualContrib="N">
+          <LastName>Tucker</LastName>
+          <ForeName>Joseph</ForeName>
+          <Initials>J</Initials>
+          <Suffix>PhD</Suffix>
+          <Identifier Source="GRID (55)">0000-0001-5784-7403 (55)</Identifier>
+          <Identifier Source="ROR (56)">0000-0002-1825-0097 (56)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>Newcastle University Faculty of Medical Sciences, Population Health Sciences Institute, Newcastle upon Tyne, United Kingdom. (19)</Affiliation>
+            <Identifier Source="ORCID (57)">https://ror.org/027m9bs27 (57)</Identifier>
+            <Identifier Source="ISNI (58)">https://ror.org/01ej9dk98 (58)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>Sidney Kimmel Comprehensive Cancer Center, Johns Hopkins University, Baltimore, MD, USA. (20)</Affiliation>
+            <Identifier Source="VIAF (59)">https://ror.org/00za53h95 (59)</Identifier>
+            <Identifier Source="GND (60)">https://ror.org/03vek6s52 (60)</Identifier>
+          </AffiliationInfo>
+        </Author>
+      </AuthorList>
+      <InvestigatorList ID="INV_2">
+        <Investigator ValidYN="Y">
+          <LastName>Mullens</LastName>
+          <ForeName>Amy</ForeName>
+          <Initials>A</Initials>
+          <Suffix>MD</Suffix>
+          <Identifier Source="RINGGOLD (61)">0000-0002-9047-0481 (61)</Identifier>
+          <Identifier Source="GRID (62)">0000-0001-6450-5815 (62)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>MRC Laboratory of Molecular Biology, Francis Crick Avenue, Cambridge, United Kingdom. (21)</Affiliation>
+            <Identifier Source="ROR (63)">0000-0003-2804-1181 (63)</Identifier>
+            <Identifier Source="ORCID (64)">0000-0002-0939-9842 (64)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>Cold Spring Harbor Laboratory, One Bungtown Road, Cold Spring Harbor, NY, USA. (22)</Affiliation>
+            <Identifier Source="ISNI (65)">0000-0001-5784-7403 (65)</Identifier>
+            <Identifier Source="VIAF (66)">0000-0002-1825-0097 (66)</Identifier>
+          </AffiliationInfo>
+        </Investigator>
+        <Investigator ValidYN="N">
+          <LastName>Morroni</LastName>
+          <ForeName>Chelsea</ForeName>
+          <Initials>CM</Initials>
+          <Suffix>FRS</Suffix>
+          <Identifier Source="GND (67)">https://ror.org/027m9bs27 (67)</Identifier>
+          <Identifier Source="RINGGOLD (68)">https://ror.org/01ej9dk98 (68)</Identifier>
+          <AffiliationInfo>
+            <Affiliation>Institute for Advanced Study, Einstein Drive, Princeton, NJ, USA. (23)</Affiliation>
+            <Identifier Source="GRID (69)">https://ror.org/00za53h95 (69)</Identifier>
+            <Identifier Source="ROR (70)">https://ror.org/03vek6s52 (70)</Identifier>
+          </AffiliationInfo>
+          <AffiliationInfo>
+            <Affiliation>Department of Molecular Biology, Princeton University, Princeton, NJ, USA. (24)</Affiliation>
+            <Identifier Source="ORCID (71)">0000-0002-9047-0481 (71)</Identifier>
+            <Identifier Source="ISNI (72)">0000-0001-6450-5815 (72)</Identifier>
+          </AffiliationInfo>
+        </Investigator>
+      </InvestigatorList>
+      <PublicationType UI="D016428">Journal Article</PublicationType>
+      <PublicationType UI="D013485">Research Support, Non-U.S. Gov't</PublicationType>
+      <Abstract>
+        <AbstractText Label="BACKGROUND" NlmCategory="BACKGROUND">The tumor suppressor <b>p53</b> regulates transcription in response to &lt;5 Gy stress and H<sub>2</sub>O<sub>2</sub>.</AbstractText>
+        <AbstractText Label="METHODS" NlmCategory="METHODS">We undertook 20 semi-structured interviews with participants aged &gt;18 years studying Ca<sup>2+</sup> signaling &amp; DNA repair <DispFormula/> and <u>underlined</u> text.</AbstractText>
+        <AbstractText Label="UNLABELLED" NlmCategory="UNASSIGNED"/>
+        <CopyrightInformation>Copyright (c) 2024 Springer Nature Limited.</CopyrightInformation>
+      </Abstract>
+      <Sections>
+        <Section>
+          <LocationLabel Type="part">Chapter 1</LocationLabel>
+          <SectionTitle book="nbk21054" part="part1" sec="sec1">Chapter 1: <b>Cells and Genomes</b> &amp; Evolution</SectionTitle>
+          <Section>
+            <LocationLabel Type="appendix">Section 1.1</LocationLabel>
+            <SectionTitle book="nbk21055" part="part1" sec="sec1.1">Section 1.1: The Universal Features of <i>Cells</i> on Earth</SectionTitle>
+            <Section>
+              <LocationLabel Type="table">Subsection 1.1.1</LocationLabel>
+              <SectionTitle book="nbk21056" part="part1" sec="sec1.1.1">Subsection 1.1.1: All Cells Store Their Hereditary Information in <b>DNA</b></SectionTitle>
+            </Section>
+          </Section>
+        </Section>
+        <Section>
+          <LocationLabel Type="figure">Chapter 2</LocationLabel>
+          <SectionTitle book="nbk21057" part="part2" sec="sec2">Chapter 2: Cell Chemistry and <i>Bioenergetics</i></SectionTitle>
+          <Section>
+            <LocationLabel Type="box">Section 2.1</LocationLabel>
+            <SectionTitle book="nbk21058" part="part2" sec="sec2.1">Section 2.1: The Chemical Components of a Cell &amp; CO<sub>2</sub> Fixation</SectionTitle>
+            <Section>
+              <LocationLabel Type="chapter">Subsection 2.1.1</LocationLabel>
+              <SectionTitle book="nbk21059" part="part2" sec="sec2.1.1">Subsection 2.1.1: Chemical Bonds and Ca<sup>2+</sup> Ions</SectionTitle>
+            </Section>
+          </Section>
+        </Section>
+      </Sections>
+      <KeywordList Owner="NOTNLM">
+        <Keyword MajorTopicYN="Y">p53 signaling</Keyword>
+        <Keyword MajorTopicYN="N">tetramerization</Keyword>
+      </KeywordList>
+      <KeywordList Owner="NLM">
+        <Keyword MajorTopicYN="Y">DNA damage response</Keyword>
+        <Keyword MajorTopicYN="N">apoptosis</Keyword>
+      </KeywordList>
+      <ContributionDate>
+        <Year>2022</Year>
+        <Month>11</Month>
+        <Day>04</Day>
+      </ContributionDate>
+      <DateRevised>
+        <Year>2021</Year>
+        <Month>03</Month>
+        <Day>21</Day>
+      </DateRevised>
+      <GrantList CompleteYN="Y">
+        <Grant>
+          <GrantID>R01-CA043460</GrantID>
+          <Acronym>CA</Acronym>
+          <Agency>NCI NIH HHS</Agency>
+          <Country>United States</Country>
+        </Grant>
+        <Grant>
+          <GrantID>MR/T021975/1</GrantID>
+          <Acronym>MRC</Acronym>
+          <Agency>Medical Research Council</Agency>
+          <Country>United Kingdom</Country>
+        </Grant>
+      </GrantList>
+      <ItemList ListType="list">
+        <Item>G1/S DNA damage checkpoint</Item>
+        <Item>G2/M mitotic spindle checkpoint</Item>
+      </ItemList>
+      <ItemList ListType="ordered">
+        <Item>Ataxia-telangiectasia mutated (ATM) kinase activation</Item>
+        <Item>CHK2-mediated phosphorylation of Ser-20</Item>
+      </ItemList>
+      <ReferenceList>
+        <Title>Nature</Title>
+        <Reference>
+          <Citation>Vogelstein B, Lane D, Levine AJ. <i>Surfing the p53 network</i>. Nature. 2000;408(6810):307-310.</Citation>
+          <ArticleIdList>
+            <ArticleId IdType="pmc">PMC10987654</ArticleId>
+            <ArticleId IdType="pii">S0028-0836(24)00123-4</ArticleId>
+          </ArticleIdList>
+        </Reference>
+        <Reference>
+          <Citation>Cho Y, Gorina S, Jeffrey PD, Pavletich NP. Crystal structure of a <b>p53</b> tumor suppressor-DNA complex. Science. 1994;265(5170):346-355.</Citation>
+          <ArticleIdList>
+            <ArticleId IdType="mid">11099028</ArticleId>
+            <ArticleId IdType="pmcid">10.1038/35042675</ArticleId>
+          </ArticleIdList>
+        </Reference>
+        <ReferenceList>
+          <Title>Primary Literature</Title>
+          <Reference>
+            <Citation>Baker SJ, Fearon ER, Nigro JM, et al. Chromosome 17 deletions and <i>p53</i> gene mutations in colorectal carcinomas. Science. 1989;244(4901):217-221.</Citation>
+            <ArticleIdList>
+              <ArticleId IdType="pmcpid">7585406</ArticleId>
+              <ArticleId IdType="pmpid">10.1126/science.7878469</ArticleId>
+            </ArticleIdList>
+          </Reference>
+          <Reference>
+            <Citation>Momand J, Zambetti GP, Olson DC, George D, Levine AJ. The <b>mdm-2</b> oncogene product forms a complex with the p53 protein. Cell. 1992;69(7):1237-1245.</Citation>
+            <ArticleIdList>
+              <ArticleId IdType="sici">2694717</ArticleId>
+              <ArticleId IdType="medline">10.1016/0092-8674(89)90984-7</ArticleId>
+            </ArticleIdList>
+          </Reference>
+          <ReferenceList>
+            <Title>Structural Biology References</Title>
+            <Reference>
+              <Citation>Kussie PH, Gorina S, Marechal V, et al. Structure of the <b>MDM2</b> oncoprotein bound to the p53 tumor suppressor transactivation domain. Science. 1996;274(5289):948-953.</Citation>
+              <ArticleIdList>
+                <ArticleId IdType="pmcbook">8183552</ArticleId>
+                <ArticleId IdType="bookaccession">10.1126/science.8183552</ArticleId>
+              </ArticleIdList>
+            </Reference>
+            <Reference>
+              <Citation>Haupt Y, Maya R, Kazaz A, Oren M. Mdm2 promotes the rapid degradation of <i>p53</i>. Nature. 1997;387(6630):296-299.</Citation>
+              <ArticleIdList>
+                <ArticleId IdType="pubmed">9367981</ArticleId>
+                <ArticleId IdType="doi">10.1038/387296a0</ArticleId>
+              </ArticleIdList>
+            </Reference>
+          </ReferenceList>
+        </ReferenceList>
+      </ReferenceList>
+      <ReferenceList>
+        <Title>Clinical &amp;amp; Genetic Studies</Title>
+        <Reference>
+          <Citation>Cohen GN, Barbe V, Flament D, et al. An integrated analysis of the genome of <i>Pyrococcus abyssi</i>. Mol Microbiol. 2003;47(6):1495-1512.</Citation>
+          <ArticleIdList>
+            <ArticleId IdType="pmc">10430560</ArticleId>
+            <ArticleId IdType="pii">10.1093/genetics/152.4.1299</ArticleId>
+          </ArticleIdList>
+        </Reference>
+        <Reference>
+          <Citation>Erkel C, Kube M, Reinhardt R, Liesack W. Genome of rice cluster I archaea. Science. 2006;313(5785):370-372.</Citation>
+          <ArticleIdList>
+            <ArticleId IdType="mid">12622808</ArticleId>
+            <ArticleId IdType="pmcid">10.1046/j.1365-2958.2003.03381.x</ArticleId>
+          </ArticleIdList>
+        </Reference>
+        <ReferenceList>
+          <Title>Historical Background</Title>
+          <Reference>
+            <Citation>Anderson IJ, Sieprawska-Lupa M, Lapidus A, et al. Complete genome sequence of <i>Methanoculleus marisnigri</i> JR1. Stand Genomic Sci. 2009;1(2):189-196.</Citation>
+            <ArticleIdList>
+              <ArticleId IdType="pmcpid">16857943</ArticleId>
+              <ArticleId IdType="pmpid">10.1126/science.1127062</ArticleId>
+            </ArticleIdList>
+          </Reference>
+          <Reference>
+            <Citation>Gao J, Wang J. Re-annotation of two hyperthermophilic archaea <i>Pyrococcus abyssi</i> &amp; <i>P. furiosus</i>. Curr Microbiol. 2012;64(2):118-129.</Citation>
+            <ArticleIdList>
+              <ArticleId IdType="sici">21304656</ArticleId>
+              <ArticleId IdType="medline">10.4056/sigs.32535</ArticleId>
+            </ArticleIdList>
+          </Reference>
+          <ReferenceList>
+            <Title>Methodological References</Title>
+            <Reference>
+              <Citation>Morris C, Robinson L, Ashcroft D, et al. Primary care experiences of people with dementia. Br J Gen Pract. 2025;75(751):e102-e110.</Citation>
+              <ArticleIdList>
+                <ArticleId IdType="pmcbook">22057919</ArticleId>
+                <ArticleId IdType="bookaccession">10.1007/s00284-011-0035-x</ArticleId>
+              </ArticleIdList>
+            </Reference>
+            <Reference>
+              <Citation>Tucker J, Mullens A, Morroni C, Ong J. The HIV response at an inflection point: resilience &amp;amp; equity. Sex Health. 2026;23(1):SH25236.</Citation>
+              <ArticleIdList>
+                <ArticleId IdType="pubmed">31234567</ArticleId>
+                <ArticleId IdType="doi">10.1016/j.cell.2019.05.012</ArticleId>
+              </ArticleIdList>
+            </Reference>
+          </ReferenceList>
+        </ReferenceList>
+      </ReferenceList>
+    </BookDocument>
+    <PubmedBookData>
+      <History>
+        <PubMedPubDate PubStatus="received">
+          <Year>2020</Year>
+          <Month>07</Month>
+          <Day>12</Day>
+          <Hour>14</Hour>
+          <Minute>30</Minute>
+          <Second>00</Second>
+        </PubMedPubDate>
+        <PubMedPubDate PubStatus="revised">
+          <Year>2019</Year>
+          <Month>02</Month>
+          <Day>08</Day>
+          <Hour>09</Hour>
+          <Minute>15</Minute>
+          <Second>25</Second>
+        </PubMedPubDate>
+      </History>
+      <PublicationStatus>ppublish</PublicationStatus>
+      <ArticleIdList>
+        <ArticleId IdType="pmc">38123456 (27)</ArticleId>
+        <ArticleId IdType="pii">10.1038/s41586-024-07123-x (28)</ArticleId>
+      </ArticleIdList>
+      <ObjectList>
+        <Object Type="SupplementaryMaterial">
+          <Param Name="id">supp_table_1.pdf</Param>
+          <Param Name="caption">Crystallographic data collection and refinement statistics</Param>
+        </Object>
+        <Object Type="Dataset">
+          <Param Name="accession">GSE245678</Param>
+          <Param Name="repository">NCBI Gene Expression Omnibus</Param>
+        </Object>
+      </ObjectList>
+    </PubmedBookData>
+  </PubmedBookArticle>
+</PubmedBookArticleSet>

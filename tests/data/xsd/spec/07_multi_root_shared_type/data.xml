@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Cluster50>
+    <entry id="C1">
+        <name>First Cluster</name>
+    </entry>
+    <entry id="C2">
+        <name>Second Cluster</name>
+    </entry>
+</Cluster50>

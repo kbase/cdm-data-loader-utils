@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <left>
+        <node>
+            <leaf>l1</leaf>
+        </node>
+    </left>
+    <right>
+        <node>
+            <leaf>r1</leaf>
+            <leaf lang="en">r2</leaf>
+        </node>
+    </right>
+</root>

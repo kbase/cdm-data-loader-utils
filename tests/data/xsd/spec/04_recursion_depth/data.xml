@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+    <record id="r1">
+        <tree label="L1" weight="10">
+            <branch label="L2">
+                <branch label="L3" weight="30">
+                    <branch label="L4"/>
+                </branch>
+                <branch label="L3_sibling"/>
+            </branch>
+        </tree>
+        <Section>
+            <SectionTitle>Ch 1</SectionTitle>
+            <Section>
+                <SectionTitle>Sec 1.1</SectionTitle>
+                <Section>
+                    <SectionTitle>Subsec 1.1.1</SectionTitle>
+                </Section>
+            </Section>
+        </Section>
+    </record>
+</doc>

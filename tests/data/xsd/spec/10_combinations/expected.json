@@ -1,0 +1,377 @@
+[
+    {
+        "_id": "r01"
+    },
+    {
+        "_id": "r02",
+        "plain": "a",
+        "plainList": [
+            "x"
+        ],
+        "bounded": [
+            "only"
+        ]
+    },
+    {
+        "_id": "r03",
+        "plainList": [
+            "x",
+            null,
+            null,
+            "y"
+        ],
+        "bounded": [
+            "b1",
+            "b2"
+        ]
+    },
+    {
+        "_id": "r04",
+        "plain": "a < b & c",
+        "plainList": [
+            "padded",
+            "Tom & Jerry"
+        ]
+    },
+    {
+        "_id": "r05",
+        "label": {
+            "_lang": "en",
+            "#text": "Hello"
+        },
+        "labelList": [
+            {
+                "_lang": "en",
+                "_source": "curated",
+                "#text": "one"
+            },
+            {
+                "#text": "two"
+            },
+            {
+                "_lang": "fr"
+            },
+            null
+        ]
+    },
+    {
+        "_id": "r06",
+        "label": {
+            "#text": "Hello"
+        },
+        "labelList": [
+            {
+                "#text": "solo"
+            }
+        ]
+    },
+    {
+        "_id": "r07",
+        "label": {
+            "_lang": "de"
+        },
+        "textNoAttr": "t",
+        "measure": {
+            "_unit": "kg",
+            "#text": 3.5
+        }
+    },
+    {
+        "_id": "r08",
+        "measure": {
+            "#text": 7.0
+        }
+    },
+    {
+        "_id": "r09",
+        "flag": {
+            "_on": true
+        },
+        "flagList": [
+            {
+                "_on": false
+            },
+            null
+        ],
+        "marker": [
+            "",
+            ""
+        ]
+    },
+    {
+        "_id": "r10",
+        "flagList": [
+            {
+                "_on": true
+            }
+        ],
+        "marker": [
+            ""
+        ]
+    },
+    {
+        "_id": "r11",
+        "group": {
+            "name": "g1",
+            "alias": [
+                "a1",
+                "a2"
+            ]
+        },
+        "entity": [
+            {
+                "_type": "person",
+                "_name": "attr-name",
+                "name": "child-name",
+                "prop": [
+                    {
+                        "_key": "k1",
+                        "_value": "v1"
+                    },
+                    {
+                        "_key": "k2"
+                    }
+                ]
+            },
+            {
+                "_type": "org"
+            }
+        ]
+    },
+    {
+        "_id": "r12",
+        "group": {
+            "name": "g2"
+        },
+        "box": {
+            "item": [
+                "1"
+            ]
+        },
+        "entity": [
+            {
+                "prop": [
+                    {
+                        "_key": "only"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "_id": "r13",
+        "para": [
+            {
+                "#text": "plain text"
+            },
+            {
+                "#text": "Hello\n            <b>world</b> again"
+            },
+            {
+                "#text": "<b>x</b>"
+            },
+            null,
+            {
+                "#text": "A\n            <b>1</b>B\n            <i>2</i>C\n            <b>3</b>"
+            },
+            {
+                "_style": "em",
+                "#text": "Intro\n            <b>bold</b>"
+            }
+        ],
+        "note": {
+            "_kind": "aside",
+            "#text": "side text"
+        },
+        "remark": "just text"
+    },
+    {
+        "_id": "r14",
+        "para": [
+            {
+                "#text": "<i>only italic</i>"
+            },
+            {
+                "_style": "x"
+            }
+        ],
+        "note": {
+            "#text": "bare note"
+        }
+    },
+    {
+        "_id": "r15",
+        "note": {
+            "_kind": "empty"
+        },
+        "optA": [
+            "a1",
+            "a2"
+        ],
+        "optB": [
+            {
+                "_lang": "en",
+                "#text": "b1"
+            },
+            {
+                "#text": "b2"
+            }
+        ]
+    },
+    {
+        "_id": "r16",
+        "optA": [
+            "solo"
+        ],
+        "pairs": {
+            "k": [
+                "a"
+            ],
+            "v": [
+                "1"
+            ]
+        }
+    },
+    {
+        "_id": "r17",
+        "optB": [
+            null
+        ],
+        "pairs": {
+            "k": [
+                "a",
+                "b"
+            ],
+            "v": [
+                "1",
+                "2"
+            ]
+        }
+    },
+    {
+        "_id": "r18",
+        "book": {
+            "title": "Book title",
+            "chapter": [
+                {
+                    "title": [
+                        {
+                            "#text": "Ch1"
+                        }
+                    ]
+                },
+                {
+                    "title": [
+                        {
+                            "_lang": "en",
+                            "#text": "Ch2"
+                        },
+                        {
+                            "#text": "Ch2 alt"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "_id": "r19",
+        "book": {
+            "title": "Lonely"
+        }
+    },
+    {
+        "_id": "r20",
+        "left": {
+            "node": {
+                "leaf": "l1"
+            }
+        },
+        "right": {
+            "node": {
+                "leaf": [
+                    {
+                        "#text": "r1"
+                    },
+                    {
+                        "_lang": "en",
+                        "#text": "r2"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "_id": "r21",
+        "left": {
+            "node": {
+                "leaf": ""
+            }
+        },
+        "right": {
+            "node": {
+                "leaf": [
+                    {
+                        "#text": "r"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "_id": "r22",
+        "tree": {
+            "_label": "root",
+            "branch": [
+                {
+                    "_label": "a",
+                    "branch": [
+                        "{\"_label\": \"a1\"}",
+                        "{\"_label\": \"a2\", \"branch\": [{\"_label\": \"a2x\"}]}"
+                    ]
+                },
+                null
+            ]
+        }
+    },
+    {
+        "_id": "r23",
+        "tree": {
+            "_label": "t",
+            "branch": [
+                {
+                    "branch": [
+                        "{\"_label\": \"deep\"}"
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "_id": "r24",
+        "shared": [
+            "s1"
+        ],
+        "derived": {
+            "_baseAttr": "b",
+            "_extraAttr": "e",
+            "baseField": "base",
+            "extraField": [
+                "x1"
+            ]
+        }
+    },
+    {
+        "_id": "r25",
+        "shared": [
+            "s1",
+            "s2"
+        ],
+        "derived": {
+            "extraField": [
+                "x1",
+                "x2"
+            ]
+        }
+    }
+]

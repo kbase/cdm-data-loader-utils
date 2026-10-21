@@ -1,0 +1,95 @@
+"""Settings class for the XML to PyArrow pipeline for the KBase CTS."""
+
+from typing import Annotated, Final, Self
+
+import pyarrow as pa
+import xmlschema
+from pydantic import Field, FilePath, PositiveInt, PrivateAttr, model_validator
+from pydantic_settings import SettingsConfigDict
+
+from cdm_data_loaders.core.fields import (
+    DEFAULT_XML_FILE_GLOB,
+    FILE_GLOB,
+    FileGlob,
+    NonEmptyStr,
+    TableName,
+)
+from cdm_data_loaders.core.settings import (
+    FileFormatIngestSettings,
+    default_settings_with_shortcuts,
+)
+from cdm_data_loaders.readers.xsd import (
+    DEFAULT_MAX_RECURSION_DEPTH,
+    generate_pyarrow_schema,
+    load_schema,
+)
+
+PIPELINE_NAME: Final[str] = "xmltopyarrow"
+
+
+class XmlToPyArrowSettings(FileFormatIngestSettings):
+    """Settings for the XML to PyArrow ingestion pipeline."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(
+        cli_prog_name=PIPELINE_NAME,
+        cli_shortcuts={
+            **FileFormatIngestSettings.model_config["cli_shortcuts"],
+            FILE_GLOB: "g",
+        },
+    )
+
+    _xsd_schema: xmlschema.XMLSchema = PrivateAttr()
+    _pyarrow_schema: pa.Schema = PrivateAttr()
+    file_glob: Annotated[
+        FileGlob,
+        Field(
+            default=DEFAULT_XML_FILE_GLOB,
+            description="Glob pattern for XML files inside each entity's input subdirectory.",
+        ),
+    ]
+    table_name: TableName
+    xml_tag: Annotated[
+        NonEmptyStr,
+        Field(
+            description="XML tag to capture the contents of",
+        ),
+    ]
+    xsd_file: Annotated[
+        FilePath,
+        Field(
+            description="Path to the XSD file describing the XML documents to be imported. Including the schema will ensure that the appropriate relationships (1-to-1 vs 1-to-many) are created between parent and child elements, and that element text is stored consistently.",
+        ),
+    ]
+    max_recursion_depth: Annotated[
+        PositiveInt,
+        Field(
+            default=DEFAULT_MAX_RECURSION_DEPTH,
+            description="Maximum recursion depth for self-referential XSD types before serializing deeper content as JSON.",
+        ),
+    ]
+
+    @model_validator(mode="after")
+    def check_xsd_file(self) -> Self:
+        """Check whether the schema file is present and valid; load the XSD and generate the PyArrow schema."""
+        try:
+            self._xsd_schema = load_schema(self.xsd_file)
+            self._pyarrow_schema = generate_pyarrow_schema(
+                self._xsd_schema,
+                self.xml_tag,
+                max_recursion_depth=self.max_recursion_depth,
+            )
+        except Exception as e:
+            err_msg = f"Could not generate PyArrow schema from XSD: {e!s}"
+            raise ValueError(err_msg) from e
+
+        return self
+
+    @property
+    def xsd_schema(self) -> xmlschema.XMLSchema:
+        """Return the loaded XMLSchema instance."""
+        return self._xsd_schema
+
+    @property
+    def pyarrow_schema(self) -> pa.Schema:
+        """Return the generated PyArrow schema for xml_tag."""
+        return self._pyarrow_schema

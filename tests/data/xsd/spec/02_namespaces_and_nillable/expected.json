@@ -1,0 +1,21 @@
+[
+    {
+        "_id": "e1",
+        "label": {
+            "_lang": "en"
+        },
+        "comment": [
+            {
+                "_type": "function"
+            },
+            {
+                "_type": "subunit",
+                "text": "Homodimer"
+            }
+        ]
+    },
+    {
+        "_id": "e2",
+        "title": "Normal Title"
+    }
+]

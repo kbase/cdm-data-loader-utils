@@ -45,6 +45,14 @@ def test_xml_pass_reference_dataset_has_nested_structures(
 ) -> None:
     """The DuckDB reference stores nested JSON as STRUCT/LIST types, not JSON text columns."""
     reference_xml_table = reference_xml_dataset.table("reference")
+    reference_xml_df = reference_xml_table.df()
+    entry = reference_xml_df["entry"].iloc[0]
+    assert isinstance(entry, dict)
+    assert isinstance(entry["property"], list)
+    assert isinstance(entry["representativeMember"], dict)
+    assert len(reference_xml_df) == EXPECTED_ENTRY_COUNT
+
+    # same thing, but using native duckdb
     entry_type = reference_xml_table.types[0]
     entry_fields = dict(entry_type.children)
 
@@ -52,7 +60,6 @@ def test_xml_pass_reference_dataset_has_nested_structures(
     member_type = entry_fields["representativeMember"]
     assert property_type.id == "list"
     assert member_type.id == "struct"
-
     count = reference_xml_table.count("*").fetchone()[0]
     assert count == EXPECTED_ENTRY_COUNT
 

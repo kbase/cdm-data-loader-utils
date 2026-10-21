@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<UniRef100 xmlns="http://uniprot.org/uniref" releaseDate="2025-02-05" version="2025_01">
+  <entry id="UniRef100_P04637" updated="2025-02-05">
+    <name>Cluster: Glycogen synthase</name>
+    <representativeMember>
+      <dbReference type="UniProtKB ID" id="P53_HUMAN"/>
+    </representativeMember>
+  </entry>
+</UniRef100>

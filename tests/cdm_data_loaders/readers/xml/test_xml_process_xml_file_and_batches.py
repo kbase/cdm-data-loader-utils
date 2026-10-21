@@ -1,4 +1,4 @@
-"""Tests for `process_xml_file`, `process_xml_file_items`, `build_xml_file_resource`, and `process_xml_file_to_dict` from cdm_data_loaders.readers.xml."""
+"""Tests for `process_xml_file`, `process_xml_file_items`, `build_xml_file_resource`, `process_xml_file_to_dict`, and `process_xml_file_to_pyarrow` from cdm_data_loaders.readers.xml."""
 
 import gzip
 import logging
@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any, Final
 from unittest.mock import MagicMock
 
+import pyarrow as pa
 import pytest
+import xmlschema
 import xmltodict
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.extract.items import DataItemWithMeta, TableNameMeta
@@ -19,13 +21,16 @@ import cdm_data_loaders.utils.buffer as buffer_module
 from cdm_data_loaders.core.fields import BUFFER_SIZE, DEFAULT_XML_FILE_GLOB, DEFAULTS, LOG_INTERVAL
 from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
+from cdm_data_loaders.pipelines.xmltopyarrow.settings import XmlToPyArrowSettings
 from cdm_data_loaders.readers.xml import (
     DEFAULT_XMLTODICT_ARGS,
     process_xml_file,
     process_xml_file_batches,
     process_xml_file_items,
     process_xml_file_to_dict,
+    process_xml_file_to_pyarrow,
 )
+from cdm_data_loaders.readers.xsd import DEFAULT_MAX_RECURSION_DEPTH, generate_pyarrow_schema
 
 ParseFn = Callable[..., dict[str, list[dict[str, Any]]]]
 
@@ -83,6 +88,28 @@ PEOPLE_PARSED = [
 PEOPLE_XML_TO_DICT_PARSED = [
     {"person": {"_id": p["id"], "name": p["name"], "email": p["email"]}} for p in PEOPLE_PARSED
 ]
+
+PEOPLE_XML_TO_PYARROW_PARSED = [{"_id": p["id"], "name": p["name"], "email": p["email"]} for p in PEOPLE_PARSED]
+
+PEOPLE_XSD: Final[str] = """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="people">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="person" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="xs:string"/>
+                            <xs:element name="email" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
+"""
 
 
 PEOPLE_XML_EMPTY: Final[str] = """<?xml version="1.0" encoding="UTF-8"?>
@@ -245,6 +272,32 @@ def fake_xmltodict_settings(
     )
     settings.table_name = table_name
     settings.xml_tag = xml_tag
+    return settings
+
+
+def fake_xmltopyarrow_settings(
+    *,
+    table_name: str = "people",
+    xml_tag: str = "person",
+    xsd_text: str = PEOPLE_XSD,
+    buffer_size: int = DEFAULTS[BUFFER_SIZE],
+    log_interval: int = DEFAULTS[LOG_INTERVAL],
+    max_recursion_depth: int = DEFAULT_MAX_RECURSION_DEPTH,
+) -> XmlToPyArrowSettings:
+    """Build a MagicMock XmlToPyArrowSettings with xsd_schema/pyarrow_schema set, for process_xml_file_to_pyarrow tests."""
+    settings: XmlToPyArrowSettings = fake_settings(  # pyright: ignore[reportAssignmentType]
+        buffer_size=buffer_size, log_interval=log_interval, settings_class=XmlToPyArrowSettings
+    )
+    settings.table_name = table_name
+    settings.xml_tag = xml_tag
+    settings.max_recursion_depth = max_recursion_depth
+    schema = xmlschema.XMLSchema(xsd_text)
+    settings.xsd_schema = schema  # pyright: ignore[reportAttributeAccessIssue]
+    settings.pyarrow_schema = generate_pyarrow_schema(  # pyright: ignore[reportAttributeAccessIssue]
+        schema,
+        xml_tag,
+        max_recursion_depth=max_recursion_depth,
+    )
     return settings
 
 
@@ -660,25 +713,12 @@ UNIREF_LIKE_ENTRY_XML: Final[str] = """<?xml version="1.0"?>
 """
 
 
-def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_filename: str | None) -> XmlToDictSettings:
-    """Build a real (non-mock) XmlToDictSettings, optionally with an xsd_file copied from tests/data/xsd.
-
-    A real settings object is required here, rather than fake_xmltodict_settings, because
-    xmltodict_args is a computed property with real schema-derived logic to exercise: a mock
-    would either need that same logic re-implemented by hand (proving nothing about the actual
-    implementation) or would unpack to `{}` by default, silently skipping the feature entirely.
-    """
+def _build_real_xmltodict_settings(tmp_path: Path) -> XmlToDictSettings:
+    """Build a real (non-mock) XmlToDictSettings."""
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
     log_config_file = tmp_path / "logging.json"
     log_config_file.write_text('{"version": 1}', encoding="utf-8")
-
-    xsd_file = None
-    if xsd_filename is not None:
-        xsd_content = (test_data_dir / "xsd" / xsd_filename).read_text(encoding="utf-8")
-        xsd_path = input_dir / xsd_filename
-        xsd_path.write_text(xsd_content, encoding="utf-8")
-        xsd_file = str(xsd_path)
 
     return XmlToDictSettings(
         input_dir=str(input_dir),
@@ -686,7 +726,6 @@ def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_file
         dataset_name="xsd_test_dataset",
         table_name="entry",
         xml_tag="entry",
-        xsd_file=xsd_file,
         buffer_size=100,
         log_interval=1000,
         output_dir=tmp_path,
@@ -694,51 +733,254 @@ def _build_real_xmltodict_settings(tmp_path: Path, test_data_dir: Path, xsd_file
     )  # pyright: ignore[reportCallIssue]
 
 
-@pytest.mark.parametrize(
-    ("xsd_filename", "expected_entry"),
-    [
-        pytest.param(
-            "uniref_like.xsd",
-            {
-                "property": [{"_type": "member count", "_value": "1"}],
-                "representativeMember": {
-                    "dbReference": {"property": [{"_type": "isSeed", "_value": "true"}]},
-                },
-            },
-            id="with-xsd-file-forces-repeatable-schema-children-into-lists",
-        ),
-        pytest.param(
-            None,
-            {
-                "property": {"_type": "member count", "_value": "1"},
-                "representativeMember": {
-                    "dbReference": {"property": {"_type": "isSeed", "_value": "true"}},
-                },
-            },
-            id="without-xsd-file-keeps-xmltodicts-default-single-occurrence-dicts",
-        ),
-    ],
-)
-def test_process_xml_file_to_dict_pass_force_list_shapes_children_by_schema_occurs(
-    tmp_path: Path,
-    test_data_dir: Path,
-    xsd_filename: str | None,
-    expected_entry: dict[str, Any],
-) -> None:
-    """Verify children the schema allows to repeat become lists even with a single occurrence.
+def _build_real_xmltopyarrow_settings(tmp_path: Path, test_data_dir: Path, xsd_filename: str) -> XmlToPyArrowSettings:
+    """Build a real (non-mock) XmlToPyArrowSettings with an xsd_file copied from tests/data/xsd."""
+    input_dir = tmp_path / "input"
+    input_dir.mkdir(exist_ok=True)
+    log_config_file = tmp_path / "logging.json"
+    log_config_file.write_text('{"version": 1}', encoding="utf-8")
 
-    With xsd_file set, every child the schema allows to repeat must be a list, regardless of how
-    many times it actually occurs in this particular document, while children the schema allows
-    only once stay plain dicts -- at every nesting depth. Without xsd_file, xmltodict's ordinary
-    behaviour applies instead: a lone occurrence is never turned into a list, whether or not the
-    schema would allow more.
-    """
+    xsd_content = (test_data_dir / "xsd" / xsd_filename).read_text(encoding="utf-8")
+    xsd_path = input_dir / xsd_filename
+    xsd_path.write_text(xsd_content, encoding="utf-8")
+
+    return XmlToPyArrowSettings(
+        input_dir=str(input_dir),
+        log_config_file=str(log_config_file),
+        dataset_name="xsd_test_dataset",
+        table_name="entry",
+        xml_tag="entry",
+        xsd_file=str(xsd_path),
+        buffer_size=100,
+        log_interval=1000,
+        output_dir=tmp_path,
+        use_destination="whatever",
+    )  # pyright: ignore[reportCallIssue]
+
+
+def test_process_xml_file_to_dict_pass_keeps_xmltodict_default_dicts(
+    tmp_path: Path,
+) -> None:
+    """process_xml_file_to_dict uses xmltodict's ordinary single-occurrence dicts."""
     file_path = _write_xml(tmp_path, "entry.xml", UNIREF_LIKE_ENTRY_XML)
-    settings = _build_real_xmltodict_settings(tmp_path, test_data_dir, xsd_filename)
+    settings = _build_real_xmltodict_settings(tmp_path)
 
     items = _table_and_data(process_xml_file_to_dict(settings, file_path=file_path))
 
-    assert items == [("entry", [{"entry": expected_entry}])]
+    assert items == [
+        (
+            "entry",
+            [
+                {
+                    "entry": {
+                        "property": {"_type": "member count", "_value": "1"},
+                        "representativeMember": {
+                            "dbReference": {"property": {"_type": "isSeed", "_value": "true"}},
+                        },
+                    }
+                }
+            ],
+        )
+    ]
+
+
+"""process_xml_file_to_pyarrow"""
+
+
+def test_process_xml_file_to_pyarrow_pass_custom_table_name_and_xml_tag_are_respected(tmp_path: Path) -> None:
+    """Verify rows land under settings.table_name as a PyArrow Table, matched by settings.xml_tag."""
+    file_path = _write_xml(tmp_path, "two.xml", PEOPLE_XML_2)
+    settings = fake_xmltopyarrow_settings(table_name="library_entries", xml_tag="person")
+
+    tagged = _table_and_data(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    assert [table_name for table_name, _ in tagged] == ["library_entries"]
+    assert isinstance(tagged[0][1], pa.Table)
+    assert tagged[0][1].to_pylist() == PEOPLE_XML_TO_PYARROW_PARSED[:2]
+
+
+def test_process_xml_file_to_pyarrow_pass_resolves_default_namespace_on_unprefixed_tag(tmp_path: Path) -> None:
+    """Verify an unprefixed xml_tag resolves the root default namespace via parse_head_matter."""
+    namespace = "http://example.com/people"
+    namespaced_xsd = f"""<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="{namespace}"
+           xmlns="{namespace}"
+           elementFormDefault="qualified">
+    <xs:element name="people">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="person" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="xs:string"/>
+                            <xs:element name="email" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
+"""
+    namespaced_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<people xmlns="{namespace}">
+    <person id="1"><name>Anne Example</name><email>a@example.com</email></person>
+    <person id="2"><name>Belinda Carlisle</name><email>b@example.com</email></person>
+</people>
+"""
+    file_path = _write_xml(tmp_path, "namespaced.xml", namespaced_xml)
+    settings = fake_xmltopyarrow_settings(table_name="people", xml_tag="person", xsd_text=namespaced_xsd)
+
+    tagged = _table_and_data(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    assert [table_name for table_name, _ in tagged] == ["people"]
+    assert tagged[0][1].to_pylist() == PEOPLE_XML_TO_PYARROW_PARSED[:2]
+
+
+@pytest.mark.parametrize(
+    ("buffer_size", "expected_batch_sizes"),
+    [
+        pytest.param(1, [1, 1, 1, 1, 1], id="one-row-batches"),
+        pytest.param(2, [2, 2, 1], id="two-row-batches-with-remainder"),
+        pytest.param(3, [3, 2], id="three-row-batches-with-remainder"),
+        pytest.param(10, [5], id="larger-than-input"),
+    ],
+)
+def test_process_xml_file_to_pyarrow_pass_buffer_size_controls_batching(
+    tmp_path: Path, buffer_size: int, expected_batch_sizes: list[int]
+) -> None:
+    """Verify rows are yielded in pa.Table batches of at most `buffer_size`, with a final partial batch."""
+    file_path = _write_xml(tmp_path, "five.xml", PEOPLE_XML_5)
+    settings = fake_xmltopyarrow_settings(buffer_size=buffer_size)
+
+    items = _table_and_data(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    assert [table.num_rows for _, table in items] == expected_batch_sizes
+    assert [row for _, table in items for row in table.to_pylist()] == PEOPLE_XML_TO_PYARROW_PARSED
+    assert {table_name for table_name, _ in items} == {"people"}
+
+
+def test_process_xml_file_to_pyarrow_pass_no_matching_elements_yields_nothing_and_logs_no_progress(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Verify a well-formed file with no elements matching xml_tag yields nothing and logs no progress."""
+    caplog.set_level(logging.DEBUG)
+    file_path = _write_xml(tmp_path, "empty.xml", PEOPLE_XML_EMPTY)
+    settings = fake_xmltopyarrow_settings()
+
+    items = list(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    assert items == []
+    assert [r for r in caplog.records if r.msg.startswith("Processed")] == []
+
+
+def test_process_xml_file_to_pyarrow_pass_logs_reading_info_message_once(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Verify the INFO-level 'Reading from <path>' message is logged exactly once with the correct path."""
+    caplog.set_level(logging.INFO)
+    file_path = _write_xml(tmp_path, "five.xml", PEOPLE_XML_5)
+    settings = fake_xmltopyarrow_settings()
+
+    list(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    info_records = [r for r in caplog.records if r.levelno == logging.INFO]
+    assert len(info_records) == 1
+    assert info_records[0].msg == "Reading from %s"
+    assert info_records[0].args == (str(file_path),)
+
+
+@pytest.mark.parametrize(
+    ("log_interval", "expected_interim_counts", "expected_final_count"),
+    [
+        pytest.param(1, [1, 2, 3, 4, 5], None, id="divides_evenly_every_entry"),
+        pytest.param(5, [5], None, id="divides_evenly_equal_to_count"),
+        pytest.param(2, [2, 4], 5, id="remainder_leaves_trailing_entries"),
+        pytest.param(10, [], 5, id="interval_larger_than_entry_count"),
+    ],
+)
+def test_process_xml_file_to_pyarrow_pass_log_interval_boundary(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    log_interval: int,
+    expected_interim_counts: list[int],
+    expected_final_count: int | None,
+) -> None:
+    """Verify the exact entry counts logged at each interim checkpoint and in the trailing summary."""
+    caplog.set_level(logging.DEBUG)
+    file_path = _write_xml(tmp_path, "five.xml", PEOPLE_XML_5)
+    settings = fake_xmltopyarrow_settings(log_interval=log_interval)
+
+    list(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    interim_counts = [r.args[0] for r in caplog.records if r.msg == "Processed %d entries"]
+    final_records = [r for r in caplog.records if r.msg == "Processed %d entries from %s"]
+
+    assert interim_counts == expected_interim_counts
+    if expected_final_count is None:
+        assert final_records == []
+    else:
+        assert len(final_records) == 1
+        assert final_records[0].args == (expected_final_count, file_path.name)
+
+
+def test_process_xml_file_to_pyarrow_pass_gzip_file(tmp_path: Path) -> None:
+    """Verify gzip-compressed XML input (.gz suffix) is transparently decompressed and parsed."""
+    plain_path = _write_xml(tmp_path, "plain.xml", PEOPLE_XML_5)
+    gz_path = _write_xml(tmp_path, "compressed.xml.gz", PEOPLE_XML_5, gzip_compress=True)
+
+    plain_items = _table_and_data(process_xml_file_to_pyarrow(fake_xmltopyarrow_settings(), file_path=plain_path))
+    gz_items = _table_and_data(process_xml_file_to_pyarrow(fake_xmltopyarrow_settings(), file_path=gz_path))
+
+    plain_rows = [row for _, table in plain_items for row in table.to_pylist()]
+    gz_rows = [row for _, table in gz_items for row in table.to_pylist()]
+    assert gz_rows == plain_rows == PEOPLE_XML_TO_PYARROW_PARSED
+
+
+def test_process_xml_file_to_pyarrow_fail_missing_file(tmp_path: Path) -> None:
+    """Verify a nonexistent file path raises FileNotFoundError when the generator is consumed."""
+    missing_path = tmp_path / "does_not_exist.xml"
+    settings = fake_xmltopyarrow_settings()
+    with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        list(process_xml_file_to_pyarrow(settings, file_path=missing_path))
+
+
+def test_process_xml_file_to_pyarrow_fail_malformed_xml(tmp_path: Path) -> None:
+    """Verify malformed (not well-formed) XML raises lxml's XMLSyntaxError during streaming."""
+    file_path = _write_xml(tmp_path, "malformed.xml", PEOPLE_XML_MALFORMED)
+    settings = fake_xmltopyarrow_settings()
+    with pytest.raises(XMLSyntaxError, match="Opening and ending tag mismatch"):
+        list(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+
+def test_process_xml_file_to_pyarrow_pass_with_xsd_file_yields_arrow_table_with_schema_lists(
+    tmp_path: Path,
+    test_data_dir: Path,
+) -> None:
+    """process_xml_file_to_pyarrow yields a PyArrow Table with schema-driven list and struct fields."""
+    file_path = _write_xml(tmp_path, "entry.xml", UNIREF_LIKE_ENTRY_XML)
+    settings = _build_real_xmltopyarrow_settings(tmp_path, test_data_dir, "uniref_like.xsd")
+
+    items = _table_and_data(process_xml_file_to_pyarrow(settings, file_path=file_path))
+
+    assert len(items) == 1
+    table_name, table = items[0]
+    assert table_name == "entry"
+    assert isinstance(table, pa.Table)
+    assert settings.pyarrow_schema is not None
+    assert table.schema.equals(settings.pyarrow_schema, check_metadata=True)
+    assert table.to_pylist() == [
+        {
+            "property": [{"_type": "member count", "_value": "1"}],
+            "representativeMember": {
+                "dbReference": {"property": [{"_type": "isSeed", "_value": "true"}]},
+                "sequence": None,
+            },
+            "member": None,
+        }
+    ]
 
 
 """process_xml_file_items"""
