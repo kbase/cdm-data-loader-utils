@@ -23,14 +23,24 @@ from pydantic_settings import SettingsError
 from requests import RequestException
 
 from cdm_data_loaders.core.fields import OUTPUT_DIR, USE_DESTINATION
-from cdm_data_loaders.core.settings import CdmDataLoadersBase, CtsSettings, LocalInputOutputSettings, LoggerSettings
+from cdm_data_loaders.core.settings import (
+    CdmDataLoadersBase,
+    CtsSettings,
+    FileFormatIngestSettings,
+    LocalInputOutputSettings,
+    LoggerSettings,
+)
 from cdm_data_loaders.pipelines import core
 from cdm_data_loaders.pipelines.core import (
+    DEFAULT_REJECTED_SUFFIX,
+    DEFAULT_SCHEMA_CONTRACT,
     LOAD_INFO_TABLE_NAME,
     NO_MESSAGE,
     WEBHOOK_NOT_CONFIGURED,
     PipelineCli,
     PipelineReport,
+    build_file_ingest_kwargs,
+    build_filesystem_resource,
     run_cli,
     run_pipeline,
     save_pipeline_metadata,
@@ -38,9 +48,13 @@ from cdm_data_loaders.pipelines.core import (
     write_pipeline_report,
 )
 from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
-from tests.cdm_data_loaders.pipelines.helpers import read_destination_rows, read_jsonl_file
+from tests.cdm_data_loaders.pipelines.helpers import (
+    read_destination_rows,
+    read_jsonl_file,
+)
 from tests.conftest import LOCAL_FS, S3
 from tests.dlt_config_isolation import dlt_config_unset, isolated_dlt_config
+from tests.helpers import make_cts_settings, settings_to_argv
 
 TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [
     {"entity_id": "tiny:one", "value": 1},
@@ -57,19 +71,13 @@ LOAD_INFO_SAVE_FAILED_JOBS: Final[str] = "Loading pipeline load info had failed 
 SETTINGS_CLASSES: Final[list[type[CdmDataLoadersBase]]] = [LoggerSettings, LocalInputOutputSettings, CtsSettings]
 
 
-def make_cts_settings(**kwargs: str | int | bool | Path) -> CtsSettings:
-    """Generate a validated CtsSettings object."""
-    return CtsSettings.model_validate(kwargs)
-
-
 @pytest.fixture
 def dlt_test_settings(tmp_path: Path, dlt_destination_config: str) -> CtsSettings:
     """Settings that load into the local_fs destination and keep pipeline metadata in a separate output_dir."""
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(exist_ok=True, parents=True)
     return make_cts_settings(
-        input_dir=str(tmp_path / "input"),
-        output_dir=str(tmp_path / "output"),
+        CtsSettings,
+        tmp_path,
+        log_config_file=None,
         use_destination=dlt_destination_config,
         use_output_dir_for_pipeline_metadata=True,
     )
@@ -406,8 +414,8 @@ def test_run_cli_pipeline_fn_not_called_on_settings_instantiation_error(
 def test_run_pipeline_builds_destination_from_settings(mock_dlt: MagicMock, tmp_path: Path) -> None:
     """The destination comes from settings.use_destination only; output_dir has no effect on it."""
     settings = make_cts_settings(
-        input_dir=tmp_path,
-        output_dir=tmp_path / "output",
+        CtsSettings,
+        tmp_path,
         use_destination=S3,
         dlt_dev_mode=True,
     )
@@ -432,7 +440,7 @@ def test_run_pipeline_forwards_destination_kwargs(
     mock_dlt: MagicMock, use_destination: str, destination_kwargs: dict[str, Any], tmp_path: Path
 ) -> None:
     """destination_kwargs are forwarded to the dlt.destination constructor."""
-    settings = make_cts_settings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)
+    settings = make_cts_settings(CtsSettings, tmp_path, use_destination=use_destination)
 
     run_pipeline(settings, MagicMock(), destination_kwargs=dict(destination_kwargs))
 
@@ -442,7 +450,7 @@ def test_run_pipeline_forwards_destination_kwargs(
 def test_run_pipeline_fail_destination_not_configured(mock_dlt: MagicMock, tmp_path: Path) -> None:
     """An unconfigured use_destination raises ValueError before the pipeline runs."""
     mock_dlt.destination.side_effect = ValueError("not configured")
-    settings = make_cts_settings(input_dir=tmp_path, output_dir=tmp_path, use_destination="missing_dest")
+    settings = make_cts_settings(CtsSettings, tmp_path, use_destination="missing_dest")
 
     with pytest.raises(ValueError, match=r"^Invalid destination configuration for missing_dest$"):
         run_pipeline(settings, MagicMock())
@@ -941,12 +949,12 @@ def test_pipeline_cli_pass_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.usefixtures("restore_logging")
-def test_pipeline_cli_pass_call_reads_argv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pipeline_cli_pass_call_reads_argv(dlt_test_settings: CtsSettings, monkeypatch: pytest.MonkeyPatch) -> None:
     """Calling the CLI parses sys.argv, runs the pipeline and returns None so the process exits with 0."""
     received, pipeline_fn = make_recorder()
-    monkeypatch.setattr(sys, "argv", ["prog", "-i", str(tmp_path), "-o", str(tmp_path / "out"), "-d", LOCAL_FS])
+    monkeypatch.setattr(sys, "argv", ["prog", *settings_to_argv(dlt_test_settings)])
     assert PipelineCli(CtsSettings, pipeline_fn)() is None
-    assert [s.input_dir for s in received] == [tmp_path.resolve()]
+    assert [s.input_dir for s in received] == [dlt_test_settings.input_dir]
 
 
 @pytest.mark.parametrize(
@@ -993,11 +1001,10 @@ def test_run_pipeline_pass_failed_jobs_reported(
     """With raise_on_failed_jobs off, failed jobs are returned in the LoadInfo and Slack says 'with errors'."""
     monkeypatch.setenv("LOAD__RAISE_ON_FAILED_JOBS", "false")
     monkeypatch.setenv(HOOK_ENV_VAR, SLACK_HOOK)
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(exist_ok=True)
     settings = make_cts_settings(
-        input_dir=str(input_dir),
-        output_dir=str(tmp_path / "output"),
+        CtsSettings,
+        tmp_path,
+        log_config_file=None,
         use_destination=FAILING_SINK,
         use_output_dir_for_pipeline_metadata=True,
     )
@@ -1597,3 +1604,89 @@ def test_write_pipeline_report_fail_oserror_logged(
 
     error_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert error_messages == ["Could not write pipeline report file: disk full"]
+
+
+def test_build_filesystem_resource_pass_default_glob_and_callable_transformer(
+    input_dir: Path, output_dir: Path
+) -> None:
+    """build_filesystem_resource uses settings.file_glob or DEFAULT_XML_FILE_GLOB and wraps a callable in dlt.transformer."""
+    file_path = input_dir / "sample.xml"
+    file_path.write_text("hello", encoding="utf-8")
+    settings = LocalInputOutputSettings(input_dir=input_dir, output_dir=output_dir)
+
+    def read_items(items: TDataItems, prefix: str) -> Iterator[dict[str, Any]]:
+        for item in items:
+            text = Path(item["file_url"].removeprefix("file://")).read_text(encoding="utf-8")
+            yield {"text": f"{prefix}:{text}"}
+
+    resource = build_filesystem_resource(settings, read_items, "tag", name="sample_reader")
+    rows = list(resource)
+    assert rows == [{"text": "tag:hello"}]
+
+
+def test_build_filesystem_resource_pass_custom_glob_resource_transformer_and_contract(
+    input_dir: Path, output_dir: Path
+) -> None:
+    """build_filesystem_resource accepts a DltResource transformer, explicit file_glob, and schema_contract."""
+    matched = input_dir / "data.jsonl"
+    matched.write_text("matched", encoding="utf-8")
+    ignored = input_dir / "ignore.txt"
+    ignored.write_text("ignored", encoding="utf-8")
+    settings = LocalInputOutputSettings(input_dir=input_dir, output_dir=output_dir)
+
+    @dlt.transformer(name="jsonl_test_reader")
+    def read_jsonl_items(items: TDataItems) -> Iterator[dict[str, Any]]:
+        for item in items:
+            yield {"name": Path(item["file_url"].removeprefix("file://")).name}
+
+    resource = build_filesystem_resource(
+        settings,
+        read_jsonl_items,
+        name="jsonl_test_reader",
+        file_glob="*.jsonl",
+        schema_contract=DEFAULT_SCHEMA_CONTRACT,
+    )
+    rows = list(resource)
+    assert rows == [{"name": "data.jsonl"}]
+
+
+@pytest.mark.parametrize(
+    ("dataset_name", "fallback_dataset_name", "expected_dataset_name"),
+    [
+        pytest.param("custom_ds", False, "custom_ds", id="explicit_no_fallback"),
+        pytest.param("custom_ds", True, "custom_ds", id="explicit_with_fallback"),
+        pytest.param(None, False, None, id="none_no_fallback"),
+        pytest.param(None, True, TINY_PIPELINE_NAME, id="none_with_fallback"),
+    ],
+)
+def test_build_file_ingest_kwargs_pass(
+    tmp_path: Path,
+    dataset_name: str | None,
+    fallback_dataset_name: bool,
+    expected_dataset_name: str | None,
+) -> None:
+    """build_file_ingest_kwargs constructs pipeline_kwargs and pipeline_run_kwargs from FileFormatIngestSettings."""
+    base_settings: FileFormatIngestSettings = make_cts_settings(
+        FileFormatIngestSettings,
+        tmp_path,
+        dataset_name="custom_ds",
+        loader_file_format="jsonl",
+    )
+    settings = base_settings.model_copy(update={"dataset_name": dataset_name})
+
+    result = build_file_ingest_kwargs(
+        settings,
+        TINY_PIPELINE_NAME,
+        fallback_dataset_name=fallback_dataset_name,
+    )
+
+    assert DEFAULT_REJECTED_SUFFIX == "_rejected"
+    assert result == {
+        "pipeline_kwargs": {
+            "pipeline_name": TINY_PIPELINE_NAME,
+            "dataset_name": expected_dataset_name,
+        },
+        "pipeline_run_kwargs": {
+            "loader_file_format": "jsonl",
+        },
+    }

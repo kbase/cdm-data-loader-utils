@@ -11,6 +11,9 @@ from cdm_data_loaders.pipelines.jsonlines.settings import (
     EXTRACT_PIPELINE_NAME,
     JSONSCHEMA_PIPELINE_NAME,
     PYDANTIC_PIPELINE_NAME,
+    JsonlExtractSettings,
+    JsonlJsonschemaIngestSettings,
+    JsonlPydanticIngestSettings,
 )
 from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import (
@@ -23,6 +26,7 @@ from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_
     canonicalize_entry,
     reconstructed_entries,
 )
+from tests.helpers import make_cts_settings, settings_to_argv
 
 pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
 
@@ -269,42 +273,31 @@ def test_jsonlines_cli_pass_reference_dataset_loads(
     sorted_reference_entities: list[str],
 ) -> None:
     """All real CLI entry points load the reference dataset from command-line settings."""
-    log_config = tmp_path / "logging.json"
-    log_config.write_text('{"version": 1}', encoding="utf-8")
     output_dir = tmp_path / "bucket"
-    registry_flag, registry_module = {
-        EXTRACT_PIPELINE_NAME: ("table-name", "dataset"),
+    settings_cls, registry_kwarg = {
+        EXTRACT_PIPELINE_NAME: (JsonlExtractSettings, {"table_name": "dataset"}),
         PYDANTIC_PIPELINE_NAME: (
-            "entity-models-module",
-            "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models",
+            JsonlPydanticIngestSettings,
+            {"entity_models_module": "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models"},
         ),
         JSONSCHEMA_PIPELINE_NAME: (
-            "schema-files-module",
-            "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas",
+            JsonlJsonschemaIngestSettings,
+            {"schema_files_module": "tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas"},
         ),
     }[pipeline_kind]
-    argv = [
-        pipeline_kind,
-        "--input-dir",
-        str(reference_data_dir / "chunk_52"),
-        "--output-dir",
-        str(output_dir),
-        "--log-config-file",
-        str(log_config),
-        "--use-destination",
-        dlt_destination_config,
-        "--dataset-name",
-        "reference_cli",
-        "--file-glob",
-        "**/*.jsonl",
-        "--loader-file-format",
-        str(loader_file_format),
-        "--use-output-dir-for-pipeline-metadata",
-        "true",
-    ]
-    if registry_flag:
-        argv.extend([f"--{registry_flag}", registry_module])
-    load_info = assert_run_ok(pipeline_runner.run(pipeline_kind, cli_args=argv[1:]))
+    settings = make_cts_settings(
+        settings_cls,
+        tmp_path,
+        input_dir=str(reference_data_dir / "chunk_52"),
+        output_dir=str(output_dir),
+        use_destination=dlt_destination_config,
+        dataset_name="reference_cli",
+        file_glob="**/*.jsonl",
+        loader_file_format=loader_file_format,
+        use_output_dir_for_pipeline_metadata=True,
+        **registry_kwarg,
+    )
+    load_info = assert_run_ok(pipeline_runner.run(pipeline_kind, cli_args=settings_to_argv(settings)))
     tables = read_pipeline_tables(output_dir / load_info.dataset_name, loader_file_format)
     assert (
         sorted(

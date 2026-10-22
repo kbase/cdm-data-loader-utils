@@ -27,12 +27,10 @@ from tests.cdm_data_loaders.pipelines.framework import (
     ensure_docker_image,
 )
 from tests.cdm_data_loaders.pipelines.helpers import (
-    make_cts_settings,
-)
-from tests.cdm_data_loaders.pipelines.helpers import (
     read_destination_rows as _read_destination_rows,
 )
 from tests.conftest import LOCAL_FS, REFERENCE_XML_FIXTURE_DIR, S3, _generate_dlt_config
+from tests.helpers import make_cts_settings
 
 DEFAULT_DLT_TABLES = {"_dlt_version", "_dlt_loads", "_dlt_pipeline_state", LOAD_INFO_TABLE_NAME}
 

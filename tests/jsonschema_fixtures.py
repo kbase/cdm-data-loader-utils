@@ -12,7 +12,7 @@ import dlt
 import pytest
 
 from cdm_data_loaders.pipelines.jsonlines.settings import JsonlJsonschemaIngestSettings
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.helpers import make_cts_settings
 
 
 @pytest.fixture

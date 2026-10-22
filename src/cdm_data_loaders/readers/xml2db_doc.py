@@ -6,7 +6,6 @@ building a `DataModel` from an XSD, streaming chunk fragments, and flattening a
 parsed `Document` into table rows with stable primary/foreign keys.
 """
 
-import gzip
 from collections.abc import Generator, Mapping
 from io import BytesIO
 from logging import Logger, getLogger
@@ -19,6 +18,7 @@ from xml2db import DataModel, Document
 from cdm_data_loaders.pipelines.xml2db.settings import Xml2DbSettings
 from cdm_data_loaders.utils.buffer import DictBuffer
 from cdm_data_loaders.utils.gz import open_maybe_gzip
+from cdm_data_loaders.utils.xml_utils import local_name as _local_name
 
 logger: Logger = getLogger(__name__)
 
@@ -272,21 +272,6 @@ def _rewrite_xml2db_junction_record(
     return row
 
 
-def _local_name(tag: str) -> str:
-    """Return the local (namespace-stripped) part of an lxml expanded tag name.
-
-    xml2db matches elements against its data model by local name only (see
-    `XMLConverter._parse_iterative`). So callers of `iter_xml2db_chunk_fragments` may supply
-    either a bare local name or a full Clark-notation expanded name.
-
-    :param tag: an XML tag, optionally in `{namespace}local` Clark notation.
-    :type tag: str
-    :return: the local part of `tag`, with any namespace stripped.
-    :rtype: str
-    """
-    return tag.rsplit("}", 1)[-1] if isinstance(tag, str) and tag.startswith("{") else tag
-
-
 def iter_xml2db_chunk_fragments(
     file_path: str | Path,
     child_tag: str,
@@ -475,14 +460,9 @@ def process_xml_file_with_xml2db(
         return
 
     # parse it all in one go
-    file_path_str = str(file_path)
     document = Document(model)
-    if file_path_str.endswith(".gz"):
-        with gzip.open(file_path, "rb") as file_handle:
-            xml_source: str | BytesIO = BytesIO(file_handle.read())
-    else:
-        xml_source = file_path_str
-    document.parse_xml(xml_source, skip_validation=settings.skip_xml_validation, iterparse=True)
+    with open_maybe_gzip(file_path) as file_handle:
+        document.parse_xml(BytesIO(file_handle.read()), skip_validation=settings.skip_xml_validation, iterparse=True)
 
     tables = flatten_xml2db_document(model, document, file_key=file_path.name)
     yield from buffer.add_items(tables)

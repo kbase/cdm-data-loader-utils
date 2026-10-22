@@ -1229,3 +1229,74 @@ def test_process_xml_file_batches_fail_propagates_process_xml_file_error(
 
     with pytest.raises(RuntimeError, match="parse failure"):
         list(process_xml_file_batches(fake_settings(), "tag", MagicMock()))  # pyright: ignore[reportArgumentType]
+
+
+def test_process_xml_file_to_dict_pass_skips_empty_xmltodict_result(
+    xml_path_factory: Callable[..., Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify an element whose xmltodict.parse output is empty is skipped and not buffered."""
+    file_path = xml_path_factory(PEOPLE_XML_2, filename="two.xml")
+    settings = fake_xmltodict_settings(table_name="people", xml_tag="person")
+    original_parse = xmltodict.parse
+    call_count = 0
+
+    def _parse_skipping_first(*args: Any, **kwargs: Any) -> dict[str, Any]:  # noqa: ANN401
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {}
+        return original_parse(*args, **kwargs)
+
+    monkeypatch.setattr(xml_module.xmltodict, "parse", _parse_skipping_first)
+
+    items = _table_and_data(process_xml_file_to_dict(settings, file_path=file_path))
+
+    assert items == [("people", [PEOPLE_XML_TO_DICT_PARSED[1]])]
+
+
+def test_process_xml_file_to_pyarrow_pass_clark_notation_tag_skips_head_matter(
+    xml_path_factory: Callable[..., Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify process_xml_file_to_pyarrow skips parse_head_matter when xml_tag is already in Clark notation."""
+    namespaced_xsd = """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://example.org/ns"
+           xmlns:tns="http://example.org/ns"
+           elementFormDefault="qualified">
+    <xs:element name="people">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="person" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="xs:string"/>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:string" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
+"""
+    namespaced_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<people xmlns="http://example.org/ns">
+    <person id="1"><name>Anne Example</name></person>
+</people>
+"""
+    xml_path = xml_path_factory(namespaced_xml, filename="people_ns.xml")
+    clark_tag = "{http://example.org/ns}person"
+    settings = fake_xmltopyarrow_settings(
+        table_name="people",
+        xml_tag=clark_tag,
+        xsd_text=namespaced_xsd,
+    )
+
+    head_matter_mock = MagicMock()
+    monkeypatch.setattr(xml_module, "parse_head_matter", head_matter_mock)
+
+    items = list(process_xml_file_to_pyarrow(settings, file_path=xml_path))
+
+    head_matter_mock.assert_not_called()
+    assert len(items) == 1
+    assert items[0].data.to_pylist() == [{"_id": "1", "name": "Anne Example"}]

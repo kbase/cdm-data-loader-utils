@@ -207,10 +207,11 @@ def test_parse_head_matter_pass_body_malformation_after_root_is_tolerated(
     assert parse_head_matter(path) == {"": DEFAULT_NS_URI}
 
 
-def test_parse_head_matter_fail_non_gzip_content_with_gz_extension_raises_error(tmp_path: Path) -> None:
+def test_parse_head_matter_fail_non_gzip_content_with_gz_extension_raises_error(
+    xml_path_factory: Callable[..., Path],
+) -> None:
     """Verify a file named `*.gz` but containing plain (non-gzip-compressed) text raises an error when read."""
-    fake_gz_path = tmp_path / "not_really_gzipped.xml.gz"
-    fake_gz_path.write_text(DEFAULT_NAMESPACE_XML, encoding="utf-8")
+    fake_gz_path = xml_path_factory(DEFAULT_NAMESPACE_XML, gzip_compress=False, filename="not_really_gzipped.xml.gz")
 
     with pytest.raises(OSError, match="Not a gzipped file"):
         parse_head_matter(fake_gz_path)

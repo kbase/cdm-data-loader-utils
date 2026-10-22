@@ -14,8 +14,8 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
     assert_pipeline_report_written,
     assert_run_ok,
-    settings_to_argv,
 )
+from tests.helpers import settings_to_argv
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
 

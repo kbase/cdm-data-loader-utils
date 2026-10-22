@@ -3,22 +3,22 @@
 from collections.abc import Generator, Iterator
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
-from dlt.sources.filesystem import filesystem
 from xml2db import DataModel, load_config
 
-from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
+from cdm_data_loaders.pipelines.core import (
+    PipelineCli,
+    build_file_ingest_kwargs,
+    build_filesystem_resource,
+    run_pipeline,
+)
 from cdm_data_loaders.pipelines.xml2db.compaction import compact_reused_tables
 from cdm_data_loaders.pipelines.xml2db.settings import PIPELINE_NAME, Xml2DbSettings
 from cdm_data_loaders.readers.xml2db_doc import build_xml2db_model, process_xml_file_with_xml2db
-
-if TYPE_CHECKING:
-    from dlt.extract import DltResource
 
 logger: Logger = getLogger(__name__)
 
@@ -50,22 +50,12 @@ def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     model_config = load_config(str(settings.xml2db_config_file)) if settings.xml2db_config_file else None
     model = build_xml2db_model(settings.xsd_file, short_name=settings.short_name, model_config=model_config)
 
-    reader = dlt.transformer(_read_items, name="xml2db_reader", parallelized=True)
-
-    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
-
-    xml2db_resource: DltResource = files | reader(settings, model)
+    xml2db_resource = build_filesystem_resource(settings, _read_items, settings, model, name="xml2db_reader")
 
     load_info = run_pipeline(
         settings=settings,
         resource=xml2db_resource,
-        pipeline_kwargs={
-            "pipeline_name": PIPELINE_NAME,
-            "dataset_name": settings.dataset_name,
-        },
-        pipeline_run_kwargs={
-            "loader_file_format": str(settings.loader_file_format),
-        },
+        **build_file_ingest_kwargs(settings, PIPELINE_NAME),
     )
 
     _maybe_compact(settings, model, load_info)

@@ -13,14 +13,19 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Final
 
-import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TSchemaContractDict
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
-from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
+from cdm_data_loaders.pipelines.core import (
+    DEFAULT_REJECTED_SUFFIX,
+    DEFAULT_SCHEMA_CONTRACT,
+    PipelineCli,
+    build_file_ingest_kwargs,
+    build_filesystem_resource,
+    run_pipeline,
+)
 from cdm_data_loaders.pipelines.xsv.settings import PIPELINE_NAME, XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_reader import read_validated_rows
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.helpers import CleanerValidatorArgs, ErrorRecord
@@ -28,12 +33,8 @@ from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.qsv import clean_vali
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import generate_header
 from cdm_data_loaders.utils.buffer import ListBuffer
 
-SCHEMA_CONTRACT: Final[TSchemaContractDict] = {
-    "tables": "evolve",
-    "columns": "evolve",
-    "data_type": "discard_row",
-}
-REJECTED_SUFFIX: Final[str] = "_rejected"
+SCHEMA_CONTRACT: Final[TSchemaContractDict] = DEFAULT_SCHEMA_CONTRACT
+REJECTED_SUFFIX: Final[str] = DEFAULT_REJECTED_SUFFIX
 
 
 @dataclass
@@ -149,10 +150,6 @@ def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
     """
     qsv_cmd = qsv_check()
 
-    xsv_reader = dlt.transformer(_read_items, name="xsv_reader", parallelized=True)
-
-    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
-
     with (
         TemporaryDirectory(prefix="xsv_tmp_") as tmp_dir,
         TemporaryDirectory(prefix="xsv_qsv_output_") as qsv_output_dir,
@@ -166,19 +163,19 @@ def run_xsv_pipeline(settings: XsvIngestSettings) -> LoadInfo | None:
             validated_dir=Path(validated_dir),
         )
 
-        xsv_resource = files | xsv_reader(settings, work_paths)
-        xsv_resource.apply_hints(schema_contract=TSchemaContractDict(**SCHEMA_CONTRACT))  # pyright: ignore[reportCallIssue]
+        xsv_resource = build_filesystem_resource(
+            settings,
+            _read_items,
+            settings,
+            work_paths,
+            name="xsv_reader",
+            schema_contract=SCHEMA_CONTRACT,
+        )
 
         return run_pipeline(
             settings=settings,
             resource=xsv_resource,
-            pipeline_kwargs={
-                "pipeline_name": PIPELINE_NAME,
-                "dataset_name": settings.dataset_name,
-            },
-            pipeline_run_kwargs={
-                "loader_file_format": str(settings.loader_file_format),
-            },
+            **build_file_ingest_kwargs(settings, PIPELINE_NAME),
         )
 
 

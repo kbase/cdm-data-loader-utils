@@ -1,6 +1,7 @@
 """Utilities for running tests."""
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,12 +11,69 @@ from pydantic_settings import BaseSettings, CliApp, CliSettingsSource
 from pyspark.sql import Row, SparkSession
 from pyspark.sql.types import StructType
 
-from cdm_data_loaders.core.settings import CdmDataLoadersBase
+from cdm_data_loaders.core.settings import CdmDataLoadersBase, CtsSettings
+from tests.conftest import LOCAL_FS
 
 
 def make_cli_arg(arg: str) -> str:
     """Generate the appropriate CLI form for an argument."""
     return f"{'--' if len(arg) > 1 else '-'}{arg.replace('_', '-')}"
+
+
+def make_cts_settings[S: CtsSettings](
+    settings_cls: type[S],
+    base_dir: Path,
+    **overrides: Any,  # noqa: ANN401
+) -> S:
+    """Create standard input/output directories and log config under base_dir and instantiate settings_cls."""
+    input_dir = base_dir / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = base_dir / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    log_config_file = base_dir / "logging.json"
+    if not log_config_file.exists():
+        log_config_file.write_text('{"version": 1}', encoding="utf-8")
+
+    kwargs: dict[str, Any] = {
+        "input_dir": str(input_dir),
+        "output_dir": str(output_dir),
+        "log_config_file": str(log_config_file),
+        "use_destination": LOCAL_FS,
+        "dlt_dev_mode": False,
+        "use_output_dir_for_pipeline_metadata": False,
+    }
+    kwargs.update(overrides)
+    return settings_cls(**kwargs)
+
+
+def settings_to_argv(settings: Any, *, exclude: Iterable[str] = ()) -> list[str]:  # noqa: ANN401
+    """Derive CLI arguments from a settings instance.
+
+    Every serialized field becomes a ``--kebab-case`` flag, with bools rendered
+    as their ``true``/``false`` CLI spelling, sequence fields expanded after the
+    flag, and None-valued, excluded, or computed fields skipped.
+
+    :param settings: a CtsSettings (or derivative) instance
+    :type settings: Any
+    :param exclude: field names to omit from the resulting argument list
+    :type exclude: Iterable[str]
+    :return: command-line argument list reproducing the settings
+    :rtype: list[str]
+    """
+    argv: list[str] = []
+    excluded_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys()) | set(exclude)
+    for name, value in settings.model_dump(exclude=excluded_fields).items():
+        flag = make_cli_arg(name)
+        if isinstance(value, bool):
+            argv.extend([flag, "true" if value else "false"])
+        elif value is None:
+            continue
+        elif isinstance(value, list | tuple):
+            if value:
+                argv.extend([flag, *(str(item) for item in value)])
+        else:
+            argv.extend([flag, str(value)])
+    return argv
 
 
 @dataclass(frozen=True)

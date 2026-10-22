@@ -32,7 +32,8 @@ from cdm_data_loaders.pipelines.xmltopyarrow.uniprot import run_uniprot_pipeline
 from cdm_data_loaders.pipelines.xmltopyarrow.uniref import cli as uniref_cli
 from cdm_data_loaders.pipelines.xmltopyarrow.uniref import run_uniref_pipeline
 from tests.cdm_data_loaders.pipelines.conftest import copy_test_files, duckdb_pipeline
-from tests.cdm_data_loaders.pipelines.helpers import assert_run_ok, fetch_all_duckdb, settings_to_argv
+from tests.cdm_data_loaders.pipelines.helpers import assert_run_ok, fetch_all_duckdb
+from tests.helpers import settings_to_argv
 from tests.xml_samples import TWO_BOOK_LIBRARY_XML
 
 

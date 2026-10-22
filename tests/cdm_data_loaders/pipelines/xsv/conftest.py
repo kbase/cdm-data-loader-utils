@@ -12,7 +12,7 @@ import pytest
 from cdm_data_loaders.pipelines.xsv.pipeline import XsvWorkPaths
 from cdm_data_loaders.pipelines.xsv.settings import XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import generate_header
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.helpers import make_cts_settings
 
 VALID_SCHEMA_URI: Final[str] = "https://json-schema.org/draft/2020-12/schema"
 COLUMNS: Final[list[str]] = ["number", "date", "float", "boolean", "string"]

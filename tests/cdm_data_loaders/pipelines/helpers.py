@@ -3,7 +3,7 @@
 import gzip
 import json
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import datetime
 from logging import Logger, getLogger
@@ -19,9 +19,7 @@ from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.destinations import filesystem
 
 from cdm_data_loaders.core.fields import PARQUET, LoaderFileFormatEnum
-from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.core import LOAD_INFO_TABLE_NAME
-from tests.conftest import LOCAL_FS
 
 logger: Logger = getLogger(__name__)
 
@@ -114,32 +112,6 @@ def read_destination_rows(base_dir: Path, table_name: str) -> list[dict[str, Any
     return [strip_metadata_columns(row) for row in rows]
 
 
-def make_cts_settings[S: CtsSettings](
-    settings_cls: type[S],
-    base_dir: Path,
-    **overrides: Any,  # noqa: ANN401
-) -> S:
-    """Create standard input/output directories and log config under base_dir and instantiate settings_cls."""
-    input_dir = base_dir / "input"
-    input_dir.mkdir(parents=True, exist_ok=True)
-    output_dir = base_dir / "output"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    log_config_file = base_dir / "logging.json"
-    if not log_config_file.exists():
-        log_config_file.write_text('{"version": 1}', encoding="utf-8")
-
-    kwargs: dict[str, Any] = {
-        "input_dir": str(input_dir),
-        "output_dir": str(output_dir),
-        "log_config_file": str(log_config_file),
-        "use_destination": LOCAL_FS,
-        "dlt_dev_mode": False,
-        "use_output_dir_for_pipeline_metadata": False,
-    }
-    kwargs.update(overrides)
-    return settings_cls(**kwargs)
-
-
 def make_file_item(file_path: Path, mime_type: str = "application/octet-stream") -> FileItemDict:
     """Build a dlt FileItemDict for a local file."""
     return FileItemDict(
@@ -164,7 +136,7 @@ def fetch_all_duckdb(pipeline: dlt.Pipeline, query: str) -> list[tuple[Any, ...]
 
 
 @contextmanager
-def duckdb_reference_from_jsonl(jsonl_path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
+def duckdb_reference_from_jsonl(jsonl_path: Path) -> Generator[duckdb.DuckDBPyConnection]:
     """Load a reference JSONL file into an in-memory DuckDB connection with a `reference` table."""
     connection = duckdb.connect()
     connection.execute(
@@ -180,36 +152,6 @@ def duckdb_reference_from_jsonl(jsonl_path: Path) -> Iterator[duckdb.DuckDBPyCon
 def sorted_json(entries: list[dict[str, Any]]) -> list[str]:
     """Entries as sorted JSON strings for order-insensitive comparison."""
     return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in entries)
-
-
-def settings_to_argv(settings: Any, *, exclude: Iterable[str] = ()) -> list[str]:  # noqa: ANN401
-    """Derive CLI arguments from a settings instance.
-
-    Every serialized field becomes a ``--kebab-case`` flag, with bools rendered
-    as their ``true``/``false`` CLI spelling, sequence fields expanded after the
-    flag, and None-valued, excluded, or computed fields skipped.
-
-    :param settings: a CtsSettings (or derivative) instance
-    :type settings: Any
-    :param exclude: field names to omit from the resulting argument list
-    :type exclude: Iterable[str]
-    :return: command-line argument list reproducing the settings
-    :rtype: list[str]
-    """
-    argv: list[str] = []
-    excluded_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys()) | set(exclude)
-    for name, value in settings.model_dump(exclude=excluded_fields).items():
-        flag = f"--{name.replace('_', '-')}"
-        if isinstance(value, bool):
-            argv.extend([flag, "true" if value else "false"])
-        elif value is None:
-            continue
-        elif isinstance(value, list | tuple):
-            if value:
-                argv.extend([flag, *(str(item) for item in value)])
-        else:
-            argv.extend([flag, str(value)])
-    return argv
 
 
 def assert_run_ok(load_info: LoadInfo | None) -> LoadInfo:

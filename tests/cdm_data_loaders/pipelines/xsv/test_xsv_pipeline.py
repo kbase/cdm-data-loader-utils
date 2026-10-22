@@ -28,9 +28,9 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     assert_run_ok,
     fetch_all_duckdb,
     make_file_item,
-    settings_to_argv,
 )
 from tests.cdm_data_loaders.pipelines.xsv.conftest import VALID_SCHEMA_URI
+from tests.helpers import settings_to_argv
 
 SIMPLE_SCHEMA: dict[str, Any] = {
     "$schema": VALID_SCHEMA_URI,

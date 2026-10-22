@@ -22,7 +22,6 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     LOADER_FILE_FORMATS,
     assert_pipeline_report_written,
     assert_run_ok,
-    settings_to_argv,
     sorted_json,
 )
 from tests.cdm_data_loaders.pipelines.xmltopyarrow.integration.conftest import (
@@ -30,6 +29,7 @@ from tests.cdm_data_loaders.pipelines.xmltopyarrow.integration.conftest import (
     strip_xsd_arrow_row,
 )
 from tests.conftest import N_REFERENCE_XML_ENTRIES
+from tests.helpers import settings_to_argv
 from tests.xml_samples import SIMPLE_LIBRARY_XML
 
 

@@ -30,21 +30,18 @@ class PromoteSettings(LoggerSettings):
     staging_bucket: PurePosixPath = Field(
         default=DEFAULT_STAGING_BUCKET,
         description="Bucket where staged files are located after download",
-        validation_alias=AliasChoices("staging-bucket", "staging_bucket"),
     )
     destination_bucket: PurePosixPath = Field(
         default=DEFAULT_DESTINATION_BUCKET,
         description="Bucket to which staged files will be promoted.",
-        validation_alias=AliasChoices("destination-bucket", "destination_bucket"),
     )
     staging_path: PurePosixPath = Field(
         description="Path to folder in the staging bucket where staged files are located; Should contain `raw_data/` folder",
-        validation_alias=AliasChoices("s", "staging-path", "staging_path"),
+        validation_alias=AliasChoices("s", "staging_path"),
     )
     destination_path: PurePosixPath = Field(
         default=DEFAULT_DESTINATION_PREFIX,
         description="Path to folder in the destination bucket where files will be promoted to; Will contain `raw_data/` folder",
-        validation_alias=AliasChoices("destination-path", "destination_path"),
     )
     removed_manifest_path: Path | None = Field(
         default=None,
@@ -64,7 +61,6 @@ class PromoteSettings(LoggerSettings):
     dry_run: CliImplicitFlag[bool] = Field(
         default=False,
         description="Log actions without making changes",
-        validation_alias=AliasChoices("dry-run", "dry_run"),
     )
 
 

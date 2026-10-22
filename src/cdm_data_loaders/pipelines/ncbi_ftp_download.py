@@ -10,6 +10,7 @@ import logging
 import shutil
 import tempfile
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from ftplib import error_temp
@@ -54,7 +55,6 @@ class DownloadSettings(LoggerSettings):
     output_dir: Path = Field(
         default=Path(OUTPUT_MOUNT),
         description="Output directory for downloaded assembly files",
-        validation_alias=AliasChoices("output-dir", "output_dir"),
     )
     threads: int = Field(
         default=4,
@@ -66,7 +66,6 @@ class DownloadSettings(LoggerSettings):
     ftp_host: str = Field(
         default=FTP_HOST,
         description="NCBI FTP hostname",
-        validation_alias=AliasChoices("ftp-host", "ftp_host"),
     )
     limit: int | None = Field(
         default=None,
@@ -116,12 +115,15 @@ def _upload_assembly_dir(
 # Batch download
 
 
-def download_batch(
+def download_batch(  # noqa: PLR0913
     manifest_path: Path,
     output_dir: Path,
     threads: int = 4,
     ftp_host: str = FTP_HOST,
     limit: int | None = None,
+    *,
+    on_assembly_downloaded: Callable[[PurePosixPath], None] | None = None,
+    progress_desc: str = "Downloading from NCBI FTP",
 ) -> dict[str, Any]:
     """Download all assemblies listed in the manifest.
 
@@ -130,6 +132,8 @@ def download_batch(
     :param threads: number of parallel download threads
     :param ftp_host: FTP hostname
     :param limit: optional limit for testing
+    :param on_assembly_downloaded: optional callback invoked with each assembly's FTP path after download succeeds
+    :param progress_desc: description shown on the tqdm progress bar
     :return: report dict with overall stats
     """
     with manifest_path.open() as f:
@@ -163,17 +167,18 @@ def download_batch(
             stats = _attempt()
         except Exception as e:  # noqa: BLE001
             return str(path), e
-        else:
-            with lock:
-                success_count += 1
-                all_stats.append(stats)
-            return str(path), None
+
+        if on_assembly_downloaded is not None:
+            on_assembly_downloaded(path)
+
+        with lock:
+            success_count += 1
+            all_stats.append(stats)
+        return str(path), None
 
     try:
         with (
-            tqdm.tqdm(
-                total=len(assembly_paths), unit="assembly", desc="Downloading from NCBI FTP", smoothing=0.01
-            ) as pbar,
+            tqdm.tqdm(total=len(assembly_paths), unit="assembly", desc=progress_desc, smoothing=0.01) as pbar,
             ThreadPoolExecutor(max_workers=threads) as executor,
         ):
             futures = {executor.submit(_download_one, p): p for p in assembly_paths}
@@ -235,7 +240,7 @@ def run_download(config: DownloadSettings) -> None:
 # Notebook / interactive entry point
 
 
-def download_and_stage(  #  noqa: PLR0913, PLR0915
+def download_and_stage(  # noqa: PLR0913
     *,
     bucket: PurePosixPath,
     staging_key_prefix: PurePosixPath,
@@ -285,94 +290,34 @@ def download_and_stage(  #  noqa: PLR0913, PLR0915
             manifest_dest.write_bytes(manifest_local_path.read_bytes())
             logger.info("Manifest read from local path: %s", manifest_local_path)
 
-        with manifest_dest.open() as f:
-            assembly_paths = [PurePosixPath(line.strip()) for line in f if line.strip() and not line.startswith("#")]
-
-        if limit:
-            assembly_paths = assembly_paths[:limit]
-
-        logger.info("Starting download & stage of %d assemblies with %d threads", len(assembly_paths), threads)
-
-        pool = ThreadLocalFTP(ftp_host)
-        lock = threading.Lock()
-        success_count = 0
         staged_objects = 0
-        failed: list[dict[str, str]] = []
-        all_stats: list[dict[str, Any]] = []
+        stage_lock = threading.Lock()
 
-        def _download_upload_one(path: PurePosixPath) -> tuple[str, Exception | None]:
-            nonlocal success_count, staged_objects
+        def _stage_assembly(path: PurePosixPath) -> None:
+            nonlocal staged_objects
+            _db, assembly_dir_name, _accession = parse_assembly_path(path)
+            assembly_local_dir = tmp / build_accession_path(assembly_dir_name)
+            count = _upload_assembly_dir(assembly_local_dir, tmp, bucket, staging_key_prefix)
+            with stage_lock:
+                staged_objects += count
 
-            @retry(
-                retry=retry_if_exception_type((error_temp, BrokenPipeError, ConnectionResetError, EOFError)),
-                stop=stop_after_attempt(5),
-                wait=wait_exponential(multiplier=1, min=5, max=60),
-                reraise=True,
-                before_sleep=before_sleep_log(logger, logging.WARNING),
-            )
-            def _attempt() -> dict[str, Any]:
-                return download_assembly_to_local(path, tmp, ftp_host=ftp_host, ftp=pool.get())
-
-            try:
-                stats = _attempt()
-            except Exception as e:  # noqa: BLE001
-                return str(path), e
-
-            if not dry_run:
-                _db, assembly_dir_name, _accession = parse_assembly_path(path)
-                assembly_local_dir = tmp / build_accession_path(assembly_dir_name)
-                count = _upload_assembly_dir(assembly_local_dir, tmp, bucket, staging_key_prefix)
-                with lock:
-                    staged_objects += count
-
-            with lock:
-                success_count += 1
-                all_stats.append(stats)
-            return str(path), None
-
-        try:
-            with (
-                tqdm.tqdm(
-                    total=len(assembly_paths), unit="assembly", desc="Downloading & staging", smoothing=0.01
-                ) as pbar,
-                ThreadPoolExecutor(max_workers=threads) as executor,
-            ):
-                futures = {executor.submit(_download_upload_one, p): p for p in assembly_paths}
-                for future in as_completed(futures):
-                    path, error = future.result()
-                    if error:
-                        logger.error("FAILED: %s: %s", path, error)
-                        with lock:
-                            failed.append({"path": path, "error": str(error)})
-                    pbar.update(1)
-        finally:
-            pool.close_all()
-
-        report: dict[str, Any] = {
-            "timestamp": datetime.now(UTC).isoformat(),
-            "total_attempted": len(assembly_paths),
-            "succeeded": success_count,
-            "failed": len(failed),
-            "failures": failed,
-            "assembly_stats": all_stats,
-        }
+        report = download_batch(
+            manifest_path=manifest_dest,
+            output_dir=tmp,
+            threads=threads,
+            ftp_host=ftp_host,
+            limit=limit,
+            on_assembly_downloaded=None if dry_run else _stage_assembly,
+            progress_desc="Downloading & staging",
+        )
 
         if not dry_run:
             report_path = tmp / "download_report.json"
-            with report_path.open("w") as f:
-                json.dump(report, f, indent=2)
             if upload_file(report_path, str(bucket / staging_key_prefix), show_progress=False):
                 staged_objects += 1
             else:
                 logger.warning("Failed to upload download report to s3://%s/%s", bucket, staging_key_prefix)
             logger.info("Staged %d objects to s3://%s/%s", staged_objects, bucket, staging_key_prefix)
-
-        logger.info(
-            "SUMMARY: %d attempted, %d succeeded, %d failed",
-            len(assembly_paths),
-            success_count,
-            len(failed),
-        )
 
     return {
         **report,

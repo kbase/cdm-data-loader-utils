@@ -2,20 +2,20 @@
 
 from collections.abc import Generator, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
-from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
+from cdm_data_loaders.pipelines.core import (
+    PipelineCli,
+    build_file_ingest_kwargs,
+    build_filesystem_resource,
+    run_pipeline,
+)
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from cdm_data_loaders.readers.xml import process_xml_file_to_dict
-
-if TYPE_CHECKING:
-    from dlt.extract import DltResource
 
 
 def _read_xmltodict_items(
@@ -40,21 +40,12 @@ def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     :param settings: pipeline configuration
     :type  settings: XmlToDictSettings
     """
-    reader = dlt.transformer(_read_xmltodict_items, name="xmltodict_reader", parallelized=True)
-    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
-
-    xmltodict_resource: DltResource = files | reader(settings)
+    xmltodict_resource = build_filesystem_resource(settings, _read_xmltodict_items, settings, name="xmltodict_reader")
 
     return run_pipeline(
         settings=settings,
         resource=xmltodict_resource,
-        pipeline_kwargs={
-            "pipeline_name": PIPELINE_NAME,
-            "dataset_name": settings.dataset_name,
-        },
-        pipeline_run_kwargs={
-            "loader_file_format": str(settings.loader_file_format),
-        },
+        **build_file_ingest_kwargs(settings, PIPELINE_NAME),
     )
 
 

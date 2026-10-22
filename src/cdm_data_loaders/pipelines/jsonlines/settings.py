@@ -7,17 +7,14 @@ from pydantic_settings import SettingsConfigDict
 
 from cdm_data_loaders.core.fields import (
     DEFAULT_JSONL_FILE_GLOB,
-    DEFAULTS,
     FILE_GLOB,
-    LOADER_FILE_FORMAT,
     TABLE_NAME,
     FileGlob,
-    LoaderFileFormat,
     NonEmptyStr,
     TableName,
 )
 from cdm_data_loaders.core.settings import (
-    CLI_SHORTCUTS,
+    FILE_FORMAT_CLI_SHORTCUTS,
     FileFormatIngestSettings,
     default_settings_with_shortcuts,
 )
@@ -33,7 +30,6 @@ TABLE_NAMES: Final[str] = "table_names"
 LOCAL_CLI_SHORTCUTS: Final[dict[str, str]] = {
     ENTITY_MODELS_MODULE: "m",
     FILE_GLOB: "g",
-    LOADER_FILE_FORMAT: "f",
     SCHEMA_FILES_MODULE: "m",
     TABLE_NAME: "t",
     TABLE_NAMES: "t",
@@ -50,7 +46,6 @@ class JsonlIngestSettings(FileFormatIngestSettings):
             description="Glob pattern for JSONL files",
         ),
     ]
-    loader_file_format: LoaderFileFormat = Field(default=DEFAULTS[LOADER_FILE_FORMAT])
 
 
 class JsonlExtractSettings(JsonlIngestSettings):
@@ -59,8 +54,8 @@ class JsonlExtractSettings(JsonlIngestSettings):
     model_config: SettingsConfigDict = default_settings_with_shortcuts(
         cli_prog_name=EXTRACT_PIPELINE_NAME,
         cli_shortcuts={
-            **CLI_SHORTCUTS,
-            **{k: v for k, v in LOCAL_CLI_SHORTCUTS.items() if k in [FILE_GLOB, LOADER_FILE_FORMAT, TABLE_NAME]},
+            **FILE_FORMAT_CLI_SHORTCUTS,
+            **{k: v for k, v in LOCAL_CLI_SHORTCUTS.items() if k in [FILE_GLOB, TABLE_NAME]},
         },
     )
 
@@ -90,12 +85,8 @@ class JsonlPydanticIngestSettings(ValidatedJsonlIngestSettings):
     model_config: SettingsConfigDict = default_settings_with_shortcuts(
         cli_prog_name=PYDANTIC_PIPELINE_NAME,
         cli_shortcuts={
-            **CLI_SHORTCUTS,
-            **{
-                k: v
-                for k, v in LOCAL_CLI_SHORTCUTS.items()
-                if k in [ENTITY_MODELS_MODULE, FILE_GLOB, LOADER_FILE_FORMAT, TABLE_NAMES]
-            },
+            **FILE_FORMAT_CLI_SHORTCUTS,
+            **{k: v for k, v in LOCAL_CLI_SHORTCUTS.items() if k in [ENTITY_MODELS_MODULE, FILE_GLOB, TABLE_NAMES]},
         },
     )
 
@@ -117,14 +108,13 @@ class JsonlJsonschemaIngestSettings(ValidatedJsonlIngestSettings):
     model_config: SettingsConfigDict = default_settings_with_shortcuts(
         cli_prog_name=JSONSCHEMA_PIPELINE_NAME,
         cli_shortcuts={
-            **CLI_SHORTCUTS,
+            **FILE_FORMAT_CLI_SHORTCUTS,
             **{
                 k: v
                 for k, v in LOCAL_CLI_SHORTCUTS.items()
                 if k
                 in [
                     FILE_GLOB,
-                    LOADER_FILE_FORMAT,
                     SCHEMA_FILES_MODULE,
                 ]
             },

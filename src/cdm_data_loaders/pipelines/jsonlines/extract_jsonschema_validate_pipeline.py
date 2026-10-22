@@ -8,7 +8,6 @@ source_file, line_no, raw_record, and error_detail. Format checks are enabled.
 """
 
 import json
-from importlib import import_module
 from logging import Logger, getLogger
 from typing import Any
 
@@ -21,6 +20,7 @@ from jsonschema.validators import validator_for
 from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
+    load_registry_dict,
     run_registry_ingest,
 )
 from cdm_data_loaders.pipelines.jsonlines.base import (
@@ -44,11 +44,7 @@ def load_entity_schemas(module_path: str) -> dict[str, dict[str, Any]]:
     :rtype: dict[str, dict[str, Any]]
     :raises ValueError: if ENTITY_SCHEMAS is missing, empty, or not a dict
     """
-    module = import_module(module_path)
-    registry = getattr(module, "ENTITY_SCHEMAS", None)
-    if not isinstance(registry, dict) or not registry:
-        err_msg = f"{module_path} does not define a non-empty ENTITY_SCHEMAS"
-        raise ValueError(err_msg)
+    registry = load_registry_dict(module_path, "ENTITY_SCHEMAS")
     errors: dict[str, str] = {}
     for table_name, schema in registry.items():
         if not isinstance(table_name, str) or not table_name.strip():

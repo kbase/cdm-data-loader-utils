@@ -1,14 +1,16 @@
 """Settings classes for data loading and wrangling pipelines."""
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Annotated, Any, Final
 
 from frozendict import frozendict
-from pydantic import AliasChoices, AliasPath, computed_field
+from pydantic import AliasChoices, AliasPath, Field, computed_field
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsError
 
 from cdm_data_loaders.core.fields import (
+    DEFAULT_XML_FILE_GLOB,
+    FILE_GLOB,
     INPUT_DIR,
     LOADER_FILE_FORMAT,
     OUTPUT_DIR,
@@ -17,6 +19,7 @@ from cdm_data_loaders.core.fields import (
     BufferSize,
     DatasetName,
     DltDevMode,
+    FileGlob,
     LoaderFileFormat,
     LogConfigFile,
     LogInterval,
@@ -45,6 +48,18 @@ CLI_SHORTCUTS: frozendict[str, str] = frozendict(
         OUTPUT_DIR: "o",
         USE_DESTINATION: "d",
         USE_OUTPUT_DIR_FOR_PIPELINE_METADATA: "p",
+    }
+)
+FILE_FORMAT_CLI_SHORTCUTS: frozendict[str, str] = frozendict(
+    {
+        **CLI_SHORTCUTS,
+        LOADER_FILE_FORMAT: "f",
+    }
+)
+XML_CLI_SHORTCUTS: frozendict[str, str] = frozendict(
+    {
+        **FILE_FORMAT_CLI_SHORTCUTS,
+        FILE_GLOB: "g",
     }
 )
 
@@ -210,9 +225,21 @@ class CtsSettings(LocalInputOutputSettings):
 class FileFormatIngestSettings(CtsSettings):
     """Configuration for DLT pipelines that import a particular file format."""
 
-    model_config: SettingsConfigDict = default_settings_with_shortcuts(
-        cli_shortcuts={**CLI_SHORTCUTS, LOADER_FILE_FORMAT: "f"}
-    )
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_shortcuts=FILE_FORMAT_CLI_SHORTCUTS)
 
     dataset_name: DatasetName
     loader_file_format: LoaderFileFormat
+
+
+class XmlIngestSettings(FileFormatIngestSettings):
+    """Configuration for DLT pipelines that import XML files."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_shortcuts=XML_CLI_SHORTCUTS)
+
+    file_glob: Annotated[
+        FileGlob,
+        Field(
+            default=DEFAULT_XML_FILE_GLOB,
+            description="Glob pattern for XML files",
+        ),
+    ]
