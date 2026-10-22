@@ -4,27 +4,28 @@ Promotes staged files from the containerized NCBI FTP download pipeline to their
 final location in the Lakehouse.
 """
 
-import logging
 from pathlib import Path, PurePosixPath
+from typing import Final
 
 from pydantic import AliasChoices, Field
-from pydantic_settings import CliImplicitFlag
+from pydantic_settings import CliImplicitFlag, SettingsConfigDict
 
-from cdm_data_loaders.core.settings import LoggerSettings
+from cdm_data_loaders.core.settings import LoggerSettings, default_settings_with_shortcuts
 from cdm_data_loaders.ncbi_ftp.promote import promote_from_s3
 from cdm_data_loaders.pipelines.core import PipelineCli
 
+PIPELINE_NAME: Final[str] = "ncbi_ftp_promote"
 DEFAULT_STAGING_BUCKET: PurePosixPath = PurePosixPath("cts")
 DEFAULT_DESTINATION_BUCKET: PurePosixPath = PurePosixPath("cdm-lake")
 DEFAULT_DESTINATION_PREFIX: PurePosixPath = PurePosixPath("tenant-general-warehouse/kbase/datasets/ncbi")
 DEFAULT_TRANSFER_MANIFEST_FILE: PurePosixPath = PurePosixPath("transfer_manifest.txt")
 ESTIMATED_FILES_PER_ASSEMBLY: int = 21
 
-logger = logging.getLogger("dlt")
-
 
 class PromoteSettings(LoggerSettings):
     """Configuration for the NCBI FTP file promotion pipeline."""
+
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_prog_name=PIPELINE_NAME)
 
     staging_bucket: PurePosixPath = Field(
         default=DEFAULT_STAGING_BUCKET,

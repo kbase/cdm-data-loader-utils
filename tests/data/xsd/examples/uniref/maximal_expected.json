@@ -1,0 +1,82 @@
+[
+  {
+    "_id": "UniRef100_P04637",
+    "_updated": "2025-02-05",
+    "name": "Cluster: Glycogen synthase",
+    "property": [
+      {
+        "_type": "member count",
+        "_value": "3"
+      },
+      {
+        "_type": "common taxon",
+        "_value": "Homo sapiens"
+      }
+    ],
+    "representativeMember": {
+      "dbReference": {
+        "_type": "UniProtKB ID",
+        "_id": "P53_HUMAN",
+        "property": [
+          {
+            "_type": "common taxon ID",
+            "_value": "9606"
+          },
+          {
+            "_type": "GO Molecular Function",
+            "_value": "GO:0003677"
+          }
+        ]
+      },
+      "sequence": {
+        "_length": 393,
+        "_checksum": "AD5C149FD8106131",
+        "#text": "MHPKVDALLSRFPRITLIPWETPIQYLPRISRELGVDVYVKRDDLTGLGIGGNKIRKLEF"
+      }
+    },
+    "member": [
+      {
+        "dbReference": {
+          "_type": "UniParc ID",
+          "_id": "UPI000002ED67",
+          "property": [
+            {
+              "_type": "UniProtKB accession",
+              "_value": "P04637"
+            },
+            {
+              "_type": "UniParc ID",
+              "_value": "UPI000002ED67"
+            }
+          ]
+        },
+        "sequence": {
+          "_length": 330,
+          "_checksum": "CC8699923C0B11CD",
+          "#text": "MPVLPRDFYDRPTLEVARDLLGKTLVRQLPAGRVALRIVETEAYIGENDKACHASKGMTA"
+        }
+      },
+      {
+        "dbReference": {
+          "_type": "RefSeq",
+          "_id": "NP_000537.3",
+          "property": [
+            {
+              "_type": "UniRef100 ID",
+              "_value": "UniRef100_P04637"
+            },
+            {
+              "_type": "UniRef90 ID",
+              "_value": "UniRef90_P04637"
+            }
+          ]
+        },
+        "sequence": {
+          "_length": 200,
+          "_checksum": "8DA31EA44EEB8636",
+          "#text": "MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP"
+        }
+      }
+    ]
+  }
+]

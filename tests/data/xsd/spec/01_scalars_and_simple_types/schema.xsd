@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:simpleType name="intListType">
+        <xs:list itemType="xs:int"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="flexibleDateType">
+        <xs:union memberTypes="xs:date xs:gYearMonth xs:gYear"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="int64UnionType">
+        <xs:union memberTypes="xs:long xs:integer"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="statusEnum">
+        <xs:annotation>
+            <xs:documentation>Record lifecycle status.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="active"/>
+            <xs:enumeration value="archived"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="dataset">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="record" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="flag" type="xs:boolean">
+                                <xs:annotation>
+                                    <xs:documentation>Primary boolean flag.</xs:documentation>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="smallInt" type="xs:byte" minOccurs="0"/>
+                            <xs:element name="medInt" type="xs:short" minOccurs="0"/>
+                            <xs:element name="stdInt" type="xs:int" minOccurs="0"/>
+                            <xs:element name="bigInt" type="xs:integer" minOccurs="0"/>
+                            <xs:element name="uByte" type="xs:unsignedByte" minOccurs="0"/>
+                            <xs:element name="uShort" type="xs:unsignedShort" minOccurs="0"/>
+                            <xs:element name="uInt" type="xs:unsignedInt" minOccurs="0"/>
+                            <xs:element name="uLong" type="xs:unsignedLong" minOccurs="0"/>
+                            <xs:element name="f32" type="xs:float" minOccurs="0"/>
+                            <xs:element name="f64" type="xs:double" minOccurs="0"/>
+                            <xs:element name="dec" type="xs:decimal" minOccurs="0"/>
+                            <xs:element name="created" type="xs:date" minOccurs="0"/>
+                            <xs:element name="updatedAt" type="xs:dateTime" minOccurs="0"/>
+                            <xs:element name="published" type="flexibleDateType" minOccurs="0"/>
+                            <xs:element name="homogeneousUnion" type="int64UnionType" minOccurs="0"/>
+                            <xs:element name="scores" type="intListType" minOccurs="0"/>
+                            <xs:element name="tokens" type="xs:NMTOKENS" minOccurs="0"/>
+                            <xs:element name="rawHex" type="xs:hexBinary" minOccurs="0"/>
+                            <xs:element name="rawB64" type="xs:base64Binary" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="id" type="xs:ID" use="required">
+                            <xs:annotation>
+                                <xs:documentation>Unique record identifier.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
+                        <xs:attribute name="status" type="statusEnum" use="required"/>
+                        <xs:attribute name="evidence" type="intListType" use="optional"/>
+                        <xs:attribute name="version" type="xs:int" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

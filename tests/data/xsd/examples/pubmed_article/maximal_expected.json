@@ -1,0 +1,894 @@
+[
+  {
+    "MedlineCitation": {
+      "_Owner": "NLM",
+      "_Status": "MEDLINE",
+      "_VersionID": "1",
+      "_VersionDate": "2024-05-29",
+      "_IndexingMethod": "Automated",
+      "PMID": {
+        "_Version": "1",
+        "#text": "38123456"
+      },
+      "DateCompleted": {
+        "Year": "2024",
+        "Month": "05",
+        "Day": "29"
+      },
+      "DateRevised": {
+        "Year": "2025",
+        "Month": "01",
+        "Day": "16"
+      },
+      "Article": {
+        "_PubModel": "Print-Electronic",
+        "Journal": {
+          "ISSN": {
+            "_IssnType": "Electronic",
+            "#text": "1476-4687"
+          },
+          "JournalIssue": {
+            "_CitedMedium": "Internet",
+            "Volume": "629",
+            "Issue": "8012",
+            "PubDate": {
+              "Year": "2023",
+              "Month": "09",
+              "Day": "15"
+            }
+          },
+          "Title": "Nature",
+          "ISOAbbreviation": "Nature"
+        },
+        "ArticleTitle": {
+          "_book": "nbk21054",
+          "_part": "part1",
+          "_sec": "sec1.1",
+          "#text": "Structural basis of <i>TP53</i> tetramerization and Ca<sup>2+</sup> signaling"
+        },
+        "Pagination": {
+          "StartPage": "410",
+          "EndPage": "418",
+          "MedlinePgn": "410-418"
+        },
+        "ELocationID": [
+          {
+            "_EIdType": "doi",
+            "_ValidYN": "Y",
+            "#text": "10.1038/s41586-024-07123-x"
+          },
+          {
+            "_EIdType": "pii",
+            "_ValidYN": "N",
+            "#text": "S0028-0836(24)00123-4"
+          }
+        ],
+        "Abstract": {
+          "AbstractText": [
+            {
+              "_Label": "BACKGROUND",
+              "_NlmCategory": "BACKGROUND",
+              "#text": "The tumor suppressor <b>p53</b> regulates transcription in response to &lt;5 Gy stress and H<sub>2</sub>O<sub>2</sub>."
+            },
+            {
+              "_Label": "METHODS",
+              "_NlmCategory": "METHODS",
+              "#text": "We undertook 20 semi-structured interviews with participants aged &gt;18 years studying Ca<sup>2+</sup> signaling &amp; DNA repair <DispFormula/> and <u>underlined</u> text."
+            },
+            {
+              "_Label": "UNLABELLED",
+              "_NlmCategory": "UNASSIGNED"
+            }
+          ],
+          "CopyrightInformation": "Copyright (c) 2024 Springer Nature Limited."
+        },
+        "AuthorList": {
+          "_CompleteYN": "Y",
+          "_Type": "authors",
+          "Author": [
+            {
+              "_ValidYN": "Y",
+              "_EqualContrib": "Y",
+              "LastName": "Morris",
+              "ForeName": "Charlotte",
+              "Initials": "C",
+              "Suffix": "Jr",
+              "Identifier": [
+                {
+                  "_Source": "ORCID",
+                  "#text": "0000-0002-9047-0481"
+                },
+                {
+                  "_Source": "ISNI",
+                  "#text": "0000-0001-6450-5815"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "The University of Manchester, Division of Population Health, Manchester, United Kingdom.",
+                  "Identifier": [
+                    {
+                      "_Source": "VIAF",
+                      "#text": "0000-0003-2804-1181"
+                    },
+                    {
+                      "_Source": "GND",
+                      "#text": "0000-0002-0939-9842"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "National Institute for Health and Care Research School for Primary Care Research, Manchester, United Kingdom.",
+                  "Identifier": [
+                    {
+                      "_Source": "RINGGOLD",
+                      "#text": "0000-0001-5784-7403"
+                    },
+                    {
+                      "_Source": "GRID",
+                      "#text": "0000-0002-1825-0097"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "_ValidYN": "N",
+              "_EqualContrib": "N",
+              "CollectiveName": {
+                "_Investigators": "INV_1",
+                "#text": "International Cancer Genome Consortium"
+              },
+              "Identifier": [
+                {
+                  "_Source": "ROR",
+                  "#text": "https://ror.org/027m9bs27"
+                },
+                {
+                  "_Source": "ORCID (8)",
+                  "#text": "https://ror.org/01ej9dk98"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "Newcastle University Faculty of Medical Sciences, Population Health Sciences Institute, Newcastle upon Tyne, United Kingdom.",
+                  "Identifier": [
+                    {
+                      "_Source": "ISNI (9)",
+                      "#text": "https://ror.org/00za53h95"
+                    },
+                    {
+                      "_Source": "VIAF (10)",
+                      "#text": "https://ror.org/03vek6s52"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "Sidney Kimmel Comprehensive Cancer Center, Johns Hopkins University, Baltimore, MD, USA.",
+                  "Identifier": [
+                    {
+                      "_Source": "GND (11)",
+                      "#text": "0000-0002-9047-0481 (11)"
+                    },
+                    {
+                      "_Source": "RINGGOLD (12)",
+                      "#text": "0000-0001-6450-5815 (12)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Language": [
+          "eng",
+          "fre"
+        ],
+        "DataBankList": {
+          "_CompleteYN": "Y",
+          "DataBank": [
+            {
+              "DataBankName": "PDB",
+              "AccessionNumberList": {
+                "AccessionNumber": [
+                  "1TUP",
+                  "2OCJ"
+                ]
+              }
+            },
+            {
+              "DataBankName": "GenBank",
+              "AccessionNumberList": {
+                "AccessionNumber": [
+                  "NM_000546",
+                  "AF307851"
+                ]
+              }
+            }
+          ]
+        },
+        "GrantList": {
+          "_CompleteYN": "Y",
+          "Grant": [
+            {
+              "GrantID": "R01-CA043460",
+              "Acronym": "CA",
+              "Agency": "NCI NIH HHS",
+              "Country": "United States"
+            },
+            {
+              "GrantID": "MR/T021975/1",
+              "Acronym": "MRC",
+              "Agency": "Medical Research Council",
+              "Country": "United Kingdom"
+            }
+          ]
+        },
+        "PublicationTypeList": {
+          "PublicationType": [
+            {
+              "_UI": "D016428",
+              "#text": "Journal Article"
+            },
+            {
+              "_UI": "D013485",
+              "#text": "Research Support, Non-U.S. Gov't"
+            }
+          ]
+        },
+        "VernacularTitle": "Bases structurales de la tetramerisation de <i>TP53</i>",
+        "ArticleDate": [
+          {
+            "_DateType": "Electronic",
+            "Year": "2022",
+            "Month": "11",
+            "Day": "04"
+          },
+          {
+            "_DateType": "Electronic",
+            "Year": "2021",
+            "Month": "03",
+            "Day": "21"
+          }
+        ]
+      },
+      "MedlineJournalInfo": {
+        "Country": "Belgium",
+        "MedlineTA": "Nature",
+        "NlmUniqueID": "0410462",
+        "ISSNLinking": "0028-0836"
+      },
+      "ChemicalList": {
+        "Chemical": [
+          {
+            "RegistryNumber": "EC 2.7.11.1",
+            "NameOfSubstance": {
+              "_UI": "Sample_UI_1",
+              "#text": "Tumor Suppressor Protein p53"
+            }
+          },
+          {
+            "RegistryNumber": "EC 6.3.2.19",
+            "NameOfSubstance": {
+              "_UI": "Sample_UI_2",
+              "#text": "Proto-Oncogene Proteins c-mdm2"
+            }
+          }
+        ]
+      },
+      "SupplMeshList": {
+        "SupplMeshName": [
+          {
+            "_Type": "Disease",
+            "_UI": "C536599",
+            "#text": "Li-Fraumeni Syndrome"
+          },
+          {
+            "_Type": "Protocol",
+            "_UI": "C045812",
+            "#text": "Chromatin Immunoprecipitation"
+          }
+        ]
+      },
+      "CitationSubset": [
+        "IM",
+        "AIM"
+      ],
+      "CommentsCorrectionsList": {
+        "CommentsCorrections": [
+          {
+            "_RefType": "Cites",
+            "RefSource": "Nature. 2000 Nov 16;408(6810):307-310.",
+            "PMID": {
+              "_Version": "2",
+              "#text": "11099028"
+            },
+            "Note": "Foundational review of the p53 signaling network."
+          },
+          {
+            "_RefType": "CommentIn",
+            "RefSource": "Science. 2024 Jun 7;384(6700):1020-1021.",
+            "PMID": {
+              "_Version": "3",
+              "#text": "38843210"
+            },
+            "Note": "Perspective highlighting TP53 tetramerization dynamics."
+          }
+        ]
+      },
+      "GeneSymbolList": {
+        "GeneSymbol": [
+          "TP53",
+          "MDM2"
+        ]
+      },
+      "MeshHeadingList": {
+        "MeshHeading": [
+          {
+            "DescriptorName": {
+              "_MajorTopicYN": "Y",
+              "_AutoHM": "Y",
+              "_Type": "Geographic",
+              "_UI": "D016159",
+              "#text": "Tumor Suppressor Protein p53"
+            },
+            "QualifierName": [
+              {
+                "_AutoHM": "Y",
+                "_MajorTopicYN": "N",
+                "_UI": "Q000235",
+                "#text": "genetics"
+              },
+              {
+                "_AutoHM": "Y",
+                "_MajorTopicYN": "Y",
+                "_UI": "Q000378",
+                "#text": "metabolism"
+              }
+            ]
+          },
+          {
+            "DescriptorName": {
+              "_MajorTopicYN": "N",
+              "_AutoHM": "Y",
+              "_Type": "Geographic",
+              "_UI": "D004260",
+              "#text": "DNA Repair"
+            },
+            "QualifierName": [
+              {
+                "_AutoHM": "Y",
+                "_MajorTopicYN": "N",
+                "_UI": "Q000502",
+                "#text": "physiology"
+              },
+              {
+                "_AutoHM": "Y",
+                "_MajorTopicYN": "Y",
+                "_UI": "Q000187",
+                "#text": "drug effects"
+              }
+            ]
+          }
+        ]
+      },
+      "NumberOfReferences": "42",
+      "PersonalNameSubjectList": {
+        "PersonalNameSubject": [
+          {
+            "LastName": "Kontopantelis",
+            "ForeName": "Evangelos",
+            "Initials": "E",
+            "Suffix": "III"
+          },
+          {
+            "LastName": "Robinson",
+            "ForeName": "Louise",
+            "Initials": "L",
+            "Suffix": "Sr"
+          }
+        ]
+      },
+      "OtherID": [
+        {
+          "_Source": "NASA",
+          "#text": "NTRS-20240001234"
+        },
+        {
+          "_Source": "PIP",
+          "#text": "PIP-987654"
+        }
+      ],
+      "OtherAbstract": [
+        {
+          "_Type": "Publisher",
+          "_Language": "eng",
+          "AbstractText": [
+            {
+              "_Label": "RESULTS",
+              "_NlmCategory": "RESULTS",
+              "#text": "Tetramerization affinity increased <i>in vitro</i> by 3.5-fold (<i>p</i> &lt; 0.001) upon phosphorylation."
+            },
+            {
+              "_Label": "CONCLUSIONS",
+              "_NlmCategory": "CONCLUSIONS",
+              "#text": "Clarifying <b>TP53</b> &amp; <i>MDM2</i> kinetics improves targeted cancer therapy."
+            }
+          ],
+          "CopyrightInformation": "Copyright (c) 2024 The Authors. Published under CC-BY 4.0."
+        },
+        {
+          "_Type": "AAMC",
+          "_Language": "fre",
+          "AbstractText": [
+            {
+              "_Label": "OBJECTIVE",
+              "_NlmCategory": "OBJECTIVE",
+              "#text": "French summary: Le facteur de transcription <b>p53</b> maintient la stabilite du genome."
+            },
+            {
+              "_Label": "BACKGROUND (6)",
+              "_NlmCategory": "UNASSIGNED",
+              "#text": "Plain-language summary: How cells repair damaged DNA when exposed to &amp;gt;2 Gy radiation."
+            }
+          ],
+          "CopyrightInformation": "Copyright (c) 2024 National Library of Medicine."
+        }
+      ],
+      "KeywordList": [
+        {
+          "_Owner": "NOTNLM",
+          "Keyword": [
+            {
+              "_MajorTopicYN": "Y",
+              "#text": "p53 signaling"
+            },
+            {
+              "_MajorTopicYN": "N",
+              "#text": "tetramerization"
+            }
+          ]
+        },
+        {
+          "_Owner": "NLM",
+          "Keyword": [
+            {
+              "_MajorTopicYN": "Y",
+              "#text": "DNA damage response"
+            },
+            {
+              "_MajorTopicYN": "N",
+              "#text": "apoptosis"
+            }
+          ]
+        }
+      ],
+      "CoiStatement": "The authors declare no competing financial or non-financial interests.",
+      "SpaceFlightMission": [
+        "ISS Expedition 68",
+        "Artemis I BioSentinel"
+      ],
+      "InvestigatorList": [
+        {
+          "_ID": "INV_1",
+          "Investigator": [
+            {
+              "_ValidYN": "Y",
+              "LastName": "Ashcroft",
+              "ForeName": "Darren",
+              "Initials": "D",
+              "Suffix": "II",
+              "Identifier": [
+                {
+                  "_Source": "GRID (13)",
+                  "#text": "0000-0003-2804-1181 (13)"
+                },
+                {
+                  "_Source": "ROR (14)",
+                  "#text": "0000-0002-0939-9842 (14)"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "MRC Laboratory of Molecular Biology, Francis Crick Avenue, Cambridge, United Kingdom.",
+                  "Identifier": [
+                    {
+                      "_Source": "ORCID (15)",
+                      "#text": "0000-0001-5784-7403 (15)"
+                    },
+                    {
+                      "_Source": "ISNI (16)",
+                      "#text": "0000-0002-1825-0097 (16)"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "Cold Spring Harbor Laboratory, One Bungtown Road, Cold Spring Harbor, NY, USA.",
+                  "Identifier": [
+                    {
+                      "_Source": "VIAF (17)",
+                      "#text": "https://ror.org/027m9bs27 (17)"
+                    },
+                    {
+                      "_Source": "GND (18)",
+                      "#text": "https://ror.org/01ej9dk98 (18)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "_ValidYN": "N",
+              "LastName": "Blakeman",
+              "ForeName": "Thomas",
+              "Initials": "T",
+              "Suffix": "IV",
+              "Identifier": [
+                {
+                  "_Source": "RINGGOLD (19)",
+                  "#text": "https://ror.org/00za53h95 (19)"
+                },
+                {
+                  "_Source": "GRID (20)",
+                  "#text": "https://ror.org/03vek6s52 (20)"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "Institute for Advanced Study, Einstein Drive, Princeton, NJ, USA.",
+                  "Identifier": [
+                    {
+                      "_Source": "ROR (21)",
+                      "#text": "0000-0002-9047-0481 (21)"
+                    },
+                    {
+                      "_Source": "ORCID (22)",
+                      "#text": "0000-0001-6450-5815 (22)"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "Department of Molecular Biology, Princeton University, Princeton, NJ, USA.",
+                  "Identifier": [
+                    {
+                      "_Source": "ISNI (23)",
+                      "#text": "0000-0003-2804-1181 (23)"
+                    },
+                    {
+                      "_Source": "VIAF (24)",
+                      "#text": "0000-0002-0939-9842 (24)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_ID": "INV_2",
+          "Investigator": [
+            {
+              "_ValidYN": "Y",
+              "LastName": "Tucker",
+              "ForeName": "Joseph",
+              "Initials": "J",
+              "Suffix": "PhD",
+              "Identifier": [
+                {
+                  "_Source": "GND (25)",
+                  "#text": "0000-0001-5784-7403 (25)"
+                },
+                {
+                  "_Source": "RINGGOLD (26)",
+                  "#text": "0000-0002-1825-0097 (26)"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "The University of Manchester, Division of Population Health, Manchester, United Kingdom. (9)",
+                  "Identifier": [
+                    {
+                      "_Source": "GRID (27)",
+                      "#text": "https://ror.org/027m9bs27 (27)"
+                    },
+                    {
+                      "_Source": "ROR (28)",
+                      "#text": "https://ror.org/01ej9dk98 (28)"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "National Institute for Health and Care Research School for Primary Care Research, Manchester, United Kingdom. (10)",
+                  "Identifier": [
+                    {
+                      "_Source": "ORCID (29)",
+                      "#text": "https://ror.org/00za53h95 (29)"
+                    },
+                    {
+                      "_Source": "ISNI (30)",
+                      "#text": "https://ror.org/03vek6s52 (30)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "_ValidYN": "N",
+              "LastName": "Mullens",
+              "ForeName": "Amy",
+              "Initials": "A",
+              "Suffix": "MD",
+              "Identifier": [
+                {
+                  "_Source": "VIAF (31)",
+                  "#text": "0000-0002-9047-0481 (31)"
+                },
+                {
+                  "_Source": "GND (32)",
+                  "#text": "0000-0001-6450-5815 (32)"
+                }
+              ],
+              "AffiliationInfo": [
+                {
+                  "Affiliation": "Newcastle University Faculty of Medical Sciences, Population Health Sciences Institute, Newcastle upon Tyne, United Kingdom. (11)",
+                  "Identifier": [
+                    {
+                      "_Source": "RINGGOLD (33)",
+                      "#text": "0000-0003-2804-1181 (33)"
+                    },
+                    {
+                      "_Source": "GRID (34)",
+                      "#text": "0000-0002-0939-9842 (34)"
+                    }
+                  ]
+                },
+                {
+                  "Affiliation": "Sidney Kimmel Comprehensive Cancer Center, Johns Hopkins University, Baltimore, MD, USA. (12)",
+                  "Identifier": [
+                    {
+                      "_Source": "ROR (35)",
+                      "#text": "0000-0001-5784-7403 (35)"
+                    },
+                    {
+                      "_Source": "ORCID (36)",
+                      "#text": "0000-0002-1825-0097 (36)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "GeneralNote": [
+        {
+          "_Owner": "NLM",
+          "#text": "Indexed by automated curation."
+        },
+        {
+          "_Owner": "NASA",
+          "#text": "Supported by NASA Space Biology grant 80NSSC22K0123."
+        }
+      ]
+    },
+    "PubmedData": {
+      "History": {
+        "PubMedPubDate": [
+          {
+            "_PubStatus": "received",
+            "Year": "2020",
+            "Month": "07",
+            "Day": "12",
+            "Hour": "14",
+            "Minute": "30",
+            "Second": "00"
+          },
+          {
+            "_PubStatus": "revised",
+            "Year": "2019",
+            "Month": "02",
+            "Day": "08",
+            "Hour": "09",
+            "Minute": "15",
+            "Second": "25"
+          }
+        ]
+      },
+      "PublicationStatus": "ppublish",
+      "ArticleIdList": {
+        "ArticleId": [
+          {
+            "_IdType": "pubmed",
+            "#text": "38123456"
+          },
+          {
+            "_IdType": "doi",
+            "#text": "10.1038/s41586-024-07123-x"
+          }
+        ]
+      },
+      "ObjectList": {
+        "Object": [
+          {
+            "_Type": "SupplementaryMaterial",
+            "Param": [
+              {
+                "_Name": "id",
+                "#text": "supp_table_1.pdf"
+              },
+              {
+                "_Name": "caption",
+                "#text": "Crystallographic data collection and refinement statistics"
+              }
+            ]
+          },
+          {
+            "_Type": "Dataset",
+            "Param": [
+              {
+                "_Name": "accession",
+                "#text": "GSE245678"
+              },
+              {
+                "_Name": "repository",
+                "#text": "NCBI Gene Expression Omnibus"
+              }
+            ]
+          }
+        ]
+      },
+      "ReferenceList": [
+        {
+          "Title": "Primary Literature",
+          "Reference": [
+            {
+              "Citation": "Vogelstein B, Lane D, Levine AJ. <i>Surfing the p53 network</i>. Nature. 2000;408(6810):307-310.",
+              "ArticleIdList": {
+                "ArticleId": [
+                  {
+                    "_IdType": "pmc",
+                    "#text": "PMC10987654"
+                  },
+                  {
+                    "_IdType": "pii",
+                    "#text": "S0028-0836(24)00123-4"
+                  }
+                ]
+              }
+            },
+            {
+              "Citation": "Cho Y, Gorina S, Jeffrey PD, Pavletich NP. Crystal structure of a <b>p53</b> tumor suppressor-DNA complex. Science. 1994;265(5170):346-355.",
+              "ArticleIdList": {
+                "ArticleId": [
+                  {
+                    "_IdType": "mid",
+                    "#text": "11099028"
+                  },
+                  {
+                    "_IdType": "pmcid",
+                    "#text": "10.1038/35042675"
+                  }
+                ]
+              }
+            }
+          ],
+          "ReferenceList": [
+            {
+              "Title": "Structural Biology References",
+              "Reference": [
+                {
+                  "Citation": "Baker SJ, Fearon ER, Nigro JM, et al. Chromosome 17 deletions and <i>p53</i> gene mutations in colorectal carcinomas. Science. 1989;244(4901):217-221.",
+                  "ArticleIdList": {
+                    "ArticleId": [
+                      {
+                        "_IdType": "pmcpid",
+                        "#text": "7585406"
+                      },
+                      {
+                        "_IdType": "pmpid",
+                        "#text": "10.1126/science.7878469"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Citation": "Momand J, Zambetti GP, Olson DC, George D, Levine AJ. The <b>mdm-2</b> oncogene product forms a complex with the p53 protein. Cell. 1992;69(7):1237-1245.",
+                  "ArticleIdList": {
+                    "ArticleId": [
+                      {
+                        "_IdType": "sici",
+                        "#text": "2694717"
+                      },
+                      {
+                        "_IdType": "medline",
+                        "#text": "10.1016/0092-8674(89)90984-7"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "ReferenceList": [
+                "{\"Title\": \"Clinical &amp;amp; Genetic Studies\", \"Reference\": [{\"Citation\": \"Kussie PH, Gorina S, Marechal V, et al. Structure of the <b>MDM2</b> oncoprotein bound to the p53 tumor suppressor transactivation domain. Science. 1996;274(5289):948-953.\", \"ArticleIdList\": {\"ArticleId\": [{\"_IdType\": \"pmcbook\", \"#text\": \"8183552\"}, {\"_IdType\": \"bookaccession\", \"#text\": \"10.1126/science.8183552\"}]}}, {\"Citation\": \"Haupt Y, Maya R, Kazaz A, Oren M. Mdm2 promotes the rapid degradation of <i>p53</i>. Nature. 1997;387(6630):296-299.\", \"ArticleIdList\": {\"ArticleId\": [{\"_IdType\": \"pubmed\", \"#text\": \"9367981\"}, {\"_IdType\": \"doi\", \"#text\": \"10.1038/387296a0\"}]}}]}"
+              ]
+            }
+          ]
+        },
+        {
+          "Title": "Historical Background",
+          "Reference": [
+            {
+              "Citation": "Cohen GN, Barbe V, Flament D, et al. An integrated analysis of the genome of <i>Pyrococcus abyssi</i>. Mol Microbiol. 2003;47(6):1495-1512.",
+              "ArticleIdList": {
+                "ArticleId": [
+                  {
+                    "_IdType": "pmc",
+                    "#text": "10430560"
+                  },
+                  {
+                    "_IdType": "pii",
+                    "#text": "10.1093/genetics/152.4.1299"
+                  }
+                ]
+              }
+            },
+            {
+              "Citation": "Erkel C, Kube M, Reinhardt R, Liesack W. Genome of rice cluster I archaea. Science. 2006;313(5785):370-372.",
+              "ArticleIdList": {
+                "ArticleId": [
+                  {
+                    "_IdType": "mid",
+                    "#text": "12622808"
+                  },
+                  {
+                    "_IdType": "pmcid",
+                    "#text": "10.1046/j.1365-2958.2003.03381.x"
+                  }
+                ]
+              }
+            }
+          ],
+          "ReferenceList": [
+            {
+              "Title": "Methodological References",
+              "Reference": [
+                {
+                  "Citation": "Anderson IJ, Sieprawska-Lupa M, Lapidus A, et al. Complete genome sequence of <i>Methanoculleus marisnigri</i> JR1. Stand Genomic Sci. 2009;1(2):189-196.",
+                  "ArticleIdList": {
+                    "ArticleId": [
+                      {
+                        "_IdType": "pmcpid",
+                        "#text": "16857943"
+                      },
+                      {
+                        "_IdType": "pmpid",
+                        "#text": "10.1126/science.1127062"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Citation": "Gao J, Wang J. Re-annotation of two hyperthermophilic archaea <i>Pyrococcus abyssi</i> &amp; <i>P. furiosus</i>. Curr Microbiol. 2012;64(2):118-129.",
+                  "ArticleIdList": {
+                    "ArticleId": [
+                      {
+                        "_IdType": "sici",
+                        "#text": "21304656"
+                      },
+                      {
+                        "_IdType": "medline",
+                        "#text": "10.4056/sigs.32535"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "ReferenceList": [
+                "{\"Title\": \"Supplementary Citations\", \"Reference\": [{\"Citation\": \"Morris C, Robinson L, Ashcroft D, et al. Primary care experiences of people with dementia. Br J Gen Pract. 2025;75(751):e102-e110.\", \"ArticleIdList\": {\"ArticleId\": [{\"_IdType\": \"pmcbook\", \"#text\": \"22057919\"}, {\"_IdType\": \"bookaccession\", \"#text\": \"10.1007/s00284-011-0035-x\"}]}}, {\"Citation\": \"Tucker J, Mullens A, Morroni C, Ong J. The HIV response at an inflection point: resilience &amp;amp; equity. Sex Health. 2026;23(1):SH25236.\", \"ArticleIdList\": {\"ArticleId\": [{\"_IdType\": \"pubmed\", \"#text\": \"31234567\"}, {\"_IdType\": \"doi\", \"#text\": \"10.1016/j.cell.2019.05.012\"}]}}]}"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

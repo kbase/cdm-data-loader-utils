@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<books>
+    <book>
+        <title>In-Process Book</title>
+        <BookInProcess/>
+        <flag/>
+        <flag/>
+    </book>
+    <book>
+        <title>Completed Book</title>
+    </book>
+</books>

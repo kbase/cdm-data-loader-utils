@@ -1,0 +1,693 @@
+<?xml version='1.0' encoding='utf-8'?>
+<uniprot xmlns="https://uniprot.org/uniprot" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <entry dataset="Swiss-Prot" created="1986-08-13" modified="2024-05-29" version="285">
+    <accession>P04637</accession>
+    <accession>Q9V2L2</accession>
+    <name>P53_HUMAN</name>
+    <name>1A1D_PYRAB</name>
+    <protein>
+      <recommendedName>
+        <fullName evidence="1 2">Cellular tumor antigen p53</fullName>
+        <shortName evidence="1 3">p53</shortName>
+        <shortName evidence="2 3">TP53-alpha</shortName>
+        <ecNumber evidence="1 4">2.7.11.1</ecNumber>
+        <ecNumber evidence="2 4">3.5.99.7</ecNumber>
+      </recommendedName>
+      <alternativeName>
+        <fullName evidence="3 4">Antigen NY-CO-13</fullName>
+        <shortName evidence="1 2 3">NY-CO-13</shortName>
+        <shortName evidence="1 2 4">Pp53</shortName>
+        <ecNumber evidence="2 3 4">3.1.3.16</ecNumber>
+        <ecNumber evidence="1 5">3.1.3.48</ecNumber>
+      </alternativeName>
+      <alternativeName>
+        <fullName evidence="2 5">Phosphoprotein p53</fullName>
+        <shortName evidence="3 5">TRP53</shortName>
+        <shortName evidence="4 6 9">p53-iso1</shortName>
+        <ecNumber evidence="5 7 1">2.7.10.2</ecNumber>
+        <ecNumber evidence="6 8 2">2.7.12.1</ecNumber>
+      </alternativeName>
+      <submittedName>
+        <fullName evidence="7 9 3">Cellular phosphoprotein p53</fullName>
+        <ecNumber evidence="8 1 4">2.7.11.22</ecNumber>
+        <ecNumber evidence="9 2 5">2.7.11.24</ecNumber>
+      </submittedName>
+      <submittedName>
+        <fullName evidence="1 3 6">Mutant-type p53 antigen</fullName>
+        <ecNumber evidence="2 4 7">3.2.2.6</ecNumber>
+        <ecNumber evidence="3 5 8">3.2.2.20</ecNumber>
+      </submittedName>
+      <allergenName evidence="4 6 9">Hom s p53</allergenName>
+      <biotechName evidence="5 7 1">Recombinant human p53 (rHu-p53)</biotechName>
+      <cdAntigenName evidence="6 8 2">CD-p53a</cdAntigenName>
+      <cdAntigenName evidence="7 9 3">CD-p53b</cdAntigenName>
+      <innName evidence="8 1 4">p53-alfa</innName>
+      <innName evidence="9 2 5">p53-beta</innName>
+      <domain>
+        <recommendedName>
+          <fullName evidence="1 3 6">DNA-binding core domain</fullName>
+          <shortName evidence="2 4 7">p53-DBD</shortName>
+          <shortName evidence="3 5 8">DBD-core</shortName>
+          <ecNumber evidence="4 6 9">3.2.2.-</ecNumber>
+          <ecNumber evidence="5 7 1">3.1.3.16</ecNumber>
+        </recommendedName>
+        <alternativeName>
+          <fullName evidence="6 8 2">Tumor suppressor p53</fullName>
+          <shortName evidence="7 9 3">CD-A1</shortName>
+          <shortName evidence="8 1 4">CD-A2</shortName>
+          <ecNumber evidence="9 2 5">3.4.19.12</ecNumber>
+          <ecNumber evidence="1 3 6">3.4.22.68</ecNumber>
+        </alternativeName>
+        <alternativeName>
+          <fullName evidence="2 4 7">Transformation-related protein 53</fullName>
+          <shortName evidence="3 5 8">CD-B1</shortName>
+          <shortName evidence="4 6 9">CD-B2</shortName>
+          <ecNumber evidence="5 7 1">2.4.2.30</ecNumber>
+          <ecNumber evidence="6 8 2">2.1.1.43</ecNumber>
+        </alternativeName>
+        <submittedName>
+          <fullName evidence="7 9 3">Zinc-coordinated DNA binding region</fullName>
+          <ecNumber evidence="8 1 4">3.5.1.98</ecNumber>
+          <ecNumber evidence="9 2 5">3.5.1.104</ecNumber>
+        </submittedName>
+        <submittedName>
+          <fullName evidence="1 3 6">Conserved box II-V domain</fullName>
+          <ecNumber evidence="2 4 7">6.3.2.25</ecNumber>
+          <ecNumber evidence="3 5 8">6.3.2.27</ecNumber>
+        </submittedName>
+        <allergenName evidence="4 6 9">Hom s p53-DBD</allergenName>
+        <biotechName evidence="5 7 1">Engineered p53 core domain</biotechName>
+        <cdAntigenName evidence="6 8 2">CD-DBD1</cdAntigenName>
+        <cdAntigenName evidence="7 9 3">CD-DBD2</cdAntigenName>
+        <innName evidence="8 1 4">p53-gamma</innName>
+        <innName evidence="9 2 5">p53-delta</innName>
+      </domain>
+      <domain>
+        <recommendedName>
+          <fullName evidence="1 3 6">Tetramerization domain</fullName>
+          <shortName evidence="2 4 7">p53-TD</shortName>
+          <shortName evidence="3 5 8">TD-domain</shortName>
+          <ecNumber evidence="4 6 9">2.3.1.48</ecNumber>
+          <ecNumber evidence="5 7 1">3.4.21.-</ecNumber>
+        </recommendedName>
+        <alternativeName>
+          <fullName evidence="6 8 2">Core domain isoform A</fullName>
+          <shortName evidence="7 9 3">OR-1a</shortName>
+          <shortName evidence="8 1 4">OR-1b</shortName>
+          <ecNumber evidence="9 2 5">1.1.1.1</ecNumber>
+          <ecNumber evidence="1 3 6">1.2.1.12</ecNumber>
+        </alternativeName>
+        <alternativeName>
+          <fullName evidence="2 4 7">Core domain isoform B</fullName>
+          <shortName evidence="3 5 8">OR-2a</shortName>
+          <shortName evidence="4 6 9">OR-2b</shortName>
+          <ecNumber evidence="5 7 1">3.1.3.16 (11)</ecNumber>
+          <ecNumber evidence="6 8 2">3.1.3.48 (12)</ecNumber>
+        </alternativeName>
+        <submittedName>
+          <fullName evidence="7 9 3">C-terminal tetramerization helix</fullName>
+          <ecNumber evidence="8 1 4">2.7.1.37</ecNumber>
+          <ecNumber evidence="9 2 5">2.7.4.3</ecNumber>
+        </submittedName>
+        <submittedName>
+          <fullName evidence="1 3 6">Nuclear export signal region</fullName>
+          <ecNumber evidence="2 4 7">2.7.11.22 (11)</ecNumber>
+          <ecNumber evidence="3 5 8">2.7.11.24 (12)</ecNumber>
+        </submittedName>
+        <allergenName evidence="4 6 9">Hom s p53-TD</allergenName>
+        <biotechName evidence="5 7 1">Stabilized p53 tetramer domain</biotechName>
+        <cdAntigenName evidence="6 8 2">CD-TD1</cdAntigenName>
+        <cdAntigenName evidence="7 9 3">CD-TD2</cdAntigenName>
+        <innName evidence="8 1 4">p53-epsilon</innName>
+        <innName evidence="9 2 5">p53-zeta</innName>
+      </domain>
+      <component>
+        <recommendedName>
+          <fullName evidence="1 3 6">Cleaved p53 N-terminal peptide</fullName>
+          <shortName evidence="2 4 7">p53-N</shortName>
+          <shortName evidence="3 5 8">N-pep</shortName>
+          <ecNumber evidence="4 6 9">2.7.7.7</ecNumber>
+          <ecNumber evidence="5 7 1">3.6.4.12</ecNumber>
+        </recommendedName>
+        <alternativeName>
+          <fullName evidence="6 8 2">Oligomerization region 1</fullName>
+          <shortName evidence="7 9 3">TA-1a</shortName>
+          <shortName evidence="8 1 4">TA-1b</shortName>
+          <ecNumber evidence="9 2 5">2.7.10.2 (13)</ecNumber>
+          <ecNumber evidence="1 3 6">2.7.12.1 (14)</ecNumber>
+        </alternativeName>
+        <alternativeName>
+          <fullName evidence="2 4 7">Oligomerization region 2</fullName>
+          <shortName evidence="3 5 8">TA-2a</shortName>
+          <shortName evidence="4 6 9">TA-2b</shortName>
+          <ecNumber evidence="5 7 1">3.4.19.12 (15)</ecNumber>
+          <ecNumber evidence="6 8 2">3.4.22.68 (16)</ecNumber>
+        </alternativeName>
+        <submittedName>
+          <fullName evidence="7 9 3">N-terminal TAD1 peptide</fullName>
+          <ecNumber evidence="8 1 4">3.2.2.6 (13)</ecNumber>
+          <ecNumber evidence="9 2 5">3.2.2.20 (14)</ecNumber>
+        </submittedName>
+        <submittedName>
+          <fullName evidence="1 3 6">N-terminal TAD2 peptide</fullName>
+          <ecNumber evidence="2 4 7">3.5.1.98 (15)</ecNumber>
+          <ecNumber evidence="3 5 8">3.5.1.104 (16)</ecNumber>
+        </submittedName>
+        <allergenName evidence="4 6 9">Hom s p53-N</allergenName>
+        <biotechName evidence="5 7 1">Synthetic TAD peptide</biotechName>
+        <cdAntigenName evidence="6 8 2">CD-TAD1</cdAntigenName>
+        <cdAntigenName evidence="7 9 3">CD-TAD2</cdAntigenName>
+        <innName evidence="8 1 4">p53-eta</innName>
+        <innName evidence="9 2 5">p53-theta</innName>
+      </component>
+      <component>
+        <recommendedName>
+          <fullName evidence="1 3 6">Cleaved p53 C-terminal regulatory chain</fullName>
+          <shortName evidence="2 4 7">p53-C</shortName>
+          <shortName evidence="3 5 8">C-chain</shortName>
+          <ecNumber evidence="4 6 9">1.14.11.-</ecNumber>
+          <ecNumber evidence="5 7 1">6.3.2.19</ecNumber>
+        </recommendedName>
+        <alternativeName>
+          <fullName evidence="6 8 2">Transactivation subunit alpha</fullName>
+          <shortName evidence="7 9 3">CT-1a</shortName>
+          <shortName evidence="8 1 4">CT-1b</shortName>
+          <ecNumber evidence="9 2 5">2.4.2.30 (17)</ecNumber>
+          <ecNumber evidence="1 3 6">2.1.1.43 (18)</ecNumber>
+        </alternativeName>
+        <alternativeName>
+          <fullName evidence="2 4 7">Transactivation subunit beta</fullName>
+          <shortName evidence="3 5 8">CT-2a</shortName>
+          <shortName evidence="4 6 9">CT-2b</shortName>
+          <ecNumber evidence="5 7 1">1.1.1.1 (19)</ecNumber>
+          <ecNumber evidence="6 8 2">1.2.1.12 (20)</ecNumber>
+        </alternativeName>
+        <submittedName>
+          <fullName evidence="7 9 3">Basic regulatory region</fullName>
+          <ecNumber evidence="8 1 4">6.3.2.25 (17)</ecNumber>
+          <ecNumber evidence="9 2 5">6.3.2.27 (18)</ecNumber>
+        </submittedName>
+        <submittedName>
+          <fullName evidence="1 3 6">Apoptosis cofactor peptide</fullName>
+          <ecNumber evidence="2 4 7">2.7.1.37 (19)</ecNumber>
+          <ecNumber evidence="3 5 8">2.7.4.3 (20)</ecNumber>
+        </submittedName>
+        <allergenName evidence="4 6 9">Hom s p53-C</allergenName>
+        <biotechName evidence="5 7 1">Fusion C-terminal peptide</biotechName>
+        <cdAntigenName evidence="6 8 2">CD-REG1</cdAntigenName>
+        <cdAntigenName evidence="7 9 3">CD-REG2</cdAntigenName>
+        <innName evidence="8 1 4">p53-iota</innName>
+        <innName evidence="9 2 5">p53-kappa</innName>
+      </component>
+    </protein>
+    <gene>
+      <name evidence="1 3 6" type="primary">TP53</name>
+      <name evidence="2 4 7" type="synonym">P53</name>
+    </gene>
+    <gene>
+      <name evidence="3 5 8" type="ordered locus">PYRAB00630</name>
+      <name evidence="4 6 9" type="ORF">PAB2303</name>
+    </gene>
+    <organism evidence="1">
+      <name type="synonym">Homo sapiens</name>
+      <name type="synonym">Human</name>
+      <dbReference type="UniProtKB ID" id="P53_HUMAN" evidence="5 7 1">
+        <molecule id="P04637-1">Isoform 1</molecule>
+        <property type="member count" value="3"/>
+        <property type="common taxon" value="Homo sapiens"/>
+      </dbReference>
+      <dbReference type="UniParc ID" id="UPI000002ED67" evidence="6 8 2">
+        <molecule id="P04637-2">Isoform 2</molecule>
+        <property type="common taxon ID" value="9606"/>
+        <property type="GO Molecular Function" value="GO:0003677"/>
+      </dbReference>
+      <lineage>
+        <taxon>Eukaryota</taxon>
+        <taxon>Metazoa</taxon>
+      </lineage>
+    </organism>
+    <organismHost evidence="1 2">
+      <name type="synonym">Pyrococcus abyssi (strain GE5 / Orsay)</name>
+      <name type="synonym">Pyrococcus abyssi</name>
+      <dbReference type="RefSeq" id="NP_000537.3" evidence="7 9 3">
+        <molecule id="P04637-3">Isoform 3</molecule>
+        <property type="UniProtKB accession" value="P04637"/>
+        <property type="UniParc ID" value="UPI000002ED67"/>
+      </dbReference>
+      <dbReference type="NCBI Taxonomy" id="9606" evidence="8 1 4">
+        <molecule id="Q9V2L2-1">Chain A</molecule>
+        <property type="UniRef100 ID" value="UniRef100_P04637"/>
+        <property type="UniRef90 ID" value="UniRef90_P04637"/>
+      </dbReference>
+      <lineage>
+        <taxon>Archaea</taxon>
+        <taxon>Thermococci</taxon>
+      </lineage>
+    </organismHost>
+    <organismHost evidence="2 3">
+      <name type="synonym">Methanocella arvoryzae (strain DSM 22066 / NBRC 105507 / MRE50)</name>
+      <name type="synonym">Rice cluster I archaeon</name>
+      <dbReference type="Proteomes" id="UP000005640" evidence="9 2 5">
+        <molecule id="Q0W5C8-1">Chain B</molecule>
+        <property type="protein name" value="Cellular tumor antigen p53"/>
+        <property type="source organism" value="Homo sapiens (Human)"/>
+      </dbReference>
+      <dbReference type="EMBL" id="X02469" evidence="1 3 6">
+        <molecule id="A3CTY6-1">Monomer</molecule>
+        <property type="NCBI taxonomy" value="9606"/>
+        <property type="length" value="393"/>
+      </dbReference>
+      <lineage>
+        <taxon>Methanomicrobia</taxon>
+        <taxon>Methanocellales</taxon>
+      </lineage>
+    </organismHost>
+    <geneLocation type="mitochondrion" evidence="2 4 7">
+      <name status="known">17p13.1</name>
+      <name status="known">chr17:7668402-7687550</name>
+    </geneLocation>
+    <geneLocation type="plasmid" evidence="3 5 8">
+      <name status="known">pBR322</name>
+      <name status="known">pMRE50</name>
+    </geneLocation>
+    <reference evidence="4 6 9" key="1">
+      <citation type="journal article" date="2003-09-15" name="Mol. Microbiol." volume="47" first="1495" last="1512" publisher="Wiley-Blackwell" city="Oxford" db="EMBL/GenBank/DDBJ" number="US20230123456" institute="MRC Laboratory of Molecular Biology" country="United Kingdom">
+        <title>An integrated analysis of the genome of the hyperthermophilic archaeon Pyrococcus abyssi.</title>
+        <editorList>
+          <consortium name="The UniProt Consortium"/>
+          <person name="Cohen G.N."/>
+        </editorList>
+        <authorList>
+          <consortium name="International Cancer Genome Consortium"/>
+          <person name="Forterre P."/>
+        </authorList>
+        <locator>10.1046/j.1365-2958.2003.03381.x</locator>
+        <dbReference type="GO" id="GO:0003677" evidence="5 7 1">
+          <molecule id="P04637-1 (7)">Homotetramer</molecule>
+          <property type="isSeed" value="true"/>
+          <property type="protein sequence ID" value="CAB48986.1"/>
+        </dbReference>
+        <dbReference type="Pfam" id="PF00870" evidence="6 8 2">
+          <molecule id="P04637-2 (8)">Core domain</molecule>
+          <property type="molecule type" value="Genomic_DNA"/>
+          <property type="entry name" value="ACCD_DCysDesulf"/>
+        </dbReference>
+      </citation>
+      <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+      <scope>X-RAY CRYSTALLOGRAPHY (2.2 ANGSTROMS) OF 102-292</scope>
+      <source>
+        <strain evidence="7 9 3">GE5 / Orsay</strain>
+        <plasmid evidence="8 1 4">pAB1</plasmid>
+        <transposon evidence="9 2 5">Tn10</transposon>
+        <tissue evidence="1 3 6">Liver</tissue>
+      </source>
+    </reference>
+    <reference evidence="2 4 7" key="2">
+      <citation type="book" date="1999" name="Curr. Microbiol." volume="64" first="118" last="129" publisher="Springer" city="Heidelberg" db="UniProtKB" number="EP3987654A1" institute="Max Planck Institute for Biochemistry" country="Germany">
+        <title>Genome of rice cluster I archaea -- the key methane producers in the rice rhizosphere.</title>
+        <editorList>
+          <consortium name="Archaea Genome Sequencing Project"/>
+          <person name="Erkel C."/>
+        </editorList>
+        <authorList>
+          <consortium name="The UniProt Consortium (4)"/>
+          <person name="Liesack W."/>
+        </authorList>
+        <locator>10.1126/science.1127062</locator>
+        <dbReference type="InterPro" id="IPR011615" evidence="3 5 8">
+          <molecule id="P04637-3 (9)">Precursor</molecule>
+          <property type="match status" value="1"/>
+          <property type="nucleotide sequence ID" value="NC_000868.1"/>
+        </dbReference>
+        <dbReference type="PDB" id="1TUP" evidence="4 6 9">
+          <molecule id="Q9V2L2-1 (10)">Mature peptide</molecule>
+          <property type="taxonomic scope" value="Archaea"/>
+          <property type="component" value="Chromosome"/>
+        </dbReference>
+      </citation>
+      <scope>GENOME REANNOTATION</scope>
+      <scope>FUNCTION AND CATALYTIC ACTIVITY</scope>
+      <source>
+        <strain evidence="5 7 1">DSM 22066 / NBRC 105507 / MRE50</strain>
+        <plasmid evidence="6 8 2">pMRE50</plasmid>
+        <transposon evidence="7 9 3">Tn5</transposon>
+        <tissue evidence="8 1 4">Colon epithelium</tissue>
+      </source>
+    </reference>
+    <reference evidence="1 5 9" key="3">
+      <citation type="submission" date="2007-10" db="EMBL/GenBank/DDBJ databases"/>
+      <scope>NUCLEOTIDE SEQUENCE [GENOMIC DNA]</scope>
+    </reference>
+    <comment type="biophysicochemical properties" locationType="topology" name="UV-Vis absorption profile" mass="43653.5" error="Frameshift at position 112" method="Electrospray ionization" evidence="9 2 5">
+      <molecule id="Q0W5C8-1 (11)">Isoform 1 (11)</molecule>
+      <absorption>
+        <max evidence="1 3 6">280</max>
+        <text evidence="2 4 7">Absorbs UV light with a primary peak at 280 nm.</text>
+        <text evidence="3 5 8">Secondary shoulder observed at 292 nm in native buffer.</text>
+      </absorption>
+      <kinetics>
+        <KM evidence="4 6 9">12.5 uM for ATP</KM>
+        <KM evidence="5 7 1">48.0 uM for 1-aminocyclopropane-1-carboxylate</KM>
+        <Vmax evidence="6 8 2">450 nmol/min/mg enzyme</Vmax>
+        <Vmax evidence="7 9 3">1280 nmol/min/mg in presence of PLP cofactor</Vmax>
+        <text evidence="8 1 4">Follows classical Michaelis-Menten kinetics at pH 7.4.</text>
+        <text evidence="9 2 5">Shows positive cooperativity upon tetramerization.</text>
+      </kinetics>
+      <phDependence>
+        <text evidence="1 3 6">Optimum pH is 7.4-7.8 in phosphate buffer.</text>
+        <text evidence="2 4 7">Rapidly loses DNA-binding activity below pH 6.0.</text>
+      </phDependence>
+      <redoxPotential>
+        <text evidence="3 5 8">Midpoint potential E0 is -240 mV at pH 7.0.</text>
+        <text evidence="4 6 9">Oxidation of Cys-277 abolishes sequence-specific binding.</text>
+      </redoxPotential>
+      <temperatureDependence>
+        <text evidence="5 7 1">Optimum temperature is 37 degrees Celsius.</text>
+        <text evidence="6 8 2">Unfolds irreversibly above 44 degrees Celsius (Tm = 42.5 C).</text>
+      </temperatureDependence>
+      <location sequence="VSP_006535">
+        <begin position="1" status="certain" evidence="7 9 3"/>
+        <end position="42" status="certain" evidence="8 1 4"/>
+      </location>
+      <location sequence="VSP_006536">
+        <position position="15" status="certain" evidence="9 2 5"/>
+      </location>
+      <text evidence="1 3 6">Biophysical measurements performed on purified recombinant core domain.</text>
+      <text evidence="2 4 7">Exhibits high-affinity sequence-specific DNA binding.</text>
+    </comment>
+    <comment type="catalytic activity" locationType="transmembrane" name="ACC deaminase reaction" mass="35755.25" error="Erroneous initiation at residue 1" method="MALDI-TOF" evidence="3 5 8">
+      <molecule id="A3CTY6-1 (12)">Isoform 2 (12)</molecule>
+      <reaction evidence="4 6 9">
+        <text>1-aminocyclopropane-1-carboxylate + H2O = 2-oxobutanoate + NH4(+)</text>
+        <dbReference type="PubMed" id="12622808" evidence="5 7 1">
+          <molecule id="P04637-1 (13)">Isoform 3 (13)</molecule>
+          <property type="term" value="F:DNA-binding transcription factor activity"/>
+          <property type="evidence" value="ECO:0007669"/>
+        </dbReference>
+        <dbReference type="DOI" id="10.1046/j.1365-2958.2003.03381.x" evidence="6 8 2">
+          <molecule id="P04637-2 (14)">Chain A (14)</molecule>
+          <property type="project" value="UniProtKB-KW"/>
+          <property type="chains" value="A/B=102-292"/>
+        </dbReference>
+      </reaction>
+      <physiologicalReaction direction="left-to-right" evidence="7 9 3">
+        <dbReference type="Rhea" id="RHEA:16933" evidence="8 1 4">
+          <molecule id="P04637-3 (15)">Chain B (15)</molecule>
+          <property type="resolution" value="2.20 A"/>
+          <property type="method" value="X-ray"/>
+        </dbReference>
+      </physiologicalReaction>
+      <physiologicalReaction direction="right-to-left" evidence="9 2 5">
+        <dbReference type="ChEBI" id="CHEBI:15377" evidence="1 3 6">
+          <molecule id="Q9V2L2-1 (16)">Monomer (16)</molecule>
+          <property type="member count (27)" value="Q9V2L2"/>
+          <property type="common taxon (28)" value="UPI0000061B2A"/>
+        </dbReference>
+      </physiologicalReaction>
+      <location sequence="VSP_006537">
+        <position position="20" status="uncertain" evidence="2 4 7"/>
+      </location>
+      <location sequence="VSP_006538">
+        <begin position="43" status="uncertain" evidence="3 5 8"/>
+        <end position="63" status="uncertain" evidence="4 6 9"/>
+      </location>
+      <text evidence="5 7 1">Catalyzes the ring-opening deamination of ACC.</text>
+      <text evidence="6 8 2">Activity is strictly dependent on divalent cations.</text>
+    </comment>
+    <comment type="cofactor" locationType="intramembrane" name="Zinc-binding site" mass="21879.75" error="Stop codon readthrough at residue 341" method="Analytical ultracentrifugation" evidence="7 9 3">
+      <molecule id="Q0W5C8-1 (17)">Homotetramer (17)</molecule>
+      <cofactor evidence="8 1 4">
+        <name>pyridoxal 5'-phosphate</name>
+        <dbReference type="EC" id="3.5.99.7" evidence="9 2 5">
+          <molecule id="A3CTY6-1 (18)">Core domain (18)</molecule>
+          <property type="common taxon ID (29)" value="UniRef100_Q9V2L2"/>
+          <property type="GO Molecular Function (30)" value="Putative 1-aminocyclopropane-1-carboxylate deaminase"/>
+        </dbReference>
+      </cofactor>
+      <cofactor evidence="1 3 6">
+        <name>Zn(2+)</name>
+        <dbReference type="IntAct" id="EBI-366083" evidence="2 4 7">
+          <molecule id="P04637-1 (19)">Precursor (19)</molecule>
+          <property type="UniProtKB accession (31)" value="Pyrococcus abyssi (strain GE5 / Orsay)"/>
+          <property type="UniParc ID (32)" value="272844"/>
+        </dbReference>
+      </cofactor>
+      <location sequence="VSP_006539">
+        <begin position="65" status="less than" evidence="3 5 8"/>
+        <end position="92" status="less than" evidence="4 6 9"/>
+      </location>
+      <location sequence="VSP_006540">
+        <position position="37" status="less than" evidence="5 7 1"/>
+      </location>
+      <text evidence="6 8 2">Zinc coordination stabilizes loop-sheet-helix motif.</text>
+      <text evidence="7 9 3">Depletion of zinc induces molten-globule conformation.</text>
+    </comment>
+    <comment type="subcellular location" locationType="topological domain" name="Nuclear-cytoplasmic shuttling" mass="42110.125" error="Intron retention in exon 4" method="Size-exclusion chromatography" evidence="8 1 4">
+      <molecule id="P04637-2 (20)">Mature peptide (20)</molecule>
+      <subcellularLocation>
+        <location evidence="9 2 5">Nucleus</location>
+        <location evidence="1 3 6">Nucleolus</location>
+        <topology evidence="2 4 7">Peripheral membrane protein</topology>
+        <topology evidence="3 5 8">Single-pass membrane protein</topology>
+        <orientation evidence="4 6 9">Cytoplasmic side</orientation>
+        <orientation evidence="5 7 1">Extracellular side</orientation>
+      </subcellularLocation>
+      <subcellularLocation>
+        <location evidence="6 8 2">Cytoplasm</location>
+        <location evidence="7 9 3">Mitochondrion</location>
+        <topology evidence="8 1 4">Multi-pass membrane protein</topology>
+        <topology evidence="9 2 5">Lipid-anchor</topology>
+        <orientation evidence="1 3 6">Matrix side</orientation>
+        <orientation evidence="2 4 7">Lumenal side</orientation>
+      </subcellularLocation>
+      <location sequence="VSP_006541">
+        <position position="54" status="greater than" evidence="3 5 8"/>
+      </location>
+      <location sequence="VSP_006542">
+        <begin position="102" status="greater than" evidence="4 6 9"/>
+        <end position="292" status="greater than" evidence="5 7 1"/>
+      </location>
+      <text evidence="6 8 2">Shuttles between nucleus and cytoplasm in a CRM1-dependent manner.</text>
+      <text evidence="7 9 3">Accumulates in the nucleus following ionizing radiation.</text>
+    </comment>
+    <comment type="sequence caution" locationType="chain" name="Frameshift discrepancy" mass="39850.0" error="Sequencing artifact at position 215" method="X-ray crystallography" evidence="8 1 4">
+      <molecule id="P04637-3 (21)">Isoform 1 (21)</molecule>
+      <conflict type="frameshift" ref="1">
+        <sequence resource="EMBL-CDS" id="CAB48986" version="1"/>
+      </conflict>
+      <location sequence="VSP_006543">
+        <begin position="113" status="unknown" evidence="9 2 5"/>
+        <end position="185" status="unknown" evidence="1 3 6"/>
+      </location>
+      <location sequence="VSP_006544">
+        <position position="72" status="unknown" evidence="2 4 7"/>
+      </location>
+      <text evidence="3 5 8">Sequence differs from genomic reference at codon 112.</text>
+      <text evidence="4 6 9">Verified by mass spectrometry of tryptic peptides.</text>
+    </comment>
+    <comment type="online information" locationType="domain" name="UniProtKB entry page" mass="41200.5" error="Mismatch at codon 72" method="Cryo-electron microscopy" evidence="5 7 1">
+      <molecule id="Q9V2L2-1 (22)">Isoform 2 (22)</molecule>
+      <link uri="https://www.uniprot.org/uniprotkb/P04637"/>
+      <link uri="https://www.ebi.ac.uk/pdbe/entry/pdb/1tup"/>
+      <location sequence="VSP_006535 (11)">
+        <position position="175" status="certain" evidence="6 8 2"/>
+      </location>
+      <location sequence="VSP_006536 (12)">
+        <begin position="195" status="certain" evidence="7 9 3"/>
+        <end position="240" status="certain" evidence="8 1 4"/>
+      </location>
+      <text evidence="9 2 5">Full structural and clinical annotations available online.</text>
+      <text evidence="1 3 6">Cross-referenced with PDBe macromolecular database.</text>
+    </comment>
+    <comment type="alternative products" locationType="region" name="TP53 splice variants" mass="38915.25" error="Alternative exon boundary" method="NMR spectroscopy" evidence="2 4 7">
+      <molecule id="Q0W5C8-1 (23)">Isoform 3 (23)</molecule>
+      <event type="alternative splicing"/>
+      <event type="alternative initiation"/>
+      <isoform>
+        <id>P04637-1</id>
+        <id>P04637-alpha</id>
+        <name evidence="3 5 8">Alpha</name>
+        <name evidence="4 6 9">Canonical</name>
+        <sequence type="displayed" ref="VSP_006535"/>
+        <text evidence="5 7 1">Chosen as the canonical sequence.</text>
+        <text evidence="6 8 2">Expressed ubiquitously in normal tissues.</text>
+      </isoform>
+      <isoform>
+        <id>P04637-2</id>
+        <id>P04637-beta</id>
+        <name evidence="7 9 3">Beta</name>
+        <name evidence="8 1 4">Alternative</name>
+        <sequence type="external" ref="VSP_006536"/>
+        <text evidence="9 2 5">Produced by alternative splicing at intron 9.</text>
+        <text evidence="1 3 6">Lacks the C-terminal oligomerization domain.</text>
+      </isoform>
+      <location sequence="VSP_006537 (13)">
+        <begin position="248" status="uncertain" evidence="2 4 7"/>
+        <end position="270" status="uncertain" evidence="3 5 8"/>
+      </location>
+      <location sequence="VSP_006538 (14)">
+        <position position="245" status="uncertain" evidence="4 6 9"/>
+      </location>
+      <text evidence="5 7 1">Contains 12 characterized splice isoforms.</text>
+      <text evidence="6 8 2">Alternative promoter usage produces delta133 isoforms.</text>
+    </comment>
+    <comment type="interaction" locationType="motif" name="p53-MDM2 complex" mass="44102.75" error="Premature termination at 305" method="Surface plasmon resonance" evidence="7 9 3">
+      <molecule id="A3CTY6-1 (24)">Chain A (24)</molecule>
+      <interactant intactId="EBI-366083">
+        <id>P04637</id>
+        <label>TP53</label>
+        <dbReference type="MIM" id="151623" evidence="8 1 4">
+          <molecule id="P04637-1 (25)">Chain B (25)</molecule>
+          <property type="UniRef100 ID (33)" value="330"/>
+          <property type="UniRef90 ID (34)" value="false"/>
+        </dbReference>
+      </interactant>
+      <interactant intactId="EBI-389668">
+        <id>Q00987</id>
+        <label>MDM2</label>
+        <dbReference type="Reactome" id="R-HSA-3700989" evidence="9 2 5">
+          <molecule id="P04637-2 (26)">Monomer (26)</molecule>
+          <property type="protein name (35)" value="CAJ36415.1"/>
+          <property type="source organism (36)" value="mRNA"/>
+        </dbReference>
+      </interactant>
+      <organismsDiffer>false</organismsDiffer>
+      <experiments>14</experiments>
+      <location sequence="VSP_006539 (15)">
+        <position position="248" status="less than" evidence="1 3 6"/>
+      </location>
+      <location sequence="VSP_006540 (16)">
+        <begin position="273" status="less than" evidence="2 4 7"/>
+        <end position="299" status="less than" evidence="3 5 8"/>
+      </location>
+      <text evidence="4 6 9">Forms a tight complex with E3 ubiquitin-protein ligase MDM2.</text>
+      <text evidence="5 7 1">Phosphorylation at Ser-15 disrupts MDM2 binding.</text>
+    </comment>
+    <comment type="disease" locationType="site" name="Li-Fraumeni predisposition" mass="43590.875" error="Missense substitution R175H" method="Isothermal titration calorimetry" evidence="6 8 2">
+      <molecule id="P04637-3 (27)">Homotetramer (27)</molecule>
+      <disease id="DI-00682">
+        <name>Li-Fraumeni syndrome</name>
+        <acronym>LFS1</acronym>
+        <description>An autosomal dominant familial cancer syndrome caused by germline TP53 mutations.</description>
+        <dbReference type="AlphaFoldDB" id="AF-P04637-F1" evidence="7 9 3">
+          <molecule id="Q9V2L2-1 (28)">Core domain (28)</molecule>
+          <property type="NCBI taxonomy (37)" value="Pur_DNA_glyco"/>
+          <property type="length (38)" value="2"/>
+        </dbReference>
+      </disease>
+      <location sequence="VSP_006541 (17)">
+        <begin position="301" status="greater than" evidence="8 1 4"/>
+        <end position="322" status="greater than" evidence="9 2 5"/>
+      </location>
+      <location sequence="VSP_006542 (18)">
+        <position position="249" status="greater than" evidence="1 3 6"/>
+      </location>
+      <text evidence="2 4 7">Mutations in the DNA-binding domain account for 80% of LFS cases.</text>
+      <text evidence="3 5 8">Associated with early-onset sarcomas and breast carcinomas.</text>
+    </comment>
+    <comment type="miscellaneous" xsi:nil="true"/>
+    <dbReference type="SMART" id="SM00325" evidence="4 6 9">
+      <molecule id="Q0W5C8-1 (29)">Precursor (29)</molecule>
+      <property type="isSeed (39)" value="NC_009464.1"/>
+      <property type="protein sequence ID (40)" value="Eukaryota"/>
+    </dbReference>
+    <dbReference type="SUPFAM" id="SSF49417" evidence="5 7 1">
+      <molecule id="A3CTY6-1 (30)">Mature peptide (30)</molecule>
+      <property type="molecule type (41)" value="Mitochondrion"/>
+      <property type="entry name (42)" value="P:regulation of cell cycle"/>
+    </dbReference>
+    <proteinExistence type="evidence at protein level"/>
+    <keyword evidence="6 8 2" id="KW-0002">3D-structure</keyword>
+    <keyword evidence="7 9 3" id="KW-0227">DNA damage</keyword>
+    <feature type="domain" id="PRO_0000080560" description="p53 DNA-binding core domain" evidence="8 1 4" ref="1">
+      <original>R</original>
+      <variation>H</variation>
+      <variation>Q</variation>
+      <location sequence="VSP_006543 (19)">
+        <begin position="325" status="unknown" evidence="9 2 5"/>
+        <end position="355" status="unknown" evidence="1 3 6"/>
+      </location>
+      <ligand>
+        <name>Mg(2+)</name>
+        <dbReference type="PANTHER" id="PTHR11447" evidence="2 4 7">
+          <molecule id="P04637-1 (31)">Isoform 1 (31)</molecule>
+          <property type="match status (43)" value="ECO:0000314"/>
+          <property type="nucleotide sequence ID (44)" value="GO_Central"/>
+        </dbReference>
+        <label>ZN-1</label>
+        <note>Coordinated by Cys-176, His-179, Cys-238, and Cys-242.</note>
+      </ligand>
+      <ligandPart>
+        <name>catalytic zinc site</name>
+        <dbReference type="Gene3D" id="2.60.40.720" evidence="3 5 8">
+          <molecule id="P04637-2 (32)">Isoform 2 (32)</molecule>
+          <property type="taxonomic scope (45)" value="3 (45)"/>
+          <property type="component (46)" value="Homo sapiens (46)"/>
+        </dbReference>
+        <label>ZN-coord</label>
+        <note>Essential for structural integrity of L2/L3 loops.</note>
+      </ligandPart>
+    </feature>
+    <feature type="mutagenesis site" id="PRO_0000184521" description="Loss of sequence-specific DNA binding" evidence="4 6 9" ref="2">
+      <original>S</original>
+      <variation>A</variation>
+      <variation>E</variation>
+      <location sequence="VSP_006544 (20)">
+        <position position="273" status="unknown" evidence="5 7 1"/>
+      </location>
+      <ligand>
+        <name>S-adenosyl-L-methionine</name>
+        <dbReference type="CDD" id="cd08367" evidence="6 8 2">
+          <molecule id="P04637-3 (33)">Isoform 3 (33)</molecule>
+          <property type="term (47)" value="9606 (47)"/>
+          <property type="evidence (48)" value="GO:0003677 (48)"/>
+        </dbReference>
+        <label>PLP-54</label>
+        <note>Covalently linked via Schiff base to Lys-54.</note>
+      </ligand>
+      <ligandPart>
+        <name>phosphate binding pocket</name>
+        <dbReference type="HAMAP-Rule" id="MF_00527" evidence="7 9 3">
+          <molecule id="Q9V2L2-1 (34)">Chain A (34)</molecule>
+          <property type="project (49)" value="P04637 (49)"/>
+          <property type="chains (50)" value="UPI000002ED67 (50)"/>
+        </dbReference>
+        <label>PLP-OPO3</label>
+        <note>Stabilized by hydrogen bonding with Gly-188 and Thr-190.</note>
+      </ligandPart>
+    </feature>
+    <evidence type="ECO:0000269" key="1">
+      <source ref="1">
+        <dbReference type="PIR" id="A25224" evidence="8 1 4">
+          <molecule id="Q0W5C8-1 (35)">Chain B (35)</molecule>
+          <property type="resolution (51)" value="UniRef100_P04637 (51)"/>
+          <property type="method (52)" value="UniRef90_P04637 (52)"/>
+        </dbReference>
+      </source>
+      <importedFrom>
+        <dbReference type="KEGG" id="hsa:7157" evidence="9 2 5">
+          <molecule id="A3CTY6-1 (36)">Monomer (36)</molecule>
+          <property type="member count (53)" value="Cellular tumor antigen p53 (53)"/>
+          <property type="common taxon (54)" value="Homo sapiens (Human) (54)"/>
+        </dbReference>
+      </importedFrom>
+    </evidence>
+    <evidence type="ECO:0000305" key="2">
+      <source ref="2">
+        <dbReference type="STRING" id="9606.ENSP00000269305" evidence="1 3 6">
+          <molecule id="P04637-1 (37)">Homotetramer (37)</molecule>
+          <property type="common taxon ID (55)" value="9606 (55)"/>
+          <property type="GO Molecular Function (56)" value="393 (56)"/>
+        </dbReference>
+      </source>
+      <importedFrom>
+        <dbReference type="OrthoDB" id="119234at2759" evidence="2 4 7">
+          <molecule id="P04637-2 (38)">Core domain (38)</molecule>
+          <property type="UniProtKB accession (57)" value="true (57)"/>
+          <property type="UniParc ID (58)" value="CAB48986.1 (58)"/>
+        </dbReference>
+      </importedFrom>
+    </evidence>
+    <sequence length="393" mass="43653" checksum="AD5C149FD8106131" modified="2009-11-24" version="2" precursor="true" fragment="single">MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP</sequence>
+  </entry>
+</uniprot>

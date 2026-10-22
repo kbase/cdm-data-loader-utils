@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<uniprot xmlns="https://uniprot.org/uniprot">
+  <entry dataset="Swiss-Prot" created="1986-08-13" modified="2024-05-29" version="285">
+    <accession>P04637</accession>
+    <name>P53_HUMAN</name>
+    <protein>
+      <recommendedName>
+        <fullName>Cellular tumor antigen p53</fullName>
+      </recommendedName>
+    </protein>
+    <organism>
+      <name type="synonym">Homo sapiens</name>
+      <dbReference type="UniProtKB ID" id="P53_HUMAN"/>
+    </organism>
+    <reference key="1">
+      <citation type="journal article"/>
+      <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+    </reference>
+    <proteinExistence type="evidence at protein level"/>
+    <sequence length="393" mass="43653" checksum="AD5C149FD8106131" modified="2009-11-24" version="1">MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP</sequence>
+  </entry>
+</uniprot>

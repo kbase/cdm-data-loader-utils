@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instance document for xmltodict_combinations.xsd.
+  Each record is parsed on its own (xml_tag="record"); combinations.json holds the expected output.
+-->
+<dataset>
+    <!-- r01: record with an attribute and no children -->
+    <record id="r01"/>
+    <!-- r02: one occurrence each of a single, an unbounded and a bounded string element -->
+    <record id="r02">
+        <plain>a</plain>
+        <plainList>x</plainList>
+        <bounded>only</bounded>
+    </record>
+    <!-- r03: empty and whitespace-only elements become None; several occurrences of list elements -->
+    <record id="r03">
+        <plain/>
+        <plainList>x</plainList>
+        <plainList/>
+        <plainList>   </plainList>
+        <plainList>y</plainList>
+        <bounded>b1</bounded>
+        <bounded>b2</bounded>
+    </record>
+    <!-- r04: CDATA section, entity reference, leading and trailing whitespace -->
+    <record id="r04">
+        <plain>
+            <![CDATA[a < b & c]]>
+        </plain>
+        <plainList>  padded  </plainList>
+        <plainList>Tom &amp; Jerry</plainList>
+    </record>
+    <!-- r05: simple content with attributes: attributes and text, text only, attribute only, empty -->
+    <record id="r05">
+        <label lang="en">Hello</label>
+        <labelList lang="en" source="curated">one</labelList>
+        <labelList>two</labelList>
+        <labelList lang="fr"/>
+        <labelList/>
+    </record>
+    <!-- r06: simple content with attributes, no attribute in the instance -->
+    <record id="r06">
+        <label>Hello</label>
+        <labelList>solo</labelList>
+    </record>
+    <!-- r07: attribute only; simple content without attributes; wildcard attributes; decimal content -->
+    <record id="r07">
+        <label lang="de"/>
+        <textNoAttr>t</textNoAttr>
+        <measure unit="kg">3.50</measure>
+    </record>
+    <!-- r08: the same elements as r07, empty or without attributes -->
+    <record id="r08">
+        <label/>
+        <textNoAttr/>
+        <measure>7</measure>
+    </record>
+    <!-- r09: attribute-only and empty types, several occurrences -->
+    <record id="r09">
+        <flag on="true"/>
+        <flagList on="false"/>
+        <flagList/>
+        <marker/>
+        <marker/>
+    </record>
+    <!-- r10: attribute-only and empty types, one occurrence, no attributes on the single element -->
+    <record id="r10">
+        <flag/>
+        <flagList on="1"/>
+        <marker/>
+    </record>
+    <!-- r11: element-only content; attribute and child with the same name; empty element-only element -->
+    <record id="r11">
+        <group>
+            <name>g1</name>
+            <alias>a1</alias>
+            <alias>a2</alias>
+        </group>
+        <box/>
+        <entity type="person" name="attr-name">
+            <name>child-name</name>
+            <prop key="k1" value="v1"/>
+            <prop key="k2"/>
+        </entity>
+        <entity type="org"/>
+    </record>
+    <!-- r12: optional list children absent; one occurrence of list children -->
+    <record id="r12">
+        <group>
+            <name>g2</name>
+        </group>
+        <box>
+            <item>1</item>
+        </box>
+        <entity>
+            <prop key="only"/>
+        </entity>
+    </record>
+    <!-- r13: mixed content: text only, text and children, children only, empty, interleaved, attribute and children -->
+    <record id="r13">
+        <para>plain text</para>
+        <para>Hello
+            <b>world</b> again
+        </para>
+        <para>
+            <b>x</b>
+        </para>
+        <para/>
+        <para>A
+            <b>1</b>B
+            <i>2</i>C
+            <b>3</b>
+        </para>
+        <para style="em">Intro
+            <b>bold</b>
+        </para>
+        <note kind="aside">side text</note>
+        <remark>just text</remark>
+    </record>
+    <!-- r14: mixed content: one child only, attribute only; mixed element without attributes or children -->
+    <record id="r14">
+        <para>
+            <i>only italic</i>
+        </para>
+        <para style="x"/>
+        <note>bare note</note>
+        <remark/>
+    </record>
+    <!-- r15: mixed content with attribute and no text; repeated choice, interleaved -->
+    <record id="r15">
+        <note kind="empty"/>
+        <optA>a1</optA>
+        <optB lang="en">b1</optB>
+        <optA>a2</optA>
+        <optB>b2</optB>
+    </record>
+    <!-- r16: repeated choice with one occurrence; repeated sequence with one occurrence -->
+    <record id="r16">
+        <optA>solo</optA>
+        <pairs>
+            <k>a</k>
+            <v>1</v>
+        </pairs>
+    </record>
+    <!-- r17: empty choice member with simple content and attributes; repeated sequence twice -->
+    <record id="r17">
+        <optB/>
+        <pairs>
+            <k>a</k>
+            <v>1</v>
+            <k>b</k>
+            <v>2</v>
+        </pairs>
+    </record>
+    <!-- r18: "title" is single under book and list plus cdata under chapter -->
+    <record id="r18">
+        <book>
+            <title>Book title</title>
+            <chapter>
+                <title>Ch1</title>
+            </chapter>
+            <chapter>
+                <title lang="en">Ch2</title>
+                <title>Ch2 alt</title>
+            </chapter>
+        </book>
+    </record>
+    <!-- r19: optional list child absent -->
+    <record id="r19">
+        <book>
+            <title>Lonely</title>
+        </book>
+    </record>
+    <!-- r20: (node, leaf) declared twice; the merged classification applies under both parents -->
+    <record id="r20">
+        <left>
+            <node>
+                <leaf>l1</leaf>
+            </node>
+        </left>
+        <right>
+            <node>
+                <leaf>r1</leaf>
+                <leaf lang="en">r2</leaf>
+            </node>
+        </right>
+    </record>
+    <!-- r21: (node, leaf) empty and single occurrence -->
+    <record id="r21">
+        <left>
+            <node>
+                <leaf/>
+            </node>
+        </left>
+        <right>
+            <node>
+                <leaf>r</leaf>
+            </node>
+        </right>
+    </record>
+    <!-- r22: self-referential type, three levels, with an empty branch -->
+    <record id="r22">
+        <tree label="root">
+            <branch label="a">
+                <branch label="a1"/>
+                <branch label="a2">
+                    <branch label="a2x"/>
+        </branch>
+            </branch>
+            <branch/>
+        </tree>
+    </record>
+    <!-- r23: self-referential type, one branch inside one branch -->
+    <record id="r23">
+        <tree label="t">
+            <branch>
+                <branch label="deep"/>
+      </branch>
+        </tree>
+    </record>
+    <!-- r24: empty tree; comment inside a record; element declared by ref; derived type -->
+    <record id="r24">
+        <tree/>
+        <!-- comments are dropped by xmltodict unless process_comments=True -->
+        <shared>s1</shared>
+        <derived baseAttr="b" extraAttr="e">
+            <baseField>base</baseField>
+            <extraField>x1</extraField>
+        </derived>
+    </record>
+    <!-- r25: element declared by ref, several occurrences; derived type with extension children only -->
+    <record id="r25">
+        <shared>s1</shared>
+        <shared>s2</shared>
+        <derived>
+            <extraField>x1</extraField>
+            <extraField>x2</extraField>
+        </derived>
+    </record>
+</dataset>

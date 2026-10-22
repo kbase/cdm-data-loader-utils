@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Schema for testing the force_list and force_cdata callables built from an XSD.
+  The comment before each declaration gives the expected classification of the
+  (parent, child) pair: list, single, and/or cdata.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <!-- simple content with attributes: cdata -->
+    <xs:complexType name="LabelType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="lang" type="xs:string"/>
+                <!-- xmltodict does not apply defaults: an absent attribute stays absent -->
+                <xs:attribute name="source" type="xs:string" default="manual"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <!-- simple content without attributes: always a string or None, not cdata -->
+    <xs:complexType name="TextNoAttrType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string"/>
+        </xs:simpleContent>
+    </xs:complexType>
+    <!-- non-string simple content with attributes: cdata; the value stays a string -->
+    <xs:complexType name="MeasureType">
+        <xs:simpleContent>
+            <xs:extension base="xs:decimal">
+                <xs:attribute name="unit" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <!-- attributes only, no content: a dict or None, not cdata -->
+    <xs:complexType name="FlagType">
+        <xs:attribute name="on" type="xs:boolean"/>
+    </xs:complexType>
+    <!-- no attributes, no content: always None -->
+    <xs:complexType name="EmptyType"/>
+    <xs:complexType name="PropType">
+        <xs:attribute name="key" type="xs:string" use="required"/>
+        <xs:attribute name="value" type="xs:string"/>
+    </xs:complexType>
+    <!-- element-only content with attributes; attribute "name" and child "name" share a name -->
+    <xs:complexType name="EntityType">
+        <xs:sequence>
+            <!-- (entity, name): single -->
+            <xs:element name="name" type="xs:string" minOccurs="0"/>
+            <!-- (entity, prop): list -->
+            <xs:element name="prop" type="PropType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="type" type="xs:string"/>
+        <xs:attribute name="name" type="xs:string"/>
+    </xs:complexType>
+    <!-- mixed content with child elements and an attribute: cdata -->
+    <xs:complexType name="ParaType" mixed="true">
+        <!-- (para, b), (para, i): list, via the repeated choice -->
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="b" type="xs:string"/>
+            <xs:element name="i" type="xs:string"/>
+        </xs:choice>
+        <xs:attribute name="style" type="xs:string"/>
+    </xs:complexType>
+    <!-- mixed content with an attribute and no child elements: cdata -->
+    <xs:complexType name="NoteType" mixed="true">
+        <xs:attribute name="kind" type="xs:string"/>
+    </xs:complexType>
+    <!-- mixed content with no attributes and no child elements: always a string or None, not cdata -->
+    <xs:complexType name="RemarkType" mixed="true"/>
+    <!-- self-referential type -->
+    <xs:complexType name="TreeType">
+        <xs:sequence>
+            <!-- (tree, branch) and (branch, branch): list -->
+            <xs:element name="branch" type="TreeType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="label" type="xs:string"/>
+    </xs:complexType>
+    <xs:complexType name="BaseType">
+        <xs:sequence>
+            <!-- (derived, baseField): single -->
+            <xs:element name="baseField" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="baseAttr" type="xs:string"/>
+    </xs:complexType>
+    <!-- derivation by extension: base and extension children both belong to "derived" -->
+    <xs:complexType name="DerivedType">
+        <xs:complexContent>
+            <xs:extension base="BaseType">
+                <xs:sequence>
+                    <!-- (derived, extraField): list -->
+                    <xs:element name="extraField" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="extraAttr" type="xs:string"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="RecordType">
+        <xs:sequence>
+            <!-- (record, plain): single -->
+            <xs:element name="plain" type="xs:string" minOccurs="0"/>
+            <!-- (record, plainList): list -->
+            <xs:element name="plainList" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, bounded): list -->
+            <xs:element name="bounded" type="xs:string" minOccurs="0" maxOccurs="2"/>
+            <!-- (record, never): in no set -->
+            <xs:element name="never" type="xs:string" minOccurs="0" maxOccurs="0"/>
+            <!-- (record, label): single, cdata -->
+            <xs:element name="label" type="LabelType" minOccurs="0"/>
+            <!-- (record, labelList): list, cdata -->
+            <xs:element name="labelList" type="LabelType" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, textNoAttr): single -->
+            <xs:element name="textNoAttr" type="TextNoAttrType" minOccurs="0"/>
+            <!-- (record, measure): single, cdata -->
+            <xs:element name="measure" type="MeasureType" minOccurs="0"/>
+            <!-- (record, flag): single -->
+            <xs:element name="flag" type="FlagType" minOccurs="0"/>
+            <!-- (record, flagList): list -->
+            <xs:element name="flagList" type="FlagType" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, marker): list -->
+            <xs:element name="marker" type="EmptyType" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, group): single; element-only content, no attributes -->
+            <xs:element name="group" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <!-- (group, name): single -->
+                        <xs:element name="name" type="xs:string"/>
+                        <!-- (group, alias): list -->
+                        <xs:element name="alias" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- (record, box): single; element-only content where every child is optional -->
+            <xs:element name="box" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <!-- (box, item): list -->
+                        <xs:element name="item" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- (record, entity): list -->
+            <xs:element name="entity" type="EntityType" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, para): list, cdata -->
+            <xs:element name="para" type="ParaType" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, note): single, cdata -->
+            <xs:element name="note" type="NoteType" minOccurs="0"/>
+            <!-- (record, remark): single -->
+            <xs:element name="remark" type="RemarkType" minOccurs="0"/>
+            <!-- children of a repeated choice are lists even though each has maxOccurs=1 -->
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <!-- (record, optA): list -->
+                <xs:element name="optA" type="xs:string"/>
+                <!-- (record, optB): list, cdata -->
+                <xs:element name="optB" type="LabelType"/>
+            </xs:choice>
+            <!-- (record, pairs): single -->
+            <xs:element name="pairs" minOccurs="0">
+                <xs:complexType>
+                    <!-- children of a repeated sequence are lists even though each has maxOccurs=1 -->
+                    <xs:sequence maxOccurs="2">
+                        <!-- (pairs, k), (pairs, v): list -->
+                        <xs:element name="k" type="xs:string"/>
+                        <xs:element name="v" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- the child name "title" is classified differently under different parents -->
+            <!-- (record, book): single -->
+            <xs:element name="book" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <!-- (book, title): single -->
+                        <xs:element name="title" type="xs:string"/>
+                        <!-- (book, chapter): list -->
+                        <xs:element name="chapter" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <!-- (chapter, title): list, cdata -->
+                                    <xs:element name="title" type="LabelType" maxOccurs="unbounded"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- the pair (node, leaf) is declared twice with different cardinality and content type -->
+            <!-- (record, left): single -->
+            <xs:element name="left" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <!-- (left, node): single -->
+                        <xs:element name="node">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <!-- declared single, no attributes; merged result is list, cdata -->
+                                    <xs:element name="leaf" type="xs:string"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- (record, right): single -->
+            <xs:element name="right" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <!-- (right, node): single -->
+                        <xs:element name="node">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <!-- declared list, with attributes; merged result is list, cdata -->
+                                    <xs:element name="leaf" type="LabelType" maxOccurs="unbounded"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- (record, tree): single -->
+            <xs:element name="tree" type="TreeType" minOccurs="0"/>
+            <!-- (record, shared): list; declared by reference to a global element -->
+            <xs:element ref="shared" minOccurs="0" maxOccurs="unbounded"/>
+            <!-- (record, derived): single -->
+            <xs:element name="derived" type="DerivedType" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:element name="shared" type="xs:string"/>
+    <xs:element name="dataset">
+        <xs:complexType>
+            <xs:sequence>
+                <!-- (dataset, record): list -->
+                <xs:element name="record" type="RecordType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

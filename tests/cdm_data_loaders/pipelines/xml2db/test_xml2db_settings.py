@@ -15,6 +15,7 @@ from cdm_data_loaders.pipelines.xml2db.settings import (
     PIPELINE_NAME,
     Xml2DbSettings,
 )
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 from tests.conftest import S3
 
 MINIMAL_SETTINGS_KWARGS: dict[str, object] = {
@@ -44,23 +45,16 @@ def settings_factory(tmp_path: Path, test_data_dir: Path) -> Callable[..., Xml2D
     """Return a factory that builds a valid Xml2DbSettings with fields open to override."""
 
     def _factory(**overrides: object) -> Xml2DbSettings:
-        log_config_file = tmp_path / "logging.json"
-        log_config_file.write_text('{"version": 1}', encoding="utf-8")
         input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
         xsd_file = _write_xsd_fixture(input_dir, test_data_dir, "uniref.xsd")
-
-        kwargs: dict[str, object] = {
+        defaults: dict[str, object] = {
             **MINIMAL_SETTINGS_KWARGS,
-            "log_config_file": str(log_config_file),
             "input_dir": str(input_dir),
-            "output_dir": str(output_dir),
+            "output_dir": str(tmp_path / "output"),
             "xsd_file": str(input_dir / xsd_file),
         }
-        kwargs.update(overrides)
-        return Xml2DbSettings(**kwargs)
+        defaults.update(overrides)
+        return make_cts_settings(Xml2DbSettings, tmp_path, **defaults)
 
     return _factory
 

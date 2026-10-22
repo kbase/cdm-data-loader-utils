@@ -1,0 +1,81 @@
+[
+    {
+        "_id": "rec1",
+        "_status": "active",
+        "_evidence": [
+            1,
+            4,
+            9
+        ],
+        "_version": 2,
+        "flag": true,
+        "smallInt": -5,
+        "medInt": 1024,
+        "stdInt": 100000,
+        "bigInt": 999999999999,
+        "uByte": 255,
+        "uShort": 65535,
+        "uInt": 4000000000,
+        "uLong": 18446744073709551615,
+        "f32": 1.5,
+        "f64": 2.718281828,
+        "dec": 3.14,
+        "created": "2025-06-15",
+        "updatedAt": "2025-06-15T12:30:00Z",
+        "published": "2025-06",
+        "homogeneousUnion": 42000000000,
+        "scores": [
+            10,
+            20,
+            30
+        ],
+        "tokens": [
+            "alpha",
+            "beta",
+            "gamma"
+        ],
+        "rawHex": "Hello",
+        "rawB64": "Hello"
+    },
+    {
+        "_id": "rec2",
+        "_status": "archived",
+        "_version": 1,
+        "flag": false
+    },
+    {
+        "_id": "rec3",
+        "_status": "active",
+        "_evidence": [
+            10,
+            20
+        ],
+        "_version": -42,
+        "flag": true,
+        "smallInt": -128,
+        "medInt": -32768,
+        "stdInt": -2147483648,
+        "bigInt": -999999999999,
+        "uByte": 0,
+        "uShort": 0,
+        "uInt": 0,
+        "uLong": 0,
+        "f32": -0.5,
+        "f64": 0.000125,
+        "dec": 42.0,
+        "created": "2025-06-15",
+        "updatedAt": "2025-06-15T12:30:00.123+02:00",
+        "published": "1999",
+        "homogeneousUnion": -42,
+        "scores": [
+            100,
+            200
+        ],
+        "tokens": [
+            "one",
+            "two"
+        ],
+        "rawHex": "Hello",
+        "rawB64": "Hello"
+    }
+]

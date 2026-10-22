@@ -1,0 +1,11 @@
+[
+    {
+        "_id": "e1",
+        "name": "BRCA1",
+        "summary": "",
+        "geneId": 672,
+        "comment": {
+            "_type": "function"
+        }
+    }
+]

@@ -2,7 +2,7 @@
 
 import gzip
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,12 @@ from frozendict import frozendict
 from cdm_data_loaders.pipelines.xmltodict.pipeline import run_xmltodict_pipeline
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from cdm_data_loaders.readers.xml import DEFAULT_XMLTODICT_ARGS
-from tests.conftest import N_REFERENCE_XML_ENTRIES, REFERENCE_XML_FIXTURE_DIR, REFERENCE_XML_TAG
+from tests.cdm_data_loaders.pipelines.helpers import (
+    duckdb_reference_from_jsonl,
+    make_cts_settings,
+    read_jsonl_file,
+)
+from tests.conftest import N_REFERENCE_XML_ENTRIES, REFERENCE_XML_TAG
 
 DEFAULT_XMLTODICT_SETTINGS: frozendict = frozendict(
     {
@@ -28,39 +33,20 @@ DEFAULT_XMLTODICT_SETTINGS: frozendict = frozendict(
 )
 
 
-def make_settings(tmp_path: Path, dlt_destination_config: str, **overrides: Any) -> dict[str, Any]:
-    """Generate a dict of settings for the XmlToDict ingestion route."""
-    log_config_file = overrides.get("log_config_file", tmp_path / "logging.conf")
-    log_config_file.touch()
-    output_dir = overrides.get("output_dir", tmp_path / "output")
-    output_dir.mkdir(exist_ok=True)
-    input_dir = overrides.get("input_dir", tmp_path / "input")
-
-    kwargs: dict[str, Any] = {
-        **DEFAULT_XMLTODICT_SETTINGS,
-        "dataset_name": "xml_test_dataset",
-        "input_dir": str(input_dir),
-        "log_config_file": str(log_config_file),
-        "output_dir": str(output_dir),
-        "table_name": "book",
-        "use_destination": dlt_destination_config,
-        "xml_tag": "book",
-    }
-    kwargs.update(overrides)
-    return kwargs
-
-
 @pytest.fixture
 def settings_factory(tmp_path: Path, dlt_destination_config: str) -> Callable[..., XmlToDictSettings]:
     """Return a factory that builds a valid XmlToDictSettings, with fields open to override."""
 
-    def _factory(**overrides: Any) -> XmlToDictSettings:
-        settings_dict = make_settings(tmp_path, dlt_destination_config, **overrides)
-        # ensure that the input dir exists
-        input_dir = Path(settings_dict["input_dir"])
-        input_dir.mkdir(exist_ok=True)
-
-        return XmlToDictSettings(**settings_dict)
+    def _factory(**overrides: Any) -> XmlToDictSettings:  # noqa: ANN401
+        defaults: dict[str, Any] = {
+            **DEFAULT_XMLTODICT_SETTINGS,
+            "dataset_name": "xml_test_dataset",
+            "table_name": "book",
+            "use_destination": dlt_destination_config,
+            "xml_tag": "book",
+        }
+        defaults.update(overrides)
+        return make_cts_settings(XmlToDictSettings, tmp_path, **defaults)
 
     return _factory
 
@@ -77,16 +63,9 @@ def scenario_input_dir(test_data_dir: Path) -> Callable[[str], str]:
     return _resolve
 
 
-@pytest.fixture(scope="session")
-def reference_xml_data_dir() -> Path:
-    """Path to the uniref fixture directory."""
-    return REFERENCE_XML_FIXTURE_DIR
-
-
 def import_jsonl_data(jsonl_path: Path) -> list[dict[str, Any]]:
     """Read the reference JSONL into a list of canonical nested entry dicts."""
-    with jsonl_path.open(encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+    return read_jsonl_file(jsonl_path)
 
 
 def write_reference_xml_as_jsonl(source_xml: Path, jsonl_path: Path) -> int:
@@ -140,19 +119,14 @@ def sorted_reference_xml_entries(reference_xml_entries: list[dict[str, Any]]) ->
 
 
 @pytest.fixture(scope="session")
-def reference_xml_dataset(reference_xml_as_jsonl: Path) -> duckdb.DuckDBPyConnection:
+def reference_xml_dataset(reference_xml_as_jsonl: Path) -> Generator[duckdb.DuckDBPyConnection]:
     """Load the reference JSONL into an in-memory DuckDB connection with nested structures.
 
     read_json_auto infers native STRUCT/STRUCT[] types for the nested content;
     `member` infers as JSON because its shape varies across entries.
     """
-    connection = duckdb.connect()
-    jsonl_path = str(reference_xml_as_jsonl)
-    connection.execute(
-        "CREATE TABLE reference AS SELECT * FROM read_json_auto(?, sample_size=200)",
-        [jsonl_path],
-    )
-    return connection
+    with duckdb_reference_from_jsonl(reference_xml_as_jsonl) as conn:
+        yield conn
 
 
 @pytest.fixture
@@ -179,7 +153,7 @@ def run_xmltodict_pipeline_fxt(
         base_kwargs=base_kwargs,
     )
 
-    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:
+    def _factory(chunk_dir: str, **overrides: Any) -> tuple[LoadInfo | None, Path]:  # noqa: ANN401
         return runner(input_dir=str(reference_xml_data_dir / chunk_dir), **overrides)
 
     return _factory

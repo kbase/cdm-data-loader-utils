@@ -4,7 +4,6 @@ import os
 import subprocess
 from dataclasses import dataclass
 from functools import cached_property
-from logging import Logger, getLogger
 from pathlib import Path
 from shutil import copy, move
 from typing import Annotated, Final, Self
@@ -33,9 +32,6 @@ HEADER_SUFFIX: Final[str] = "-header"
 CLEANED_SUFFIX: Final[str] = "-cleaned"
 NORM_SUFFIX: Final[str] = "-norm"
 VALID_SUFFIX: Final[str] = "-valid"
-
-
-logger: Logger = getLogger(__name__)
 
 
 class ErrorRecord(BaseModel):

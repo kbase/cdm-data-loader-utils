@@ -12,6 +12,7 @@ import pytest
 from cdm_data_loaders.pipelines.xsv.pipeline import XsvWorkPaths
 from cdm_data_loaders.pipelines.xsv.settings import XsvIngestSettings
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import generate_header
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 
 VALID_SCHEMA_URI: Final[str] = "https://json-schema.org/draft/2020-12/schema"
 COLUMNS: Final[list[str]] = ["number", "date", "float", "boolean", "string"]
@@ -71,71 +72,34 @@ def qsv_cmd() -> str:
     return cmd
 
 
-def make_settings(
-    tmp_path: Path,
-    dlt_destination_config: str,
-    schema: dict[str, Any],
-    **overrides: Any,
-) -> dict[str, Any]:
-    """Build a valid xsv ingest settings dict, with fields open to override."""
-    log_config_file = overrides.pop("log_config_file", tmp_path / "logging.conf")
-    Path(log_config_file).touch(exist_ok=True)
-    output_dir = overrides.pop("output_dir", tmp_path / "output")
-    Path(output_dir).mkdir(exist_ok=True)
-    input_dir = overrides.pop("input_dir", tmp_path / "input")
-    Path(input_dir).mkdir(exist_ok=True)
-    (Path(input_dir) / "schema.json").write_text(json.dumps(schema))
-
-    kwargs: dict[str, Any] = {
-        "buffer_size": 10,
-        "dataset_name": "xsv_test_dataset",
-        "dlt_dev_mode": False,
-        "file_glob": "*",
-        "input_dir": str(input_dir),
-        "loader_file_format": "jsonl",
-        "log_config_file": str(log_config_file),
-        "log_interval": 1000,
-        "output_dir": str(output_dir),
-        "schema_file": str(Path(input_dir) / "schema.json"),
-        "table_name": "my_table",
-        "use_destination": dlt_destination_config,
-        "use_output_dir_for_pipeline_metadata": False,
-    }
-    kwargs.update(overrides)
-    return kwargs
-
-
 @pytest.fixture
-def settings_factory(tmp_path: Path) -> Callable[..., XsvIngestSettings]:
+def settings_factory(tmp_path: Path, dlt_destination_config: str) -> Callable[..., XsvIngestSettings]:
     """Return a factory that builds a valid XsvIngestSettings, with fields open to override."""
 
-    def _factory(schema: dict[str, Any], data_files: dict[str, str], **overrides: object) -> XsvIngestSettings:
-        input_dir = tmp_path / "input"
-        input_dir.mkdir(exist_ok=True)
-        output_dir = tmp_path / "output"
-        output_dir.mkdir(exist_ok=True)
+    def _factory(
+        schema: dict[str, Any] | None = DEFAULT_XSV_SCHEMA,
+        data_files: dict[str, str] | None = None,
+        **overrides: Any,  # noqa: ANN401
+    ) -> XsvIngestSettings:
+        input_dir = Path(overrides.get("input_dir", tmp_path / "input"))
+        input_dir.mkdir(parents=True, exist_ok=True)
 
-        (input_dir / "schema.json").write_text(json.dumps(schema))
-        for file_name, content in data_files.items():
-            (input_dir / file_name).write_text(content)
+        if schema is not None:
+            (input_dir / "schema.json").write_text(json.dumps(schema), encoding="utf-8")
+        if data_files:
+            for file_name, content in data_files.items():
+                (input_dir / file_name).write_text(content, encoding="utf-8")
 
-        kwargs: dict[str, object] = {
-            "buffer_size": 100,
+        defaults: dict[str, Any] = {
             "dataset_name": "xsv_test_dataset",
-            "dlt_dev_mode": False,
             "file_glob": "*",
-            "input_dir": str(input_dir),
             "loader_file_format": "jsonl",
-            "log_config_file": None,
-            "log_interval": 1000,
-            "output_dir": str(output_dir),
             "schema_file": str(input_dir / "schema.json"),
             "table_name": "my_table",
-            "use_destination": "local_fs",
-            "use_output_dir_for_pipeline_metadata": False,
+            "use_destination": dlt_destination_config,
         }
-        kwargs.update(overrides)
-        return XsvIngestSettings(**kwargs)
+        defaults.update(overrides)
+        return make_cts_settings(XsvIngestSettings, tmp_path, **defaults)
 
     return _factory
 

@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<UniRef100 xmlns="http://uniprot.org/uniref" releaseDate="2025-02-05" version="2025_01">
+  <entry id="UniRef100_P04637" updated="2025-02-05">
+    <name>Cluster: Glycogen synthase</name>
+    <property type="member count" value="3"/>
+    <property type="common taxon" value="Homo sapiens"/>
+    <representativeMember>
+      <dbReference type="UniProtKB ID" id="P53_HUMAN">
+        <property type="common taxon ID" value="9606"/>
+        <property type="GO Molecular Function" value="GO:0003677"/>
+      </dbReference>
+      <sequence length="393" checksum="AD5C149FD8106131">MHPKVDALLSRFPRITLIPWETPIQYLPRISRELGVDVYVKRDDLTGLGIGGNKIRKLEF</sequence>
+    </representativeMember>
+    <member>
+      <dbReference type="UniParc ID" id="UPI000002ED67">
+        <property type="UniProtKB accession" value="P04637"/>
+        <property type="UniParc ID" value="UPI000002ED67"/>
+      </dbReference>
+      <sequence length="330" checksum="CC8699923C0B11CD">MPVLPRDFYDRPTLEVARDLLGKTLVRQLPAGRVALRIVETEAYIGENDKACHASKGMTA</sequence>
+    </member>
+    <member>
+      <dbReference type="RefSeq" id="NP_000537.3">
+        <property type="UniRef100 ID" value="UniRef100_P04637"/>
+        <property type="UniRef90 ID" value="UniRef90_P04637"/>
+      </dbReference>
+      <sequence length="200" checksum="8DA31EA44EEB8636">MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP</sequence>
+    </member>
+  </entry>
+</UniRef100>
