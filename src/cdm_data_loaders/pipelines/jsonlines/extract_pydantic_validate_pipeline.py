@@ -60,9 +60,7 @@ def load_entity_models(module_path: str) -> dict[str, type[BaseModel]]:
     :rtype: dict[str, type[BaseModel]]
     :raises ValueError: if ENTITY_MODELS is missing, empty, or not a dict
     """
-    return load_registry_dict(
-        module_path, "ENTITY_MODELS", type_hint=": dict[str, type[BaseModel]]"
-    )
+    return load_registry_dict(module_path, "ENTITY_MODELS", type_hint=": dict[str, type[BaseModel]]")
 
 
 def _make_resolve_error(model: type[BaseModel]) -> ParseErrorResolver:

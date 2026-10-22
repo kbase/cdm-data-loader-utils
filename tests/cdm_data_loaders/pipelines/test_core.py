@@ -958,9 +958,7 @@ def test_pipeline_cli_pass_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.usefixtures("restore_logging")
-def test_pipeline_cli_pass_call_reads_argv(
-    dlt_test_settings: CtsSettings, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_pipeline_cli_pass_call_reads_argv(dlt_test_settings: CtsSettings, monkeypatch: pytest.MonkeyPatch) -> None:
     """Calling the CLI parses sys.argv, runs the pipeline and returns None so the process exits with 0."""
     received, pipeline_fn = make_recorder()
     monkeypatch.setattr(sys, "argv", ["prog", *settings_to_argv(dlt_test_settings)])
@@ -1702,4 +1700,3 @@ def test_build_file_ingest_kwargs_pass(
             "loader_file_format": "jsonl",
         },
     }
-

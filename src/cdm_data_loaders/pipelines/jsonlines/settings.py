@@ -86,11 +86,7 @@ class JsonlPydanticIngestSettings(ValidatedJsonlIngestSettings):
         cli_prog_name=PYDANTIC_PIPELINE_NAME,
         cli_shortcuts={
             **FILE_FORMAT_CLI_SHORTCUTS,
-            **{
-                k: v
-                for k, v in LOCAL_CLI_SHORTCUTS.items()
-                if k in [ENTITY_MODELS_MODULE, FILE_GLOB, TABLE_NAMES]
-            },
+            **{k: v for k, v in LOCAL_CLI_SHORTCUTS.items() if k in [ENTITY_MODELS_MODULE, FILE_GLOB, TABLE_NAMES]},
         },
     )
 

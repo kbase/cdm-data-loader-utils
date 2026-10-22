@@ -38,9 +38,7 @@ def run_xmltopyarrow_pipeline(settings: XmlToPyArrowSettings) -> LoadInfo | None
     :param settings: pipeline configuration
     :type  settings: XmlToPyArrowSettings
     """
-    xmltopyarrow_resource = build_filesystem_resource(
-        settings, _read_items, settings, name="xmltopyarrow_reader"
-    )
+    xmltopyarrow_resource = build_filesystem_resource(settings, _read_items, settings, name="xmltopyarrow_reader")
     pipeline_name = str(settings.model_config.get("cli_prog_name") or PIPELINE_NAME)
 
     return run_pipeline(

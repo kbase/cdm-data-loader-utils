@@ -178,9 +178,7 @@ def download_batch(  # noqa: PLR0913
 
     try:
         with (
-            tqdm.tqdm(
-                total=len(assembly_paths), unit="assembly", desc=progress_desc, smoothing=0.01
-            ) as pbar,
+            tqdm.tqdm(total=len(assembly_paths), unit="assembly", desc=progress_desc, smoothing=0.01) as pbar,
             ThreadPoolExecutor(max_workers=threads) as executor,
         ):
             futures = {executor.submit(_download_one, p): p for p in assembly_paths}

@@ -50,9 +50,7 @@ def run_xml2db_pipeline(settings: Xml2DbSettings) -> LoadInfo | None:
     model_config = load_config(str(settings.xml2db_config_file)) if settings.xml2db_config_file else None
     model = build_xml2db_model(settings.xsd_file, short_name=settings.short_name, model_config=model_config)
 
-    xml2db_resource = build_filesystem_resource(
-        settings, _read_items, settings, model, name="xml2db_reader"
-    )
+    xml2db_resource = build_filesystem_resource(settings, _read_items, settings, model, name="xml2db_reader")
 
     load_info = run_pipeline(
         settings=settings,

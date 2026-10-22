@@ -290,4 +290,3 @@ def test_preset_xmltopyarrow_settings_pass_base_defaults(
             dataset_name="preset_ds",
             xsd_file=xsd_path,
         )
-

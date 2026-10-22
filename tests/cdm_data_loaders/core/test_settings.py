@@ -291,4 +291,3 @@ def test_xml_ingest_settings_pass_defaults_and_cli_shortcuts(
             "file_glob": "*.xml.gz",
         },
     )
-

@@ -40,9 +40,7 @@ def run_xmltodict_pipeline(settings: XmlToDictSettings) -> LoadInfo | None:
     :param settings: pipeline configuration
     :type  settings: XmlToDictSettings
     """
-    xmltodict_resource = build_filesystem_resource(
-        settings, _read_xmltodict_items, settings, name="xmltodict_reader"
-    )
+    xmltodict_resource = build_filesystem_resource(settings, _read_xmltodict_items, settings, name="xmltodict_reader")
 
     return run_pipeline(
         settings=settings,

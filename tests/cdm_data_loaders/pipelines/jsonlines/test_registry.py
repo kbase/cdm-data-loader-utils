@@ -104,4 +104,3 @@ def test_load_registry_dict_fail_invalid_attribute(
     monkeypatch.setitem(sys.modules, module_name, module)
     with pytest.raises(ValueError, match=r"^" + expected_message.replace("[", r"\[").replace("]", r"\]") + r"$"):
         load_registry_dict(module_name, "CUSTOM_REG", type_hint=type_hint)
-
