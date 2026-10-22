@@ -14,12 +14,25 @@ from dlt.extract import DltResource
 
 import cdm_data_loaders.pipelines.xmltopyarrow.pipeline as xmltopyarrow_module
 from cdm_data_loaders.core.fields import LoaderFileFormatEnum
+from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltopyarrow.pipeline import (
     cli,
     run_xmltopyarrow_pipeline,
 )
-from cdm_data_loaders.pipelines.xmltopyarrow.settings import PIPELINE_NAME, XmlToPyArrowSettings
-from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
+from cdm_data_loaders.pipelines.xmltopyarrow.settings import (
+    PIPELINE_NAME,
+    UNIPROT_PIPELINE_NAME,
+    UNIREF_PIPELINE_NAME,
+    UniProtXmlToPyArrowSettings,
+    UniRefXmlToPyArrowSettings,
+    XmlToPyArrowSettings,
+)
+from cdm_data_loaders.pipelines.xmltopyarrow.uniprot import cli as uniprot_cli
+from cdm_data_loaders.pipelines.xmltopyarrow.uniprot import run_uniprot_pipeline
+from cdm_data_loaders.pipelines.xmltopyarrow.uniref import cli as uniref_cli
+from cdm_data_loaders.pipelines.xmltopyarrow.uniref import run_uniref_pipeline
+from tests.cdm_data_loaders.pipelines.conftest import copy_test_files, duckdb_pipeline
+from tests.cdm_data_loaders.pipelines.helpers import assert_run_ok, fetch_all_duckdb, settings_to_argv
 from tests.xml_samples import TWO_BOOK_LIBRARY_XML
 
 
@@ -64,7 +77,7 @@ def test_run_xmltopyarrow_pipeline_pass_binds_reader_before_run_pipeline(
 
 def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     tmp_path: Path,
-    library_xsd: Path,
+    settings_factory: Callable[..., Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cli() reads command-line arguments and runs the pipeline via run_xmltopyarrow_pipeline.
@@ -73,38 +86,9 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
     config isolation fixture), and core.run_pipeline is redirected to a real
     DuckDB pipeline so the full flow is validated.
     """
-    input_dir = tmp_path / "cli_input"
-    input_dir.mkdir()
-    (input_dir / "library.xml").write_text(TWO_BOOK_LIBRARY_XML, encoding="utf-8")
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-
-    argv = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--use-destination",
-        "local_fs",
-        "--log-config-file",
-        str(log_config_file),
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "book",
-        "--xml-tag",
-        "book",
-        "--xsd-file",
-        str(library_xsd),
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-    monkeypatch.setattr(sys, "argv", argv)
+    settings = settings_factory(dataset_name="cli_dataset", dlt_dev_mode=False)
+    (Path(settings.input_dir) / "library.xml").write_text(TWO_BOOK_LIBRARY_XML, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", [PIPELINE_NAME, *settings_to_argv(settings)])
 
     # unique pipeline name: the duckdb database file is derived from it, so
     # repeated runs of the suite do not see rows from previous runs
@@ -121,58 +105,20 @@ def test_cli_pass_runs_end_to_end_from_command_line_arguments(
         return pipeline.run(resource)
 
     with patch.object(xmltopyarrow_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli.run()
+        load_info = assert_run_ok(cli.run())
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
-
-    with (
-        load_info.pipeline.sql_client() as client,
-        client.execute_query("SELECT COUNT(*) FROM book") as cur,
-    ):
-        (row_count,) = cur.fetchone()
-    assert row_count == 2  # noqa: PLR2004
+    assert fetch_all_duckdb(load_info.pipeline, "SELECT COUNT(*) FROM book") == [(2,)]
 
 
 def test_cli_pass_writes_rows_for_matching_xml_files(
     tmp_path: Path,
-    library_xsd: Path,
+    settings_factory: Callable[..., Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cli() with xml files in the input dir loads one row per matching element."""
-    input_dir = tmp_path / "xml_input"
-    input_dir.mkdir()
-    (input_dir / "data.xml").write_text(TWO_BOOK_LIBRARY_XML, encoding="utf-8")
-
-    output_dir = tmp_path / "cli_output"
-    output_dir.mkdir()
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-
-    argv = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--use-destination",
-        "local_fs",
-        "--log-config-file",
-        str(log_config_file),
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "book",
-        "--xml-tag",
-        "book",
-        "--xsd-file",
-        str(library_xsd),
-        "--use-output-dir-for-pipeline-metadata",
-        "false",
-        "--dlt-dev-mode",
-        "false",
-    ]
-    monkeypatch.setattr(sys, "argv", argv)
+    settings = settings_factory(dataset_name="cli_dataset", dlt_dev_mode=False)
+    (Path(settings.input_dir) / "data.xml").write_text(TWO_BOOK_LIBRARY_XML, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", [PIPELINE_NAME, *settings_to_argv(settings)])
 
     pipeline_name = f"test_xmltopyarrow_cli_rows_pipeline_{uuid4().hex}"
 
@@ -185,56 +131,95 @@ def test_cli_pass_writes_rows_for_matching_xml_files(
         return pipeline.run(resource)
 
     with patch.object(xmltopyarrow_module, "run_pipeline", fake_run_pipeline):
-        load_info = cli.run()
+        load_info = assert_run_ok(cli.run())
 
-    assert load_info is not None
-    assert not load_info.has_failed_jobs
-    pipeline = load_info.pipeline
-    with (
-        pipeline.sql_client() as client,
-        client.execute_query("SELECT COUNT(*) FROM book") as cur,
-    ):
-        (row_count,) = cur.fetchone()
-    assert row_count == 2  # noqa: PLR2004
+    assert fetch_all_duckdb(load_info.pipeline, "SELECT COUNT(*) FROM book") == [(2,)]
 
 
-@pytest.mark.parametrize(
-    ("missing_args", "expected_fragment"),
-    [
-        (["--table-name", "book", "--xml-tag", "book", "--xsd-file", "{xsd}"], "dataset_name"),
-        (["--dataset-name", "cli_dataset", "--xml-tag", "book", "--xsd-file", "{xsd}"], "table_name"),
-        (["--dataset-name", "cli_dataset", "--table-name", "book", "--xsd-file", "{xsd}"], "xml_tag"),
-        (["--dataset-name", "cli_dataset", "--table-name", "book", "--xml-tag", "book"], "xsd_file"),
-    ],
-)
+@pytest.mark.parametrize("missing_field", ["dataset_name", "table_name", "xml_tag", "xsd_file"])
 def test_cli_fail_missing_required_args_raise(
-    tmp_path: Path,
-    library_xsd: Path,
+    settings_factory: Callable[..., Any],
     monkeypatch: pytest.MonkeyPatch,
-    missing_args: list[str],
-    expected_fragment: str,
+    missing_field: str,
 ) -> None:
     """cli() without required pipeline-specific args raises before running the pipeline."""
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-
-    resolved_args = [arg.format(xsd=library_xsd) for arg in missing_args]
-    argv = [
-        PIPELINE_NAME,
-        "--input-dir",
-        str(tmp_path / "input"),
-        "--output-dir",
-        str(tmp_path / "output"),
-        "--log-config-file",
-        str(log_config_file),
-        *resolved_args,
-    ]
-    monkeypatch.setattr(sys, "argv", argv)
+    settings = settings_factory()
+    monkeypatch.setattr(sys, "argv", [PIPELINE_NAME, *settings_to_argv(settings, exclude=[missing_field])])
 
     with (
         patch.object(xmltopyarrow_module, "run_pipeline") as mock_run_pipeline,
-        pytest.raises(Exception, match=expected_fragment),
+        pytest.raises(Exception, match=missing_field),
     ):
         cli()
 
     mock_run_pipeline.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("settings_cls", "run_fn", "expected_pipeline_name"),
+    [
+        (UniProtXmlToPyArrowSettings, run_uniprot_pipeline, UNIPROT_PIPELINE_NAME),
+        (UniRefXmlToPyArrowSettings, run_uniref_pipeline, UNIREF_PIPELINE_NAME),
+    ],
+)
+def test_run_subclass_pipeline_pass_sets_core_run_pipeline_args_correctly(
+    settings_factory: Callable[..., Any],
+    *,
+    settings_cls: type[XmlToPyArrowSettings],
+    run_fn: Callable[[Any], LoadInfo | None],
+    expected_pipeline_name: str,
+) -> None:
+    """run_uniprot_pipeline and run_uniref_pipeline delegate to run_pipeline with the subclass pipeline_name."""
+    settings = settings_factory(settings_cls)
+
+    with patch.object(xmltopyarrow_module, "run_pipeline") as mock_run_pipeline:
+        run_fn(settings)
+
+    mock_run_pipeline.assert_called_once()
+    _, kwargs = mock_run_pipeline.call_args
+    assert kwargs["settings"] == settings
+    assert kwargs["pipeline_kwargs"] == {
+        "pipeline_name": expected_pipeline_name,
+        "dataset_name": expected_pipeline_name,
+    }
+    assert isinstance(kwargs["resource"], DltResource)
+
+
+@pytest.mark.parametrize(
+    ("prog_name", "cli_obj", "sample_xml_rel_dir"),
+    [
+        (UNIPROT_PIPELINE_NAME, uniprot_cli, "xsd/examples/uniprot"),
+        (UNIREF_PIPELINE_NAME, uniref_cli, "xsd/examples/uniref"),
+    ],
+)
+def test_subclass_cli_pass_runs_end_to_end_with_default_settings(
+    tmp_path: Path,
+    test_data_dir: Path,
+    settings_factory: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    prog_name: str,
+    cli_obj: Any,  # noqa: ANN401
+    sample_xml_rel_dir: str,
+) -> None:
+    """UniProt and UniRef CLIs load entry rows end-to-end using their default settings."""
+    base_settings = settings_factory(CtsSettings, dlt_dev_mode=False)
+    copy_test_files(test_data_dir / sample_xml_rel_dir, ["minimal.xml.gz"], Path(base_settings.input_dir))
+    monkeypatch.setattr(sys, "argv", [prog_name, *settings_to_argv(base_settings)])
+
+    pipeline_name = f"test_{prog_name}_cli_pipeline_{uuid4().hex}"
+
+    def fake_run_pipeline(
+        *,
+        resource: DltResource,
+        pipeline_kwargs: dict[str, Any],
+        **_: dict[str, Any],
+    ) -> LoadInfo | None:
+        assert pipeline_kwargs == {"pipeline_name": prog_name, "dataset_name": prog_name}
+        pipeline = duckdb_pipeline(tmp_path, pipeline_name, prog_name)
+        return pipeline.run(resource)
+
+    with patch.object(xmltopyarrow_module, "run_pipeline", fake_run_pipeline):
+        load_info = assert_run_ok(cli_obj.run())
+
+    assert fetch_all_duckdb(load_info.pipeline, "SELECT COUNT(*) FROM entry") == [(1,)]

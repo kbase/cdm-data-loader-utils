@@ -3,7 +3,7 @@
 import gzip
 import json
 from collections import defaultdict
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from logging import Logger, getLogger
@@ -182,21 +182,23 @@ def sorted_json(entries: list[dict[str, Any]]) -> list[str]:
     return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in entries)
 
 
-def settings_to_argv(settings: Any) -> list[str]:
+def settings_to_argv(settings: Any, *, exclude: Iterable[str] = ()) -> list[str]:  # noqa: ANN401
     """Derive CLI arguments from a settings instance.
 
     Every serialized field becomes a ``--kebab-case`` flag, with bools rendered
     as their ``true``/``false`` CLI spelling, sequence fields expanded after the
-    flag, and None-valued or computed fields skipped.
+    flag, and None-valued, excluded, or computed fields skipped.
 
     :param settings: a CtsSettings (or derivative) instance
     :type settings: Any
+    :param exclude: field names to omit from the resulting argument list
+    :type exclude: Iterable[str]
     :return: command-line argument list reproducing the settings
     :rtype: list[str]
     """
     argv: list[str] = []
-    computed_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys())
-    for name, value in settings.model_dump(exclude=computed_fields).items():
+    excluded_fields: set[str] = set(getattr(type(settings), "model_computed_fields", {}).keys()) | set(exclude)
+    for name, value in settings.model_dump(exclude=excluded_fields).items():
         flag = f"--{name.replace('_', '-')}"
         if isinstance(value, bool):
             argv.extend([flag, "true" if value else "false"])

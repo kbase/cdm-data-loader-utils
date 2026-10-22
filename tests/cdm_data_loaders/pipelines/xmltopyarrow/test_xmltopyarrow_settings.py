@@ -2,6 +2,8 @@
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pyarrow as pa
 import pytest
@@ -9,9 +11,22 @@ import xmlschema
 from pydantic import ValidationError
 from pydantic_settings import CliApp
 
+import cdm_data_loaders.pipelines.xmltopyarrow.settings as xmltopyarrow_settings_module
 from cdm_data_loaders.core.fields import DEFAULTS
-from cdm_data_loaders.pipelines.xmltopyarrow.settings import XmlToPyArrowSettings
+from cdm_data_loaders.core.settings import CtsSettings
+from cdm_data_loaders.pipelines.xmltopyarrow.settings import (
+    UNIPROT_PIPELINE_NAME,
+    UNIPROT_XSD_FILE,
+    UNIREF_PIPELINE_NAME,
+    UNIREF_XSD_FILE,
+    UniProtXmlToPyArrowSettings,
+    UniRefXmlToPyArrowSettings,
+    XmlToPyArrowSettings,
+)
 from cdm_data_loaders.readers.xsd import DEFAULT_MAX_RECURSION_DEPTH, generate_pyarrow_schema, load_schema
+from cdm_data_loaders.schemas.uniprot.schema import SCHEMA as UNIPROT_SCHEMA
+from cdm_data_loaders.schemas.uniref.schema import SCHEMA as UNIREF_SCHEMA
+from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
 from tests.conftest import S3
 
 UNIREF_LIKE_XSD: str = "uniref_like.xsd"
@@ -175,39 +190,70 @@ def test_xmltopyarrow_settings_fail_xml_tag_not_in_xsd_raises_validation_error(
 
 @pytest.mark.parametrize("file_glob_arg", ["--file-glob", "-g"])
 def test_xmltopyarrow_settings_pass_xml_tag_shortcut(
-    tmp_path: Path,
-    library_xsd: Path,
+    settings_factory: Callable[..., Any],
     file_glob_arg: str,
 ) -> None:
     """The file_glob field is exposed as both --file-glob and -g on the command line."""
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-    input_dir = tmp_path / "input"
-    input_dir.mkdir()
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-
-    argv = [
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--use-destination",
-        "local_fs",
-        "--log-config-file",
-        str(log_config_file),
-        file_glob_arg,
-        "*.xml.gz",
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "book",
-        "--xml-tag",
-        "book",
-        "--xsd-file",
-        str(library_xsd),
-    ]
+    base_settings = settings_factory()
+    argv = [*settings_to_argv(base_settings, exclude=["file_glob"]), file_glob_arg, "*.xml.gz"]
 
     settings = CliApp.run(XmlToPyArrowSettings, cli_args=argv)
     assert settings.file_glob == "*.xml.gz"
     assert settings.xml_tag == "book"
+
+
+def test_uniprot_xmltopyarrow_settings_pass_defaults(
+    settings_factory: Callable[..., Any],
+) -> None:
+    """UniProtXmlToPyArrowSettings defaults dataset_name, table_name, xml_tag, xsd_file and uses precomputed SCHEMA."""
+    with patch.object(xmltopyarrow_settings_module, "generate_pyarrow_schema") as mock_gen_schema:
+        settings = settings_factory(UniProtXmlToPyArrowSettings)
+
+    mock_gen_schema.assert_not_called()
+    assert settings.dataset_name == UNIPROT_PIPELINE_NAME
+    assert settings.table_name == "entry"
+    assert settings.xml_tag == "entry"
+    assert settings.xsd_file == UNIPROT_XSD_FILE
+    assert isinstance(settings.xsd_schema, xmlschema.XMLSchema)
+    assert settings.pyarrow_schema is UNIPROT_SCHEMA
+
+
+def test_uniref_xmltopyarrow_settings_pass_defaults(
+    settings_factory: Callable[..., Any],
+) -> None:
+    """UniRefXmlToPyArrowSettings defaults dataset_name, table_name, xml_tag, xsd_file and uses precomputed SCHEMA."""
+    with patch.object(xmltopyarrow_settings_module, "generate_pyarrow_schema") as mock_gen_schema:
+        settings = settings_factory(UniRefXmlToPyArrowSettings)
+
+    mock_gen_schema.assert_not_called()
+    assert settings.dataset_name == UNIREF_PIPELINE_NAME
+    assert settings.table_name == "entry"
+    assert settings.xml_tag == "entry"
+    assert settings.xsd_file == UNIREF_XSD_FILE
+    assert isinstance(settings.xsd_schema, xmlschema.XMLSchema)
+    assert settings.pyarrow_schema is UNIREF_SCHEMA
+
+
+@pytest.mark.parametrize(
+    ("settings_cls", "expected_dataset_name", "expected_xsd_file", "expected_schema"),
+    [
+        (UniProtXmlToPyArrowSettings, UNIPROT_PIPELINE_NAME, UNIPROT_XSD_FILE, UNIPROT_SCHEMA),
+        (UniRefXmlToPyArrowSettings, UNIREF_PIPELINE_NAME, UNIREF_XSD_FILE, UNIREF_SCHEMA),
+    ],
+)
+def test_subclass_xmltopyarrow_settings_pass_cli_defaults(
+    settings_factory: Callable[..., Any],
+    *,
+    settings_cls: type[XmlToPyArrowSettings],
+    expected_dataset_name: str,
+    expected_xsd_file: Path,
+    expected_schema: pa.Schema,
+) -> None:
+    """UniProt and UniRef settings subclasses can be parsed via CLI without specifying defaulted arguments."""
+    base_settings = settings_factory(CtsSettings)
+    settings = CliApp.run(settings_cls, cli_args=settings_to_argv(base_settings))
+    assert settings.dataset_name == expected_dataset_name
+    assert settings.table_name == "entry"
+    assert settings.xml_tag == "entry"
+    assert settings.xsd_file == expected_xsd_file
+    assert settings.pyarrow_schema is expected_schema

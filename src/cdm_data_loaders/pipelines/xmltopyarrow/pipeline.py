@@ -42,12 +42,13 @@ def run_xmltopyarrow_pipeline(settings: XmlToPyArrowSettings) -> LoadInfo | None
     files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
 
     xmltopyarrow_resource: DltResource = files | reader(settings)
+    pipeline_name = str(settings.model_config.get("cli_prog_name") or PIPELINE_NAME)
 
     return run_pipeline(
         settings=settings,
         resource=xmltopyarrow_resource,
         pipeline_kwargs={
-            "pipeline_name": PIPELINE_NAME,
+            "pipeline_name": pipeline_name,
             "dataset_name": settings.dataset_name,
         },
         pipeline_run_kwargs={
