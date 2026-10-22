@@ -20,6 +20,7 @@ from cdm_data_loaders.core.fields import (
     USE_OUTPUT_DIR_FOR_PIPELINE_METADATA,
 )
 from tests.conftest import LOCAL_FS
+from tests.helpers import make_cli_arg
 
 
 def check_settings(
@@ -52,7 +53,7 @@ def make_settings(monkeypatch: pytest.MonkeyPatch) -> SettingsFactory:
                 monkeypatch.setenv(f"{prefix}{name}".upper(), value)
             return settings_cls()
         if source == CLI:
-            cli_args = [arg for name, value in values.items() for arg in (f"--{name.replace('_', '-')}", value)]
+            cli_args = [arg for name, value in values.items() for arg in (make_cli_arg(name), value)]
             return CliApp.run(settings_cls, cli_args=cli_args)
         err_msg = f"Unknown settings source: {source!r}"
         raise ValueError(err_msg)

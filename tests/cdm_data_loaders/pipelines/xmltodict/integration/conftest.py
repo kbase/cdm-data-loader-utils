@@ -17,10 +17,10 @@ from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
 from cdm_data_loaders.readers.xml import DEFAULT_XMLTODICT_ARGS
 from tests.cdm_data_loaders.pipelines.helpers import (
     duckdb_reference_from_jsonl,
-    make_cts_settings,
     read_jsonl_file,
 )
 from tests.conftest import N_REFERENCE_XML_ENTRIES, REFERENCE_XML_TAG
+from tests.helpers import make_cts_settings
 
 DEFAULT_XMLTODICT_SETTINGS: frozendict = frozendict(
     {

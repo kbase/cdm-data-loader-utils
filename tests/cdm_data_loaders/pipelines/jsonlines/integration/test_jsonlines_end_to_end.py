@@ -13,8 +13,8 @@ from tests.cdm_data_loaders.pipelines.framework import PipelineTestRunner
 from tests.cdm_data_loaders.pipelines.helpers import (
     assert_pipeline_report_written,
     assert_run_ok,
-    settings_to_argv,
 )
+from tests.helpers import settings_to_argv
 
 
 def test_run_jsonlines_pipeline_pass_writes_expected_parquet(

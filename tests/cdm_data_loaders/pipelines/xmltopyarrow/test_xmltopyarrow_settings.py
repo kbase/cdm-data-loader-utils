@@ -29,8 +29,8 @@ from cdm_data_loaders.pipelines.xmltopyarrow.settings import (
 from cdm_data_loaders.readers.xsd import DEFAULT_MAX_RECURSION_DEPTH, generate_pyarrow_schema, load_schema
 from cdm_data_loaders.schemas.uniprot.schema import SCHEMA as UNIPROT_SCHEMA
 from cdm_data_loaders.schemas.uniref.schema import SCHEMA as UNIREF_SCHEMA
-from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
 from tests.conftest import S3
+from tests.helpers import settings_to_argv
 
 UNIREF_LIKE_XSD: str = "uniref_like.xsd"
 

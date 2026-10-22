@@ -49,15 +49,12 @@ from cdm_data_loaders.pipelines.core import (
 )
 from tests.cdm_data_loaders.pipelines.conftest import HOOK_ENV_VAR
 from tests.cdm_data_loaders.pipelines.helpers import (
-    make_cts_settings as make_pipeline_cts_settings,
-)
-from tests.cdm_data_loaders.pipelines.helpers import (
     read_destination_rows,
     read_jsonl_file,
-    settings_to_argv,
 )
 from tests.conftest import LOCAL_FS, S3
 from tests.dlt_config_isolation import dlt_config_unset, isolated_dlt_config
+from tests.helpers import make_cts_settings, settings_to_argv
 
 TINY_RESOURCE_DATA: Final[list[dict[str, Any]]] = [
     {"entity_id": "tiny:one", "value": 1},
@@ -74,19 +71,13 @@ LOAD_INFO_SAVE_FAILED_JOBS: Final[str] = "Loading pipeline load info had failed 
 SETTINGS_CLASSES: Final[list[type[CdmDataLoadersBase]]] = [LoggerSettings, LocalInputOutputSettings, CtsSettings]
 
 
-def make_cts_settings(**kwargs: str | int | bool | Path) -> CtsSettings:
-    """Generate a validated CtsSettings object."""
-    return CtsSettings.model_validate(kwargs)
-
-
 @pytest.fixture
 def dlt_test_settings(tmp_path: Path, dlt_destination_config: str) -> CtsSettings:
     """Settings that load into the local_fs destination and keep pipeline metadata in a separate output_dir."""
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(exist_ok=True, parents=True)
     return make_cts_settings(
-        input_dir=str(tmp_path / "input"),
-        output_dir=str(tmp_path / "output"),
+        CtsSettings,
+        tmp_path,
+        log_config_file=None,
         use_destination=dlt_destination_config,
         use_output_dir_for_pipeline_metadata=True,
     )
@@ -423,8 +414,8 @@ def test_run_cli_pipeline_fn_not_called_on_settings_instantiation_error(
 def test_run_pipeline_builds_destination_from_settings(mock_dlt: MagicMock, tmp_path: Path) -> None:
     """The destination comes from settings.use_destination only; output_dir has no effect on it."""
     settings = make_cts_settings(
-        input_dir=tmp_path,
-        output_dir=tmp_path / "output",
+        CtsSettings,
+        tmp_path,
         use_destination=S3,
         dlt_dev_mode=True,
     )
@@ -449,7 +440,7 @@ def test_run_pipeline_forwards_destination_kwargs(
     mock_dlt: MagicMock, use_destination: str, destination_kwargs: dict[str, Any], tmp_path: Path
 ) -> None:
     """destination_kwargs are forwarded to the dlt.destination constructor."""
-    settings = make_cts_settings(input_dir=tmp_path, output_dir=tmp_path, use_destination=use_destination)
+    settings = make_cts_settings(CtsSettings, tmp_path, use_destination=use_destination)
 
     run_pipeline(settings, MagicMock(), destination_kwargs=dict(destination_kwargs))
 
@@ -459,7 +450,7 @@ def test_run_pipeline_forwards_destination_kwargs(
 def test_run_pipeline_fail_destination_not_configured(mock_dlt: MagicMock, tmp_path: Path) -> None:
     """An unconfigured use_destination raises ValueError before the pipeline runs."""
     mock_dlt.destination.side_effect = ValueError("not configured")
-    settings = make_cts_settings(input_dir=tmp_path, output_dir=tmp_path, use_destination="missing_dest")
+    settings = make_cts_settings(CtsSettings, tmp_path, use_destination="missing_dest")
 
     with pytest.raises(ValueError, match=r"^Invalid destination configuration for missing_dest$"):
         run_pipeline(settings, MagicMock())
@@ -1010,11 +1001,10 @@ def test_run_pipeline_pass_failed_jobs_reported(
     """With raise_on_failed_jobs off, failed jobs are returned in the LoadInfo and Slack says 'with errors'."""
     monkeypatch.setenv("LOAD__RAISE_ON_FAILED_JOBS", "false")
     monkeypatch.setenv(HOOK_ENV_VAR, SLACK_HOOK)
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(exist_ok=True)
     settings = make_cts_settings(
-        input_dir=str(input_dir),
-        output_dir=str(tmp_path / "output"),
+        CtsSettings,
+        tmp_path,
+        log_config_file=None,
         use_destination=FAILING_SINK,
         use_output_dir_for_pipeline_metadata=True,
     )
@@ -1676,7 +1666,7 @@ def test_build_file_ingest_kwargs_pass(
     expected_dataset_name: str | None,
 ) -> None:
     """build_file_ingest_kwargs constructs pipeline_kwargs and pipeline_run_kwargs from FileFormatIngestSettings."""
-    base_settings: FileFormatIngestSettings = make_pipeline_cts_settings(
+    base_settings: FileFormatIngestSettings = make_cts_settings(
         FileFormatIngestSettings,
         tmp_path,
         dataset_name="custom_ds",

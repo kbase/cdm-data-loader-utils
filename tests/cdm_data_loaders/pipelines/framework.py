@@ -25,8 +25,9 @@ from cdm_data_loaders.core.settings import CtsSettings, LoggerSettings
 from cdm_data_loaders.pipelines import core
 from cdm_data_loaders.pipelines.core import LOAD_INFO_TABLE_NAME, PipelineCli
 from cdm_data_loaders.utils import cdm_logger
-from tests.cdm_data_loaders.pipelines.helpers import read_jsonl_file, settings_to_argv
+from tests.cdm_data_loaders.pipelines.helpers import read_jsonl_file
 from tests.conftest import BASE_DIR, CONFIG_BUCKET, LOCAL_FS
+from tests.helpers import settings_to_argv
 
 DEFAULT_DOCKER_IMAGE_TAG: Final[str] = "cdm-data-loaders-test:latest"
 CONTAINER_INPUT_DIR: Final[str] = "/input_dir"

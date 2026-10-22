@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.helpers import make_cts_settings
 
 
 @pytest.fixture

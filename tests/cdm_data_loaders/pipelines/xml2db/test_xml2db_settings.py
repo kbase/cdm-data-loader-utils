@@ -15,8 +15,8 @@ from cdm_data_loaders.pipelines.xml2db.settings import (
     PIPELINE_NAME,
     Xml2DbSettings,
 )
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings, settings_to_argv
 from tests.conftest import S3
+from tests.helpers import make_cts_settings, settings_to_argv
 
 MINIMAL_SETTINGS_KWARGS: dict[str, object] = {
     "buffer_size": 100,

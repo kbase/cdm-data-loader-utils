@@ -10,8 +10,8 @@ from frozendict import frozendict
 
 from cdm_data_loaders.pipelines.xml2db.pipeline import run_xml2db_pipeline
 from cdm_data_loaders.pipelines.xml2db.settings import Xml2DbSettings
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
 from tests.conftest import REFERENCE_XSD
+from tests.helpers import make_cts_settings
 from tests.xml_samples import LIBRARY_XSD
 
 DEFAULT_XML2DB_SETTINGS: frozendict = frozendict(

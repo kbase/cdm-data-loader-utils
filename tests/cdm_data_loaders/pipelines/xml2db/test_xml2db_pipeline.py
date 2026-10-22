@@ -21,10 +21,9 @@ from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
 from tests.cdm_data_loaders.pipelines.helpers import (
     assert_run_ok,
     fetch_all_duckdb,
-    make_cts_settings,
     make_file_item,
-    settings_to_argv,
 )
+from tests.helpers import make_cts_settings, settings_to_argv
 
 SIMPLE_LIBRARY_XML = """<?xml version="1.0"?>
 <library>

@@ -9,7 +9,7 @@ import pytest
 
 from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltopyarrow.settings import XmlToPyArrowSettings
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.helpers import make_cts_settings
 from tests.xml_samples import LIBRARY_XSD
 
 

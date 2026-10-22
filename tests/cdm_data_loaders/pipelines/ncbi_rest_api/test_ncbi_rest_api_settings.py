@@ -19,8 +19,7 @@ from cdm_data_loaders.pipelines.ncbi_rest_api import (
     set_settings,
 )
 from tests.cdm_data_loaders.conftest import check_settings
-from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
-from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes
+from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes, settings_to_argv
 
 BATCH_SIZE = 200
 BATCH_SIZE_STRING = str(BATCH_SIZE)

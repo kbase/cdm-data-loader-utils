@@ -60,8 +60,9 @@ def test_xml_pass_reference_dataset_has_nested_structures(
     member_type = entry_fields["representativeMember"]
     assert property_type.id == "list"
     assert member_type.id == "struct"
-    count = reference_xml_table.count("*").fetchone()[0]
-    assert count == EXPECTED_ENTRY_COUNT
+
+    count = reference_xml_dataset.execute("SELECT COUNT(*) FROM reference").fetchone()
+    assert count == (EXPECTED_ENTRY_COUNT,)
 
 
 def test_xml_pass_diff_format_same_results(run_xmltodict_pipeline_fxt: Callable[..., Any]) -> None:

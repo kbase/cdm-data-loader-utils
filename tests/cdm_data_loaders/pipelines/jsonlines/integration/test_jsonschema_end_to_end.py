@@ -16,8 +16,8 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     assert_run_ok,
     parse_json_string,
     read_data_rows,
-    settings_to_argv,
 )
+from tests.helpers import settings_to_argv
 
 pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
 

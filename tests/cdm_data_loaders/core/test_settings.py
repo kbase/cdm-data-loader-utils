@@ -1,7 +1,7 @@
 """Tests for the settings classes and helpers in cdm_data_loaders.core.settings."""
 
 from pathlib import Path
-from typing import Any, Final
+from typing import Any
 
 import pytest
 from frozendict import frozendict
@@ -27,10 +27,45 @@ from tests.cdm_data_loaders.conftest import (
     cts_expected,
     local_io_expected,
 )
-from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
-from tests.conftest import LOCAL_FS
+from tests.helpers import (
+    assert_cli_field_roundtrips,
+    assert_no_cli_clashes,
+    settings_to_argv,
+)
 
-TEST_CLASS_NAME: Final[str] = "FruitSettings"
+
+@pytest.mark.parametrize(
+    "settings_cls",
+    [LoggerSettings, LocalInputOutputSettings, CtsSettings, FileFormatIngestSettings, XmlIngestSettings],
+)
+def test_settings_pass_no_cli_clashes(settings_cls: type[CdmDataLoadersBase]) -> None:
+    """Every core settings class has no CLI argument or alias collisions."""
+    assert_no_cli_clashes(settings_cls)
+
+
+def test_cts_settings_pass_all_params_set(
+    test_cts_settings: frozendict[str, Any],
+    test_cts_settings_reconciled: frozendict[str, Any],
+) -> None:
+    """CtsSettings populated with test_cts_settings matches test_cts_settings_reconciled."""
+    check_settings(CtsSettings(**test_cts_settings), test_cts_settings_reconciled)
+
+
+@pytest.mark.parametrize("field_name", list(CtsSettings.model_fields))
+def test_cts_settings_pass_cli_field_roundtrips(
+    field_name: str,
+    test_cts_settings: frozendict[str, Any],
+    test_cts_settings_reconciled: frozendict[str, Any],
+    test_defaults: dict[str, Any],
+) -> None:
+    """Every registered CLI option and shortcut for each CtsSettings field roundtrips to the expected value."""
+    assert_cli_field_roundtrips(
+        CtsSettings,
+        field_name,
+        test_cts_settings[field_name],
+        test_cts_settings_reconciled[field_name],
+        test_defaults,
+    )
 
 
 @pytest.mark.parametrize(
@@ -119,9 +154,9 @@ def test_local_input_output_settings_pass_cli_shortcuts(input_dir: Path, output_
 
 @pytest.mark.parametrize("source", SETTINGS_SOURCES)
 @pytest.mark.parametrize(
-    ("values", "overrides", "pipeline_dir_name"),
+    ("values", "overrides"),
     [
-        pytest.param({"use_destination": "cts"}, {"use_destination": "cts"}, None, id="defaults"),
+        pytest.param({"use_destination": "cts"}, {"use_destination": "cts"}, id="defaults"),
         pytest.param(
             {
                 "log_config_file": "logging.yaml",
@@ -139,7 +174,6 @@ def test_local_input_output_settings_pass_cli_shortcuts(input_dir: Path, output_
                 "use_destination": "s3",
                 "use_output_dir_for_pipeline_metadata": True,
             },
-            ".dlt_conf",
             id="all_fields_set",
         ),
     ],
@@ -149,16 +183,18 @@ def test_cts_settings_pass_sources(
     source: str,
     values: dict[str, str],
     overrides: dict[str, Any],
-    pipeline_dir_name: str | None,
-    input_dir: Path,
-    output_dir: Path,
+    test_defaults: dict[str, Any],
 ) -> None:
     """Build CtsSettings from each source and check every field, including the computed pipeline_dir."""
     settings = make_settings(
-        CtsSettings, source, {"input_dir": str(input_dir), "output_dir": str(output_dir), **values}
+        CtsSettings,
+        source,
+        {**{k: str(v) for k, v in test_defaults.items()}, **values},
     )
-    pipeline_dir = None if pipeline_dir_name is None else output_dir.resolve() / pipeline_dir_name
-    check_settings(settings, cts_expected(input_dir, output_dir, **overrides, pipeline_dir=pipeline_dir))
+    pipeline_dir = (
+        test_defaults["output_dir"] / ".dlt_conf" if overrides.get("use_output_dir_for_pipeline_metadata") else None
+    )
+    check_settings(settings, cts_expected(**{**test_defaults, **overrides}, pipeline_dir=pipeline_dir))
 
 
 def test_cts_settings_pass_cli_shortcuts(input_dir: Path, output_dir: Path) -> None:
@@ -186,9 +222,9 @@ def test_cts_settings_pass_cli_shortcuts(input_dir: Path, output_dir: Path) -> N
         pytest.param(["--buffer_size", "5"], id="snake_case_arg"),
     ],
 )
-def test_cts_settings_fail_unrecognised_cli_args(input_dir: Path, output_dir: Path, extra_args: list[str]) -> None:
+def test_cts_settings_fail_unrecognised_cli_args(test_defaults: dict[str, Any], extra_args: list[str]) -> None:
     """Raise SettingsError, not SystemExit, for CLI args that are not registered."""
-    base = CtsSettings(input_dir=input_dir, output_dir=output_dir, use_destination=LOCAL_FS)
+    base = CtsSettings(**test_defaults)
     with pytest.raises(SettingsError, match="unrecognized arguments"):
         CliApp.run(CtsSettings, cli_args=[*settings_to_argv(base), *extra_args])
 
@@ -221,20 +257,14 @@ def test_settings_fail_missing_dirs(
     assert {(err["loc"], err["type"]) for err in exc_info.value.errors()} == expected
 
 
-def test_file_format_ingest_settings_pass_cli_shortcuts(input_dir: Path, output_dir: Path) -> None:
+def test_file_format_ingest_settings_pass_cli_shortcuts(test_defaults: dict[str, Any]) -> None:
     """FileFormatIngestSettings supports FILE_FORMAT_CLI_SHORTCUTS (-f) in addition to CtsSettings shortcuts."""
     assert FILE_FORMAT_CLI_SHORTCUTS["loader_file_format"] == "f"
+    base = FileFormatIngestSettings(**test_defaults, dataset_name="my_dataset")
     settings = CliApp.run(
         FileFormatIngestSettings,
         cli_args=[
-            "-i",
-            str(input_dir),
-            "-o",
-            str(output_dir),
-            "-d",
-            LOCAL_FS,
-            "--dataset-name",
-            "my_dataset",
+            *settings_to_argv(base, exclude=["loader_file_format"]),
             "-f",
             "jsonl",
         ],
@@ -242,7 +272,7 @@ def test_file_format_ingest_settings_pass_cli_shortcuts(input_dir: Path, output_
     check_settings(
         settings,
         {
-            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="my_dataset"),
+            **cts_expected(**test_defaults, dataset_name="my_dataset"),
             "loader_file_format": "jsonl",
         },
     )
@@ -250,7 +280,7 @@ def test_file_format_ingest_settings_pass_cli_shortcuts(input_dir: Path, output_
 
 @pytest.mark.parametrize("source", SETTINGS_SOURCES)
 def test_xml_ingest_settings_pass_defaults_and_cli_shortcuts(
-    make_settings: SettingsFactory, source: str, input_dir: Path, output_dir: Path
+    make_settings: SettingsFactory, source: str, test_defaults: dict[str, Any]
 ) -> None:
     """XmlIngestSettings defaults file_glob to '*.xml*' across sources and supports XML_CLI_SHORTCUTS (-f, -g)."""
     assert XML_CLI_SHORTCUTS["loader_file_format"] == "f"
@@ -259,16 +289,14 @@ def test_xml_ingest_settings_pass_defaults_and_cli_shortcuts(
         XmlIngestSettings,
         source,
         {
-            "input_dir": str(input_dir),
-            "output_dir": str(output_dir),
-            "use_destination": LOCAL_FS,
+            **{k: str(v) for k, v in test_defaults.items()},
             "dataset_name": "xml_dataset",
         },
     )
     check_settings(
         default_glob_settings,
         {
-            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="xml_dataset"),
+            **cts_expected(**test_defaults, dataset_name="xml_dataset"),
             "loader_file_format": "parquet",
             "file_glob": "*.xml*",
         },
@@ -286,7 +314,7 @@ def test_xml_ingest_settings_pass_defaults_and_cli_shortcuts(
     check_settings(
         cli_settings,
         {
-            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="xml_dataset"),
+            **cts_expected(**test_defaults, dataset_name="xml_dataset"),
             "loader_file_format": "jsonl",
             "file_glob": "*.xml.gz",
         },

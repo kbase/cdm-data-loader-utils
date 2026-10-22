@@ -25,13 +25,14 @@ from cdm_data_loaders.pipelines.jsonlines.settings import (
     JsonlJsonschemaIngestSettings,
     JsonlPydanticIngestSettings,
 )
-from tests.cdm_data_loaders.pipelines.helpers import duckdb_reference_from_jsonl, make_cts_settings
+from tests.cdm_data_loaders.pipelines.helpers import duckdb_reference_from_jsonl
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_models import ENTITY_MODELS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.dataset_report_schemas import ENTITY_SCHEMAS
 from tests.cdm_data_loaders.pipelines.jsonlines.integration.jsonlines_reference_helpers import (
     canonicalize_entry,
 )
 from tests.conftest import TEST_DATA_DIR
+from tests.helpers import make_cts_settings
 
 type PipelineRunner = Callable[..., tuple[LoadInfo | None, Path]]
 type PrepareReference = Callable[[dict[str, Any]], dict[str, Any]]

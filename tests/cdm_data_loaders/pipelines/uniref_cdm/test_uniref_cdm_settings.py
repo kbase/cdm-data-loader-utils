@@ -14,11 +14,10 @@ from cdm_data_loaders.pipelines.uniref_cdm import (
     UnirefSettings,
 )
 from tests.cdm_data_loaders.conftest import check_settings
-from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
 from tests.cdm_data_loaders.pipelines.uniref_cdm.conftest import (
     UNIREF_VARIANT_ALIASES,
 )
-from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes, make_cli_arg
+from tests.helpers import assert_cli_field_roundtrips, assert_no_cli_clashes, make_cli_arg, settings_to_argv
 
 
 def test_uniref_settings_all_params_set(

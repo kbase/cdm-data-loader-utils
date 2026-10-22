@@ -20,7 +20,8 @@ from cdm_data_loaders.pipelines.xmltodict.pipeline import (
 )
 from cdm_data_loaders.pipelines.xmltodict.settings import PIPELINE_NAME, XmlToDictSettings
 from tests.cdm_data_loaders.pipelines.conftest import duckdb_pipeline
-from tests.cdm_data_loaders.pipelines.helpers import assert_run_ok, fetch_all_duckdb, settings_to_argv
+from tests.cdm_data_loaders.pipelines.helpers import assert_run_ok, fetch_all_duckdb
+from tests.helpers import settings_to_argv
 from tests.xml_samples import TWO_BOOK_LIBRARY_XML
 
 
