@@ -109,6 +109,47 @@ def _log_interval_final(n_entries: int, file_path: Path, log_interval: int) -> N
         logger.debug("Processed %d entries from %s", n_entries + 1, file_path.name)
 
 
+def _resolve_stream_tag(file_path: Path, xml_tag: str) -> str:
+    """Resolve an unprefixed XML tag against the file's default namespace if present."""
+    if not xml_tag.startswith("{"):
+        default_ns = parse_head_matter(file_path).get("")
+        if default_ns:
+            return f"{{{default_ns}}}{xml_tag}"
+    return xml_tag
+
+
+def _parse_element_to_dict(element: Element) -> dict[str, Any] | None:
+    """Parse an XML element with ``xmltodict`` and strip root-level ``_xmlns`` declarations."""
+    parsed_element = xmltodict.parse(tostring(element), **DEFAULT_XMLTODICT_ARGS)
+    if not parsed_element:
+        return None
+    for k, v in parsed_element.items():
+        # remove the xmlns declarations
+        parsed_element[k] = {kv: val for kv, val in v.items() if not kv.startswith("_xmlns")}
+    return parsed_element
+
+
+def _stream_and_buffer_xml_elements(  # noqa: PLR0913
+    file_path: Path,
+    xml_tag: str,
+    log_interval: int,
+    buffer: ArrowListBuffer | DictBuffer | ListBuffer,
+    buffer_element_fn: Callable[[Element], Iterable[DataItemWithMeta]],
+    *,
+    resolve_default_ns: bool = False,
+) -> Generator[DataItemWithMeta]:
+    """Stream matching XML elements from ``file_path``, buffer parsed items, log progress, and flush."""
+    logger.info("Reading from %s", str(file_path))
+    stream_tag = _resolve_stream_tag(file_path, xml_tag) if resolve_default_ns else xml_tag
+    n_entries = -1
+    for n_entries, element in enumerate(stream_xml_file(file_path, stream_tag)):
+        yield from buffer_element_fn(element)
+        _log_interval_progress(n_entries, log_interval)
+
+    _log_interval_final(n_entries, file_path, log_interval)
+    yield from buffer.flush()
+
+
 def process_xml_file_to_pyarrow(settings: XmlToPyArrowSettings, file_path: Path) -> Generator[DataItemWithMeta]:
     """Convert XML elements to PyArrow table batches using an XSD schema.
 
@@ -124,32 +165,25 @@ def process_xml_file_to_pyarrow(settings: XmlToPyArrowSettings, file_path: Path)
     :yield: pages of PyArrow tables
     :rtype: Generator[DataItemWithMeta]
     """
-    logger.info("Reading from %s", str(file_path))
-    n_entries = -1
-
-    stream_tag = settings.xml_tag
-    if not stream_tag.startswith("{"):
-        default_ns = parse_head_matter(file_path).get("")
-        if default_ns:
-            stream_tag = f"{{{default_ns}}}{stream_tag}"
-
     arrow_buffer = ArrowListBuffer(
         table_to_schema_map={settings.table_name: settings.pyarrow_schema},
         max_items=settings.buffer_size,
     )
-    for n_entries, element in enumerate(stream_xml_file(file_path, stream_tag)):
-        parsed_row = convert_xml_element(
-            element,
-            settings.xsd_schema,
-            settings.xml_tag,
-            max_recursion_depth=settings.max_recursion_depth,
-        )
-        yield from arrow_buffer.add_item(parsed_row)
-        _log_interval_progress(n_entries, settings.log_interval)
-
-    _log_interval_final(n_entries, file_path, settings.log_interval)
-    yield from arrow_buffer.flush()
-    return
+    yield from _stream_and_buffer_xml_elements(
+        file_path=file_path,
+        xml_tag=settings.xml_tag,
+        log_interval=settings.log_interval,
+        buffer=arrow_buffer,
+        buffer_element_fn=lambda element: arrow_buffer.add_item(
+            convert_xml_element(
+                element,
+                settings.xsd_schema,
+                settings.xml_tag,
+                max_recursion_depth=settings.max_recursion_depth,
+            )
+        ),
+        resolve_default_ns=True,
+    )
 
 
 def process_xml_file_to_dict(settings: XmlToDictSettings, file_path: Path) -> Generator[DataItemWithMeta]:
@@ -166,21 +200,20 @@ def process_xml_file_to_dict(settings: XmlToDictSettings, file_path: Path) -> Ge
     :yield: pages of dictionary items
     :rtype: Generator[DataItemWithMeta]
     """
-    logger.info("Reading from %s", str(file_path))
-    n_entries = -1
-
     buffer = ListBuffer(table_name=settings.table_name, max_items=settings.buffer_size)
-    for n_entries, element in enumerate(stream_xml_file(file_path, settings.xml_tag)):
-        parsed_element = xmltodict.parse(tostring(element), **DEFAULT_XMLTODICT_ARGS)
-        if parsed_element:
-            for k, v in parsed_element.items():
-                # remove the xmlns declarations
-                parsed_element[k] = {kv: val for kv, val in v.items() if not kv.startswith("_xmlns")}
-            yield from buffer.add_item(parsed_element)
-        _log_interval_progress(n_entries, settings.log_interval)
 
-    _log_interval_final(n_entries, file_path, settings.log_interval)
-    yield from buffer.flush()
+    def _buffer_element(element: Element) -> Generator[DataItemWithMeta]:
+        parsed_element = _parse_element_to_dict(element)
+        if parsed_element:
+            yield from buffer.add_item(parsed_element)
+
+    yield from _stream_and_buffer_xml_elements(
+        file_path=file_path,
+        xml_tag=settings.xml_tag,
+        log_interval=settings.log_interval,
+        buffer=buffer,
+        buffer_element_fn=_buffer_element,
+    )
 
 
 def process_xml_file(
@@ -205,17 +238,14 @@ def process_xml_file(
     :yield: table-tagged rows
     :rtype: Generator[DataItemWithMeta, Any]
     """
-    logger.info("Reading from %s", str(file_path))
-    n_entries = -1
     buffer = DictBuffer(max_items=settings.buffer_size)
-    for n_entries, element in enumerate(stream_xml_file(file_path, xml_tag)):
-        parsed_element = parse_fn(entry=element, file_path=file_path)
-        yield from buffer.add_items(parsed_element)
-
-        _log_interval_progress(n_entries, settings.log_interval)
-
-    _log_interval_final(n_entries, file_path, settings.log_interval)
-    yield from buffer.flush()
+    yield from _stream_and_buffer_xml_elements(
+        file_path=file_path,
+        xml_tag=xml_tag,
+        log_interval=settings.log_interval,
+        buffer=buffer,
+        buffer_element_fn=lambda element: buffer.add_items(parse_fn(entry=element, file_path=file_path)),
+    )
 
 
 def process_xml_file_batches(

@@ -6,7 +6,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 import pyarrow as pa
 import xmlschema
@@ -21,6 +21,8 @@ from xmlschema.validators import (
     XsdSimpleType,
     XsdType,
 )
+
+from cdm_data_loaders.utils.xml_utils import local_name as _local_name
 
 DEFAULT_MAX_RECURSION_DEPTH: Final[int] = 2
 
@@ -97,13 +99,6 @@ def load_schema(schema_path: str | Path) -> xmlschema.XMLSchema:
     :rtype : xmlschema.XMLSchema
     """
     return xmlschema.XMLSchema(str(schema_path))
-
-
-def _local_name(tag: str) -> str:
-    """Strip namespace URI from a Clark-notation tag or prefixed attribute name."""
-    if "}" in tag:
-        return tag.rsplit("}", maxsplit=1)[-1]
-    return tag
 
 
 def _extract_doc_comment(component: object, fallback_type: object = None) -> str | None:
@@ -230,21 +225,15 @@ def _iter_simple_builtin_names(simple_type: XsdType) -> list[str]:
 
 
 @dataclass(frozen=True, slots=True)
-class _SchemaContext:
-    """Immutable traversal context for PyArrow schema generation."""
-
-    schema: xmlschema.XMLSchema
-    type_counts: Mapping[int, int]
-    max_recursion_depth: int
-
-
-@dataclass(frozen=True, slots=True)
-class _ConvertContext:
-    """Immutable traversal context for XML-to-dict conversion."""
+class _TraversalContext:
+    """Immutable traversal context for XSD schema generation and XML-to-dict conversion."""
 
     schema: xmlschema.XMLSchema
     type_counts: Mapping[int, int]
     max_recursion_depth: int | None
+
+
+_LeafKind = Literal["simple", "mixed", "empty_marker"]
 
 
 def _check_complex_type_forbidden_recursion(root_type: XsdType, current: XsdComplexType) -> list[XsdType]:
@@ -430,8 +419,23 @@ def _is_empty_marker_complex_type(complex_type: XsdComplexType) -> bool:
     )
 
 
+def _resolve_child_cardinality(
+    model_group: XsdGroup,
+    child_decl: XsdElement,
+    *,
+    parent_nillable: bool = False,
+) -> tuple[bool, bool]:
+    """Return ``(is_list, nullable)`` for ``child_decl`` within ``model_group``."""
+    child_name = child_decl.local_name or ""
+    max_occurs = _group_max_occurs_by_name(model_group, child_name)
+    min_occurs = _group_min_occurs_by_name(model_group, child_name)
+    is_list = max_occurs is None or max_occurs > 1
+    nullable = parent_nillable or child_decl.nillable or min_occurs < 1
+    return is_list, nullable
+
+
 def _build_complex_struct_fields(
-    ctx: _SchemaContext,
+    ctx: _TraversalContext,
     complex_type: XsdComplexType,
     *,
     parent_nillable: bool,
@@ -499,10 +503,7 @@ def _build_complex_struct_fields(
             )
             raise ValueError(msg)
 
-        max_occurs = _group_max_occurs_by_name(model_group, child_name)
-        min_occurs = _group_min_occurs_by_name(model_group, child_name)
-        is_list = max_occurs is None or max_occurs > 1
-        nullable = parent_nillable or child.nillable or min_occurs < 1
+        is_list, nullable = _resolve_child_cardinality(model_group, child, parent_nillable=parent_nillable)
 
         fields.append(
             _build_element_field(
@@ -516,27 +517,40 @@ def _build_complex_struct_fields(
     return fields
 
 
-def _resolve_non_struct_element_type(elem_type: XsdType | None) -> tuple[pa.DataType, str | None] | None:
-    """Return ``(pa_type, xsd_type_or_None)`` if ``elem_type`` maps to a leaf scalar rather than a struct."""
+def _classify_leaf_element_type(elem_type: XsdType | None) -> tuple[_LeafKind, XsdType | None] | None:
+    """Classify ``elem_type`` as a non-struct leaf ``(kind, simple_type)`` or ``None`` if it maps to a struct."""
     if not isinstance(elem_type, XsdComplexType):
-        return _simple_type_to_arrow(elem_type) if elem_type is not None else (pa.string(), "xs:string")
+        return "simple", elem_type
 
     attrs = _collect_attributes(elem_type)
     if elem_type.has_simple_content() and not attrs:
-        content_type = elem_type.content
-        return _simple_type_to_arrow(content_type) if isinstance(content_type, XsdType) else (pa.string(), "xs:string")
+        content_type = elem_type.content if isinstance(elem_type.content, XsdType) else None
+        return "simple", content_type
 
     if elem_type.mixed and not attrs:
-        return pa.string(), "xs:string"
+        return "mixed", None
 
     if _is_empty_marker_complex_type(elem_type):
-        return pa.string(), None
+        return "empty_marker", None
 
     return None
 
 
+def _resolve_non_struct_element_type(elem_type: XsdType | None) -> tuple[pa.DataType, str | None] | None:
+    """Return ``(pa_type, xsd_type_or_None)`` if ``elem_type`` maps to a leaf scalar rather than a struct."""
+    leaf_info = _classify_leaf_element_type(elem_type)
+    if leaf_info is None:
+        return None
+    kind, simple_type = leaf_info
+    if kind == "simple":
+        return _simple_type_to_arrow(simple_type) if simple_type is not None else (pa.string(), "xs:string")
+    if kind == "mixed":
+        return pa.string(), "xs:string"
+    return pa.string(), None
+
+
 def _build_element_field(
-    ctx: _SchemaContext,
+    ctx: _TraversalContext,
     element: XsdElement,
     *,
     is_list: bool,
@@ -562,7 +576,7 @@ def _build_element_field(
         _check_no_forbidden_types_under_recursion(elem_type)
 
     next_count = ctx.type_counts.get(type_id, 0) + 1
-    if next_count > ctx.max_recursion_depth:
+    if ctx.max_recursion_depth is not None and next_count > ctx.max_recursion_depth:
         return _wrap_scalar_or_list_field(
             element.local_name,
             (pa.string(), None),
@@ -571,7 +585,7 @@ def _build_element_field(
             nullable=nullable,
         )
 
-    next_ctx = _SchemaContext(
+    next_ctx = _TraversalContext(
         schema=ctx.schema,
         type_counts={**ctx.type_counts, type_id: next_count},
         max_recursion_depth=ctx.max_recursion_depth,
@@ -689,6 +703,23 @@ def _require_complex_type(elem_type: XsdType | None, xml_tag: str) -> XsdComplex
     return elem_type
 
 
+def _prepare_target_traversal(
+    schema: xmlschema.XMLSchema,
+    xml_tag: str,
+    *,
+    max_recursion_depth: int,
+) -> tuple[XsdElement, XsdComplexType, _TraversalContext]:
+    """Resolve ``xml_tag`` to its ``XsdElement``, validated ``XsdComplexType``, and initial ``_TraversalContext``."""
+    target_elem = _resolve_target_element(schema, xml_tag)
+    elem_type = _require_complex_type(target_elem.type, xml_tag)
+    ctx = _TraversalContext(
+        schema=schema,
+        type_counts={id(elem_type): 1},
+        max_recursion_depth=max_recursion_depth,
+    )
+    return target_elem, elem_type, ctx
+
+
 def generate_pyarrow_schema(
     schema: xmlschema.XMLSchema,
     xml_tag: str,
@@ -706,8 +737,11 @@ def generate_pyarrow_schema(
     :return: PyArrow schema whose top-level fields correspond to the target element's fields
     :rtype : pa.Schema
     """
-    target_elem = _resolve_target_element(schema, xml_tag)
-    elem_type = _require_complex_type(target_elem.type, xml_tag)
+    target_elem, elem_type, ctx = _prepare_target_traversal(
+        schema,
+        xml_tag,
+        max_recursion_depth=max_recursion_depth,
+    )
 
     if _is_empty_marker_complex_type(elem_type):
         msg = f"Top-level xml_tag {xml_tag!r} has an empty complex type with no attributes or child elements"
@@ -718,11 +752,6 @@ def generate_pyarrow_schema(
         msg = f"Top-level xml_tag {xml_tag!r} must have a complex type that resolves to a struct"
         raise ValueError(msg)
 
-    ctx = _SchemaContext(
-        schema=schema,
-        type_counts={id(elem_type): 1},
-        max_recursion_depth=max_recursion_depth,
-    )
     fields = _build_complex_struct_fields(
         ctx,
         elem_type,
@@ -833,7 +862,7 @@ def _group_child_elements_by_name(element: Element) -> dict[str, list[Element]]:
 
 
 def _convert_complex_struct(
-    ctx: _ConvertContext,
+    ctx: _TraversalContext,
     element: Element,
     complex_type: XsdComplexType,
 ) -> dict[str, Any] | None:
@@ -868,10 +897,7 @@ def _convert_complex_struct(
         if not matching_elements:
             continue
 
-        max_occurs = _group_max_occurs_by_name(model_group, child_name)
-        min_occurs = _group_min_occurs_by_name(model_group, child_name)
-        is_list = max_occurs is None or max_occurs > 1
-        nullable = child_decl.nillable or min_occurs < 1
+        is_list, nullable = _resolve_child_cardinality(model_group, child_decl)
 
         if is_list:
             result[child_name] = [
@@ -902,7 +928,7 @@ def _convert_text_or_empty_leaf(
 
 
 def _convert_child_occurrence(
-    ctx: _ConvertContext,
+    ctx: _TraversalContext,
     element: Element,
     xsd_element: XsdElement,
     *,
@@ -910,29 +936,27 @@ def _convert_child_occurrence(
 ) -> Any:  # noqa: ANN401
     """Convert a single XML element occurrence according to ``xsd_element``."""
     elem_type = xsd_element.type
+    leaf_info = _classify_leaf_element_type(elem_type)
+    if leaf_info is not None:
+        kind, simple_type = leaf_info
+        if kind == "empty_marker":
+            return None if _is_xsi_nil(element) else ""
+        return _convert_text_or_empty_leaf(
+            element,
+            is_mixed=(kind == "mixed"),
+            simple_type=simple_type,
+            nullable=nullable,
+        )
 
-    if not isinstance(elem_type, XsdComplexType):
-        return _convert_text_or_empty_leaf(element, is_mixed=False, simple_type=elem_type, nullable=nullable)
-
-    attrs = _collect_attributes(elem_type)
-    if elem_type.has_simple_content() and not attrs:
-        content_type = elem_type.content if isinstance(elem_type.content, XsdType) else None
-        return _convert_text_or_empty_leaf(element, is_mixed=False, simple_type=content_type, nullable=nullable)
-
-    if elem_type.mixed and not attrs:
-        return _convert_text_or_empty_leaf(element, is_mixed=True, simple_type=None, nullable=nullable)
-
-    if _is_empty_marker_complex_type(elem_type):
-        return None if _is_xsi_nil(element) else ""
-
+    assert isinstance(elem_type, XsdComplexType)  # noqa: S101
     type_id = id(elem_type)
     next_count = ctx.type_counts.get(type_id, 0) + 1
     if ctx.max_recursion_depth is not None and next_count > ctx.max_recursion_depth:
-        unbounded_ctx = _ConvertContext(schema=ctx.schema, type_counts={}, max_recursion_depth=None)
+        unbounded_ctx = _TraversalContext(schema=ctx.schema, type_counts={}, max_recursion_depth=None)
         nested = _convert_complex_struct(unbounded_ctx, element, elem_type)
         return json.dumps(nested) if nested is not None else None
 
-    next_ctx = _ConvertContext(
+    next_ctx = _TraversalContext(
         schema=ctx.schema,
         type_counts={**ctx.type_counts, type_id: next_count},
         max_recursion_depth=ctx.max_recursion_depth,
@@ -960,12 +984,9 @@ def convert_xml_element(
     :return: sparse dictionary of coerced field values matching the generated PyArrow schema
     :rtype : dict[str, Any]
     """
-    target_elem = _resolve_target_element(schema, xml_tag)
-    elem_type = _require_complex_type(target_elem.type, xml_tag)
-
-    ctx = _ConvertContext(
-        schema=schema,
-        type_counts={id(elem_type): 1},
+    _, elem_type, ctx = _prepare_target_traversal(
+        schema,
+        xml_tag,
         max_recursion_depth=max_recursion_depth,
     )
     converted = _convert_complex_struct(ctx, element, elem_type)

@@ -6,22 +6,18 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from shutil import copy, move
-from typing import Annotated, Final, Self
+from typing import Final, Self
 
 from pydantic import (
     BaseModel,
     DirectoryPath,
     Field,
     FilePath,
-    StringConstraints,
     computed_field,
 )
 
+from cdm_data_loaders.core.fields import CharStr, NonEmptyStr
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import ValidatedSchema
-
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
-CharStr = Annotated[str, StringConstraints(min_length=1, max_length=1)]
-
 
 VALIDATION_ERRORS: Final[str] = ".validation-errors.tsv"
 

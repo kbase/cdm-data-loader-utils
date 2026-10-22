@@ -3,7 +3,7 @@
 import pytest
 from lxml.etree import Element
 
-from cdm_data_loaders.utils.xml_utils import get_text
+from cdm_data_loaders.utils.xml_utils import get_text, local_name
 
 
 def make_element_with_text(raw_text: str | None) -> Element:
@@ -36,3 +36,25 @@ def test_get_text_fail_rejects_non_element() -> None:
     """A non-Element input raises AttributeError."""
     with pytest.raises(AttributeError):
         get_text(123)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("tag", "expected"),
+    [
+        ("{http://uniprot.org/uniprot}entry", "entry"),
+        ("{}entry", "entry"),
+        ("{http://example.org/{nested}}item", "item"),
+        ("entry", "entry"),
+        ("", ""),
+    ],
+    ids=[
+        "clark_notation",
+        "empty_namespace_braces",
+        "nested_braces_in_namespace",
+        "unprefixed_tag",
+        "empty_string",
+    ],
+)
+def test_local_name_pass_extracts_local_part(tag: str, expected: str) -> None:
+    """local_name strips Clark-notation namespaces and preserves unprefixed names."""
+    assert local_name(tag) == expected

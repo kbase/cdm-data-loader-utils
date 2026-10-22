@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 from pydantic import validate_call
 
@@ -127,6 +128,16 @@ def _run_qsv_step(cmd: list[str], args: "CleanerValidatorArgs") -> subprocess.Co
     return None
 
 
+def _require_input_file(args: CleanerValidatorArgs, input_file_name: str) -> Path | None:
+    """Return ``args.tmp_dir_path / input_file_name`` if it exists, or record a ``FileNotFoundError`` and return ``None``."""
+    input_path = args.tmp_dir_path / input_file_name
+    if not input_path.is_file():
+        err_msg = f"Input file not found at {input_path!s}"
+        args.errors.append(ErrorRecord.from_exception(args.file_name, FileNotFoundError(err_msg)))
+        return None
+    return input_path
+
+
 def run_qsv_input(args: CleanerValidatorArgs, input_file_name: str) -> str | None:
     """Run qsv input to normalise the file input_file_name.
 
@@ -141,9 +152,8 @@ def run_qsv_input(args: CleanerValidatorArgs, input_file_name: str) -> str | Non
     :return: name of the output file if all went ok; otherwise None
     :rtype: str | None
     """
-    if not (args.tmp_dir_path / input_file_name).is_file():
-        err_msg = f"Input file not found at {(args.tmp_dir_path / input_file_name)!s}"
-        args.errors.append(ErrorRecord.from_exception(args.file_name, FileNotFoundError(err_msg)))
+    input_path = _require_input_file(args, input_file_name)
+    if input_path is None:
         return None
 
     output_file_name = f"{args.xsv_file_base_name}{CLEANED_SUFFIX}{args.ext}"
@@ -166,7 +176,7 @@ def run_qsv_input(args: CleanerValidatorArgs, input_file_name: str) -> str | Non
         "--output",
         str(output_path),
         # input file
-        str(args.tmp_dir_path / input_file_name),
+        str(input_path),
     ]
     result = _run_qsv_step(cmd, args)
     if result is None:
@@ -191,9 +201,8 @@ def run_qsv_null_replacement(args: CleanerValidatorArgs, input_file_name: str) -
     :return: name of the output file if all went ok; otherwise None
     :rtype: str | None
     """
-    if not (args.tmp_dir_path / input_file_name).is_file():
-        err_msg = f"Input file not found at {(args.tmp_dir_path / input_file_name)!s}"
-        args.errors.append(ErrorRecord.from_exception(args.file_name, FileNotFoundError(err_msg)))
+    input_path = _require_input_file(args, input_file_name)
+    if input_path is None:
         return None
 
     output_file_name = f"{args.xsv_file_base_name}{NORM_SUFFIX}{args.ext}"
@@ -214,7 +223,7 @@ def run_qsv_null_replacement(args: CleanerValidatorArgs, input_file_name: str) -
         # replacement
         "",
         # input file
-        str(args.tmp_dir_path / input_file_name),
+        str(input_path),
     ]
     result = _run_qsv_step(cmd, args)
     if result is None:
@@ -226,7 +235,7 @@ def run_qsv_null_replacement(args: CleanerValidatorArgs, input_file_name: str) -
     # note: the output file may still exist, but it is ignored
     args.errors.append(ErrorRecord.from_qsv_result(args.file_name, result))
     # copy the input file to the output directory for later perusal
-    copy_safely(args.tmp_dir_path / input_file_name, args.qsv_output_dir_path / input_file_name, args)
+    copy_safely(input_path, args.qsv_output_dir_path / input_file_name, args)
     return None
 
 
@@ -249,9 +258,8 @@ def run_qsv_validate(
     :return: name of the output file if all went ok; otherwise None
     :rtype: str | None
     """
-    if not (args.tmp_dir_path / input_file_name).is_file():
-        err_msg = f"Input file not found at {(args.tmp_dir_path / input_file_name)!s}"
-        args.errors.append(ErrorRecord.from_exception(args.file_name, FileNotFoundError(err_msg)))
+    input_path = _require_input_file(args, input_file_name)
+    if input_path is None:
         return None
 
     # generate the full paths for the derived files
@@ -278,7 +286,7 @@ def run_qsv_validate(
         "--valid-output",
         str(files.valid_output),
         # file to validate
-        str(args.tmp_dir_path / input_file_name),
+        str(input_path),
         # the schema
         str(files.schema),
     ]

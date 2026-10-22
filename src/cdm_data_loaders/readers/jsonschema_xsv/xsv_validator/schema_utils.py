@@ -3,7 +3,7 @@
 import json
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 import jsonschema
 import jsonschema.exceptions
@@ -12,21 +12,17 @@ from jsonschema import Draft202012Validator, validators
 from pydantic import (
     BaseModel,
     DirectoryPath,
-    StringConstraints,
     computed_field,
     field_validator,
     validate_call,
 )
-from referencing import Registry, Resource
 
+from cdm_data_loaders.core.fields import CharStr, NonEmptyStr
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.custom_metaschema import (
     CUSTOM_META_SCHEMA,
     CUSTOM_META_SCHEMA_URI,
     X_XSV_CONFIG_KEY,
 )
-
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
-CharStr = Annotated[str, StringConstraints(min_length=1, max_length=1)]
 
 logger: Logger = getLogger(__name__)
 
@@ -90,12 +86,6 @@ class ValidatedSchema(BaseModel):
 
 def register_xsv_validator() -> None:
     """Register the custom validator for validating JSON Schema with embedded XSV parsing metadata."""
-    # register the new meta-schema and build a validator class for it
-    Registry().with_resource(
-        CUSTOM_META_SCHEMA_URI,
-        Resource.from_contents(CUSTOM_META_SCHEMA),
-    )
-
     # extend the Draft202012Validator metaschema to include the extra XSV parsing info
     # the metaschema only affects validation of schemas, not of data conforming to the schema
     xsv_validator = validators.extend(Draft202012Validator)
@@ -116,7 +106,6 @@ def validate_jsonschema(schema_path: Path) -> ValidatedSchema:
     :rtype: dict[str, Any]
     """
     schema = json.loads(schema_path.read_bytes())
-    register_xsv_validator()
     return ValidatedSchema(jsonschema=schema)
 
 
