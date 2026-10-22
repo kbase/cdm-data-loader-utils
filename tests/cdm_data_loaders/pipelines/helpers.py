@@ -3,7 +3,7 @@
 import gzip
 import json
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
 from datetime import datetime
 from logging import Logger, getLogger
@@ -164,7 +164,7 @@ def fetch_all_duckdb(pipeline: dlt.Pipeline, query: str) -> list[tuple[Any, ...]
 
 
 @contextmanager
-def duckdb_reference_from_jsonl(jsonl_path: Path) -> Iterator[duckdb.DuckDBPyConnection]:
+def duckdb_reference_from_jsonl(jsonl_path: Path) -> Generator[duckdb.DuckDBPyConnection]:
     """Load a reference JSONL file into an in-memory DuckDB connection with a `reference` table."""
     connection = duckdb.connect()
     connection.execute(

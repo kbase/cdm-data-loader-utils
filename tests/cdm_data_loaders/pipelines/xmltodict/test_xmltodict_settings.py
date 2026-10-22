@@ -1,7 +1,6 @@
 """Tests for XmlToDictSettings field validation and defaults."""
 
 from collections.abc import Callable
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -9,6 +8,7 @@ from pydantic_settings import CliApp
 
 from cdm_data_loaders.core.fields import DEFAULTS
 from cdm_data_loaders.pipelines.xmltodict.settings import XmlToDictSettings
+from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
 from tests.conftest import S3
 
 
@@ -100,33 +100,13 @@ def test_xmltodict_settings_pass_unknown_use_destination_rejected(
 
 
 @pytest.mark.parametrize("file_glob_arg", ["--file-glob", "-g"])
-def test_xmltodict_settings_pass_xml_tag_shortcut(tmp_path: Path, file_glob_arg: str) -> None:
+def test_xmltodict_settings_pass_xml_tag_shortcut(
+    settings_factory: Callable[..., XmlToDictSettings],
+    file_glob_arg: str,
+) -> None:
     """The file_glob field is exposed as both --file-glob and -g on the command line."""
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}')
-    input_dir = tmp_path / "input"
-    input_dir.mkdir()
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-
-    argv = [
-        "--input-dir",
-        str(input_dir),
-        "--output-dir",
-        str(output_dir),
-        "--use-destination",
-        "local_fs",
-        "--log-config-file",
-        str(log_config_file),
-        file_glob_arg,
-        "*.xml.gz",
-        "--dataset-name",
-        "cli_dataset",
-        "--table-name",
-        "entry",
-        "--xml-tag",
-        "entry",
-    ]
+    base_settings = settings_factory(xml_tag="entry")
+    argv = [*settings_to_argv(base_settings, exclude=["file_glob"]), file_glob_arg, "*.xml.gz"]
 
     settings = CliApp.run(XmlToDictSettings, cli_args=argv)
     assert settings.file_glob == "*.xml.gz"

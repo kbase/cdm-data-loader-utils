@@ -11,13 +11,20 @@ from typing import Any, Final
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.runtime.slack import send_slack_message
+from dlt.common.schema.typing import TSchemaContractDict
 from dlt.extract import DltResource
 from dlt.pipeline.exceptions import PipelineStepFailed
+from dlt.sources.filesystem import filesystem
 from pydantic import ValidationError
 from pydantic_settings import CliApp, SettingsError
 
-from cdm_data_loaders.core.fields import JSONL
-from cdm_data_loaders.core.settings import CtsSettings, LoggerSettings
+from cdm_data_loaders.core.fields import DEFAULT_XML_FILE_GLOB, JSONL
+from cdm_data_loaders.core.settings import (
+    CtsSettings,
+    FileFormatIngestSettings,
+    LocalInputOutputSettings,
+    LoggerSettings,
+)
 from cdm_data_loaders.utils.cdm_logger import init_logger
 
 WEBHOOK_NOT_CONFIGURED: Final[str] = "Slack webhook not configured"
@@ -27,6 +34,12 @@ DISABLE_COMPRESSION_ENV_VAR: Final[str] = "NORMALIZE__DATA_WRITER__DISABLE_COMPR
 DESTINATION_NOT_CONFIGURED: Final[str] = (
     "Destination {name!r} is not configured: set destination.{name}.destination_type in the dlt config."
 )
+DEFAULT_SCHEMA_CONTRACT: Final[TSchemaContractDict] = {
+    "tables": "evolve",
+    "columns": "evolve",
+    "data_type": "discard_row",
+}
+DEFAULT_REJECTED_SUFFIX: Final[str] = "_rejected"
 
 logger: Logger = getLogger(__name__)
 
@@ -300,3 +313,61 @@ def run_pipeline(
         send_slack_message_carefully(slack_hook, msg)
 
     return load_info
+
+
+def build_filesystem_resource(
+    settings: LocalInputOutputSettings,
+    reader_fn: Callable[..., Any] | DltResource,
+    *reader_args: Any,  # noqa: ANN401
+    name: str,
+    file_glob: str | None = None,
+    schema_contract: TSchemaContractDict | None = None,
+    **transformer_kwargs: Any,  # noqa: ANN401
+) -> DltResource:
+    """Build a dlt resource that pipes ``filesystem(settings.input_dir, file_glob)`` into a parallelized transformer.
+
+    :param settings: pipeline settings with ``input_dir`` (and optionally ``file_glob``)
+    :param reader_fn: transformer function or resource accepting ``items`` followed by ``*reader_args``
+    :param reader_args: positional arguments bound to the transformer after ``items``
+    :param name: name of the resulting dlt transformer resource
+    :param file_glob: glob pattern for files; defaults to ``settings.file_glob`` if present, else ``DEFAULT_XML_FILE_GLOB``
+    :param schema_contract: optional dlt schema contract hint applied to the resource
+    :param transformer_kwargs: additional keyword arguments passed to ``dlt.transformer``
+    :return: configured ``DltResource``
+    """
+    resolved_glob = file_glob if file_glob is not None else getattr(settings, "file_glob", DEFAULT_XML_FILE_GLOB)
+    files = filesystem(bucket_url=str(settings.input_dir), file_glob=resolved_glob)
+    reader = (
+        reader_fn
+        if isinstance(reader_fn, DltResource)
+        else dlt.transformer(reader_fn, name=name, parallelized=True, **transformer_kwargs)
+    )
+    resource: DltResource = files | reader(*reader_args)
+    if schema_contract is not None:
+        resource.apply_hints(schema_contract=TSchemaContractDict(**schema_contract))  # pyright: ignore[reportCallIssue]
+    return resource
+
+
+def build_file_ingest_kwargs(
+    settings: FileFormatIngestSettings,
+    pipeline_name: str,
+    *,
+    fallback_dataset_name: bool = False,
+) -> dict[str, dict[str, Any]]:
+    """Build the standard ``pipeline_kwargs`` and ``pipeline_run_kwargs`` for a file-ingest pipeline.
+
+    :param settings: file-format ingest settings with ``dataset_name`` and ``loader_file_format``
+    :param pipeline_name: name of the dlt pipeline
+    :param fallback_dataset_name: whether to fall back to ``pipeline_name`` when ``settings.dataset_name`` is None
+    :return: mapping with ``pipeline_kwargs`` and ``pipeline_run_kwargs`` suitable for ``run_pipeline``
+    """
+    dataset_name = (settings.dataset_name or pipeline_name) if fallback_dataset_name else settings.dataset_name
+    return {
+        "pipeline_kwargs": {
+            "pipeline_name": pipeline_name,
+            "dataset_name": dataset_name,
+        },
+        "pipeline_run_kwargs": {
+            "loader_file_format": str(settings.loader_file_format),
+        },
+    }

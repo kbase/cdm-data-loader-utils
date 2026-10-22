@@ -8,6 +8,7 @@ registry loader.
 """
 
 from collections.abc import Callable, Generator
+from importlib import import_module
 from logging import Logger, getLogger
 from typing import TYPE_CHECKING, Any, Final
 
@@ -16,7 +17,11 @@ from dlt.common.pipeline import LoadInfo
 from dlt.common.schema.typing import TSchemaContractDict
 from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import run_pipeline
+from cdm_data_loaders.pipelines.core import (
+    DEFAULT_REJECTED_SUFFIX,
+    DEFAULT_SCHEMA_CONTRACT,
+    run_pipeline,
+)
 from cdm_data_loaders.readers.jsonlines import stream_jsonl_lines
 from cdm_data_loaders.utils.buffer import ListBuffer
 
@@ -25,18 +30,33 @@ if TYPE_CHECKING:
 
 logger: Logger = getLogger(__name__)
 
-SCHEMA_CONTRACT: Final[TSchemaContractDict] = {
-    "tables": "evolve",
-    "columns": "evolve",
-    "data_type": "discard_row",
-}
-
-DEFAULT_REJECTED_SUFFIX: Final[str] = "_rejected"
+SCHEMA_CONTRACT: Final[TSchemaContractDict] = DEFAULT_SCHEMA_CONTRACT
 
 REJECTED_COLUMNS: Final[tuple[str, ...]] = ("source_file", "line_no", "raw_record")
 
 ParseErrorResolver = Callable[[dict[str, Any]], str | None]
 ResourceFactory = Callable[[str, dict[str, Any], Any], "DltResource"]
+
+
+def load_registry_dict(module_path: str, attribute_name: str, type_hint: str = "") -> dict[str, Any]:
+    """Import ``module_path`` and return its non-empty dictionary attribute ``attribute_name``.
+
+    :param module_path: dotted import path of the registry module
+    :type module_path: str
+    :param attribute_name: name of the dictionary attribute on the module
+    :type attribute_name: str
+    :param type_hint: optional suffix included in the ValueError message when missing or empty
+    :type type_hint: str
+    :return: the registry dictionary
+    :rtype: dict[str, Any]
+    :raises ValueError: if the attribute is missing, empty, or not a dict
+    """
+    module = import_module(module_path)
+    registry = getattr(module, attribute_name, None)
+    if not isinstance(registry, dict) or not registry:
+        err_msg = f"{module_path} does not define a non-empty {attribute_name}{type_hint}"
+        raise ValueError(err_msg)
+    return registry
 
 
 def make_page_router(  # noqa: PLR0913

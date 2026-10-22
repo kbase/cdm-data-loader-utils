@@ -15,7 +15,7 @@ from cdm_data_loaders.pipelines.xml2db.settings import (
     PIPELINE_NAME,
     Xml2DbSettings,
 )
-from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings
+from tests.cdm_data_loaders.pipelines.helpers import make_cts_settings, settings_to_argv
 from tests.conftest import S3
 
 MINIMAL_SETTINGS_KWARGS: dict[str, object] = {
@@ -199,33 +199,13 @@ def test_xml2db_settings_pass_pipeline_name_constant() -> None:
     assert Xml2DbSettings.model_config.get("cli_prog_name") == PIPELINE_NAME
 
 
-def test_xml2db_settings_pass_cli_shortcut_g_targets_file_glob(tmp_path: Path, test_data_dir: Path) -> None:
+def test_xml2db_settings_pass_cli_shortcut_g_targets_file_glob(
+    settings_factory: Callable[..., Xml2DbSettings],
+) -> None:
     """The '-g' shortcut added on top of the shared shortcuts parses as file_glob."""
-    input_dir = tmp_path / "input"
-    input_dir.mkdir()
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-    xsd_file = _write_xsd_fixture(input_dir, test_data_dir, "uniref.xsd")
-    log_config_file = tmp_path / "logging.json"
-    log_config_file.write_text('{"version": 1}', encoding="utf-8")
-
+    base_settings = settings_factory()
     settings = CliApp.run(
         Xml2DbSettings,
-        cli_args=[
-            "--input-dir",
-            str(input_dir),
-            "--output-dir",
-            str(output_dir),
-            "--use-destination",
-            "local_fs",
-            "--log-config-file",
-            str(log_config_file),
-            "--dataset-name",
-            "ds",
-            "--xsd-file",
-            str(input_dir / xsd_file),
-            "-g",
-            "*.gz",
-        ],
+        cli_args=[*settings_to_argv(base_settings, exclude=["file_glob"]), "-g", "*.gz"],
     )
     assert settings.file_glob == "*.gz"

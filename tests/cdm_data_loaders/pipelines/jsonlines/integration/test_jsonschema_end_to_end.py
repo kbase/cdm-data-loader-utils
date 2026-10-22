@@ -16,6 +16,7 @@ from tests.cdm_data_loaders.pipelines.helpers import (
     assert_run_ok,
     parse_json_string,
     read_data_rows,
+    settings_to_argv,
 )
 
 pytestmark = pytest.mark.parametrize("loader_file_format", LOADER_FILE_FORMATS, ids=str)
@@ -131,30 +132,20 @@ def test_cli_pass_loads_selected_entity(
     pipeline_runner: PipelineTestRunner,
 ) -> None:
     """The real CTS CLI accepts a registry shortcut, table selection, and the requested file format."""
-    settings = schema_settings_factory(input_dir=str(schema_input_dir), loader_file_format=loader_file_format)
+    settings = schema_settings_factory(
+        input_dir=str(schema_input_dir),
+        loader_file_format=loader_file_format,
+        dataset_name="schema_cli",
+        table_names=["gadget"],
+    )
 
     load_info = assert_run_ok(
         pipeline_runner.run(
             JSONSCHEMA_PIPELINE_NAME,
             cli_args=[
-                "--input-dir",
-                str(settings.input_dir),
-                "--output-dir",
-                str(settings.output_dir),
-                "--log-config-file",
-                str(settings.log_config_file),
-                "--use-destination",
-                str(settings.use_destination),
-                "--use-output-dir-for-pipeline-metadata",
-                "true",
-                "--loader-file-format",
-                loader_file_format,
-                "--dataset-name",
-                "schema_cli",
+                *settings_to_argv(settings, exclude=["schema_files_module"]),
                 "-m",
                 settings.schema_files_module,
-                "--table-names",
-                "gadget",
             ],
         )
     )

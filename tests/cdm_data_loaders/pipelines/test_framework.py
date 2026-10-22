@@ -8,6 +8,7 @@ from types import ModuleType
 import pytest
 from pydantic import BaseModel
 
+from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines import uniprot_kb_cdm
 from cdm_data_loaders.pipelines.jsonlines.extract_pipeline import (
     cli as jsonl_extract_cli,
@@ -35,6 +36,7 @@ from tests.cdm_data_loaders.pipelines.framework import (
 from tests.cdm_data_loaders.pipelines.helpers import (
     assert_pipeline_report_written,
     assert_run_ok,
+    make_cts_settings,
     read_data_rows,
     settings_to_argv,
 )
@@ -107,7 +109,7 @@ def test_settings_to_argv_pass_excludes_computed_fields_and_expands_lists(tmp_pa
         loader_file_format="jsonl",
         schema_files_module="some.module",
         table_names=["alpha", "beta"],
-    )
+    )  # pyright: ignore[reportCallIssue]
     argv = settings_to_argv(settings)
     assert "--pipeline-dir" not in argv
     assert "--log-config-file" not in argv
@@ -287,7 +289,7 @@ def test_pipeline_test_runner_pass_docker_mode_command_and_staging(
         table_name="entries",
         xml_tag="entry",
         loader_file_format="parquet",
-    )
+    )  # pyright: ignore[reportCallIssue]
 
     runner = PipelineTestRunner(mode=ExecutionMode.DOCKER, docker_image="test-image:latest")
     cli_args = [
@@ -326,10 +328,7 @@ def test_pipeline_test_runner_fail_docker_mode_nonzero_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Docker mode raises ValueError on validation errors and RuntimeError on general container failures."""
-    input_dir = tmp_path / "input"
-    input_dir.mkdir()
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
+    settings = make_cts_settings(CtsSettings, tmp_path)
     monkeypatch.setattr(framework, "_built_docker_images", {"test-image:latest"})
 
     def fake_fail_runtime(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -340,7 +339,7 @@ def test_pipeline_test_runner_fail_docker_mode_nonzero_exit(
     with pytest.raises(RuntimeError, match="failed with exit code 2"):
         runner.run(
             "jsonlines_extract",
-            cli_args=["--input-dir", str(input_dir), "--output-dir", str(output_dir)],
+            cli_args=settings_to_argv(settings),
         )
 
     def fake_fail_value_error(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -350,7 +349,7 @@ def test_pipeline_test_runner_fail_docker_mode_nonzero_exit(
     with pytest.raises(ValueError, match="Unknown table name"):
         runner.run(
             "jsonlines_extract",
-            cli_args=["--input-dir", str(input_dir), "--output-dir", str(output_dir)],
+            cli_args=settings_to_argv(settings),
         )
 
 
@@ -413,7 +412,7 @@ def test_pipeline_test_runner_pass_real_docker_container(tmp_path: Path, docker_
         dataset_name="docker_framework_ds",
         table_name="items",
         loader_file_format="jsonl",
-    )
+    )  # pyright: ignore[reportCallIssue]
 
     runner = PipelineTestRunner(mode=ExecutionMode.DOCKER, docker_image=docker_image)
     load_info = assert_run_ok(runner.run("jsonlines_extract", settings=settings))

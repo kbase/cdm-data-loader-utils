@@ -5,19 +5,20 @@ from typing import Annotated, Final
 from pydantic import Field, FilePath, PositiveInt
 
 from cdm_data_loaders.core.fields import (
-    DEFAULT_XML_FILE_GLOB,
-    FILE_GLOB,
-    FileGlob,
     NonEmptyStr,
 )
-from cdm_data_loaders.core.settings import FileFormatIngestSettings, default_settings_with_shortcuts
+from cdm_data_loaders.core.settings import (
+    XML_CLI_SHORTCUTS,
+    XmlIngestSettings,
+    default_settings_with_shortcuts,
+)
 
 PIPELINE_NAME: Final[str] = "xml2db"
 DEFAULT_XML2DB_SHORT_NAME: Final[str] = "xml2db"
 DEFAULT_XML2DB_CHUNK_SIZE: Final[int] = 1000
 
 
-class Xml2DbSettings(FileFormatIngestSettings):
+class Xml2DbSettings(XmlIngestSettings):
     """Settings for the xml2db-based XML ingestion pipeline.
 
     xml2db loads an entire XML document into memory before it can be converted into rows, which
@@ -36,10 +37,7 @@ class Xml2DbSettings(FileFormatIngestSettings):
 
     model_config = default_settings_with_shortcuts(
         cli_prog_name=PIPELINE_NAME,
-        cli_shortcuts={
-            **FileFormatIngestSettings.model_config["cli_shortcuts"],
-            FILE_GLOB: "g",
-        },
+        cli_shortcuts=XML_CLI_SHORTCUTS,
     )
 
     xml_tag: Annotated[
@@ -73,13 +71,6 @@ class Xml2DbSettings(FileFormatIngestSettings):
                 "reference-preserving row removal). Only takes effect when use_destination is "
                 "'local_fs'; ignored otherwise."
             ),
-        ),
-    ]
-    file_glob: Annotated[
-        FileGlob,
-        Field(
-            default=DEFAULT_XML_FILE_GLOB,
-            description="Glob pattern for XML files inside settings.input_dir.",
         ),
     ]
     short_name: Annotated[

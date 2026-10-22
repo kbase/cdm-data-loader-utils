@@ -3,10 +3,12 @@
 import sys
 import types
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
 
+from cdm_data_loaders.pipelines.jsonlines.base import load_registry_dict
 from cdm_data_loaders.pipelines.jsonlines.extract_pydantic_validate_pipeline import load_entity_models
 
 
@@ -49,3 +51,57 @@ def test_load_entity_models_fail_invalid_registry(
             load_entity_models(module_name)
     finally:
         sys.modules.pop(module_name, None)
+
+
+def test_load_registry_dict_pass_returns_mapping(
+    schema_module_factory: Callable[[dict[str, dict[str, Any]]], str],
+    widget_schema: dict[str, Any],
+) -> None:
+    """load_registry_dict returns a non-empty dict attribute from the imported module."""
+    expected = {"widget": widget_schema}
+    module_name = schema_module_factory(expected)
+    assert load_registry_dict(module_name, "ENTITY_SCHEMAS") == expected
+
+
+@pytest.mark.parametrize(
+    ("attribute_present", "value", "type_hint", "expected_message"),
+    [
+        pytest.param(
+            False,
+            None,
+            "",
+            "_test_load_registry_dict_invalid does not define a non-empty CUSTOM_REG",
+            id="missing_no_type_hint",
+        ),
+        pytest.param(
+            True,
+            {},
+            " dict[str, int]",
+            "_test_load_registry_dict_invalid does not define a non-empty CUSTOM_REG dict[str, int]",
+            id="empty_with_type_hint",
+        ),
+        pytest.param(
+            True,
+            ("not", "a", "dict"),
+            " dict[str, Any]",
+            "_test_load_registry_dict_invalid does not define a non-empty CUSTOM_REG dict[str, Any]",
+            id="wrong_type_with_type_hint",
+        ),
+    ],
+)
+def test_load_registry_dict_fail_invalid_attribute(
+    monkeypatch: pytest.MonkeyPatch,
+    attribute_present: bool,
+    value: object,
+    type_hint: str,
+    expected_message: str,
+) -> None:
+    """load_registry_dict raises ValueError with optional type_hint when attribute is missing, empty, or not a dict."""
+    module_name = "_test_load_registry_dict_invalid"
+    module = types.ModuleType(module_name)
+    if attribute_present:
+        module.CUSTOM_REG = value  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, module_name, module)
+    with pytest.raises(ValueError, match=r"^" + expected_message.replace("[", r"\[").replace("]", r"\]") + r"$"):
+        load_registry_dict(module_name, "CUSTOM_REG", type_hint=type_hint)
+

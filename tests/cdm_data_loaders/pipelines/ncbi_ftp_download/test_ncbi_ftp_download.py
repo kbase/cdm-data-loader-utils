@@ -127,6 +127,41 @@ def test_download_batch_handles_download_failure(tmp_path: Path) -> None:
     assert report["succeeded"] == 0
 
 
+def test_download_batch_pass_callback_and_comments(tmp_path: Path, output_dir: Path) -> None:
+    """download_batch skips blank/comment lines and calls on_assembly_downloaded only on success."""
+    manifest = tmp_path / "manifest.txt"
+    good_path = "/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/"
+    bad_path = "/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/"
+    manifest.write_text(f"# header comment\n\n{good_path}\n{bad_path}\n")
+
+    callback_paths: list[PurePosixPath] = []
+
+    def _fake_download(path: PurePosixPath, output_dir: Path, **kwargs: object) -> dict[str, str | int]:  # noqa: ARG001
+        if str(path) == bad_path.rstrip("/"):
+            msg = "simulated error"
+            raise RuntimeError(msg)
+        return _MOCK_STATS
+
+    with (
+        patch("cdm_data_loaders.pipelines.ncbi_ftp_download.ThreadLocalFTP"),
+        patch(
+            "cdm_data_loaders.pipelines.ncbi_ftp_download.download_assembly_to_local",
+            side_effect=_fake_download,
+        ),
+    ):
+        report = download_batch(
+            manifest_path=manifest,
+            output_dir=output_dir,
+            threads=1,
+            on_assembly_downloaded=callback_paths.append,
+        )
+
+    assert report["total_attempted"] == _EXPECTED_ATTEMPTED
+    assert report["succeeded"] == 1
+    assert report["failed"] == 1
+    assert callback_paths == [PurePosixPath(good_path)]
+
+
 # Helpers shared by download_and_stage tests
 
 _MANIFEST_CONTENT = (
@@ -458,3 +493,42 @@ def test_download_and_stage_report_shape(tmp_path: Path, monkeypatch: pytest.Mon
     assert report["succeeded"] == _EXPECTED_ATTEMPTED
 
     reset_s3_client()
+
+
+@pytest.mark.usefixtures("mock_s3_client")
+def test_download_and_stage_pass_missing_dir_and_upload_failure(tmp_path: Path) -> None:
+    """download_and_stage handles missing local assembly directory and failed S3 uploads gracefully."""
+    manifest_local = tmp_path / "manifest.txt"
+    manifest_local.write_text(_MANIFEST_CONTENT)
+
+    assembly_rel = "raw_data/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT"
+
+    def _fake_download(path: PurePosixPath, output_dir: Path, **kwargs: object) -> dict[str, str | int]:  # noqa: ARG001
+        if "000001215" in str(path):
+            asm_dir = Path(output_dir) / assembly_rel
+            asm_dir.mkdir(parents=True)
+            (asm_dir / "genomic.fna.gz").write_bytes(b"fasta_data")
+        # For the second assembly, do not create any directory to exercise the missing-dir path
+        return _MOCK_STATS
+
+    with (
+        patch("cdm_data_loaders.pipelines.ncbi_ftp_download.ThreadLocalFTP"),
+        patch(
+            "cdm_data_loaders.pipelines.ncbi_ftp_download.download_assembly_to_local",
+            side_effect=_fake_download,
+        ),
+        patch(
+            "cdm_data_loaders.pipelines.ncbi_ftp_download.upload_file",
+            return_value=False,
+        ),
+    ):
+        report = download_and_stage(
+            bucket=_TEST_BUCKET,
+            staging_key_prefix=_STAGING_PREFIX,
+            manifest_local_path=manifest_local,
+            dry_run=False,
+            threads=1,
+        )
+
+    assert report["succeeded"] == _EXPECTED_ATTEMPTED
+    assert report["staged_objects"] == 0

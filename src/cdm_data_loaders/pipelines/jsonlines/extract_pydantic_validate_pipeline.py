@@ -31,7 +31,6 @@ Write disposition is `append` or `replace` only. No merge is performed.
 """
 
 import json
-from importlib import import_module
 from typing import Any
 
 from dlt.common.pipeline import LoadInfo
@@ -40,6 +39,7 @@ from pydantic import BaseModel, ValidationError
 from cdm_data_loaders.pipelines.core import PipelineCli
 from cdm_data_loaders.pipelines.jsonlines.base import (
     ParseErrorResolver,
+    load_registry_dict,
     run_registry_ingest,
 )
 from cdm_data_loaders.pipelines.jsonlines.base import (
@@ -60,12 +60,9 @@ def load_entity_models(module_path: str) -> dict[str, type[BaseModel]]:
     :rtype: dict[str, type[BaseModel]]
     :raises ValueError: if ENTITY_MODELS is missing, empty, or not a dict
     """
-    module = import_module(module_path)
-    registry = getattr(module, "ENTITY_MODELS", None)
-    if not isinstance(registry, dict) or not registry:
-        err_msg = f"{module_path} does not define a non-empty ENTITY_MODELS: dict[str, type[BaseModel]]"
-        raise ValueError(err_msg)
-    return registry
+    return load_registry_dict(
+        module_path, "ENTITY_MODELS", type_hint=": dict[str, type[BaseModel]]"
+    )
 
 
 def _make_resolve_error(model: type[BaseModel]) -> ParseErrorResolver:

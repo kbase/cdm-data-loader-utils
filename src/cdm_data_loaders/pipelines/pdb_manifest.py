@@ -29,7 +29,7 @@ from botocore.exceptions import ClientError
 from pydantic import AliasChoices, Field
 from pydantic_settings import CliImplicitFlag, SettingsConfigDict
 
-from cdm_data_loaders.core.settings import DEFAULT_SETTINGS_CONFIG_DICT, CtsSettings
+from cdm_data_loaders.core.settings import CtsSettings, default_settings_with_shortcuts
 from cdm_data_loaders.parsers.pdb_holdings_file import parse_holdings_file
 from cdm_data_loaders.pdb.constants import (
     DEFAULT_DESTINATION_BUCKET,
@@ -51,17 +51,15 @@ logger: Logger = getLogger(__name__)
 class PdbManfestSettings(CtsSettings):
     """Configuration for running the PDB manifest-generation pipeline."""
 
-    model_config = SettingsConfigDict(**DEFAULT_SETTINGS_CONFIG_DICT, cli_prog_name="pdb_manifest")
+    model_config: SettingsConfigDict = default_settings_with_shortcuts(cli_prog_name="pdb_manifest")
 
     destination_bucket: PurePosixPath = Field(
         default=DEFAULT_DESTINATION_BUCKET,
         description="Bucket holding current PDB records",
-        validation_alias=AliasChoices("destination-bucket", "destination_bucket"),
     )
     destination_prefix: PurePosixPath = Field(
         default=DEFAULT_DESTINATION_PREFIX,
         description="Path to folder in the destination bucket where PDB records exist. Must contain `raw_data/` folder",
-        validation_alias=AliasChoices("destination-prefix", "destination_prefix"),
     )
     holdings_snapshot_path: PurePosixPath = Field(
         default=DEFAULT_HOLDINGS_SNAPSHOT,
@@ -76,11 +74,9 @@ class PdbManfestSettings(CtsSettings):
     skip_diff: CliImplicitFlag[bool] = Field(
         default=False,
         description="If set, prevents reading of snapshot data. All current PDB records will be include in manifest",
-        validation_alias=AliasChoices("skip-diff", "skip_diff"),
     )
     output_path: Path = Field(
         description="Local path to save generated manfiest files to",
-        validation_alias=AliasChoices("output-path", "output_path"),
     )
     regex_filter: str | None = Field(
         default=None,

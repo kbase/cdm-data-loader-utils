@@ -10,10 +10,14 @@ from pydantic_settings import CliApp, SettingsError
 
 from cdm_data_loaders.core.settings import (
     DEFAULT_SETTINGS_CONFIG_DICT,
+    FILE_FORMAT_CLI_SHORTCUTS,
+    XML_CLI_SHORTCUTS,
     CdmDataLoadersBase,
     CtsSettings,
+    FileFormatIngestSettings,
     LocalInputOutputSettings,
     LoggerSettings,
+    XmlIngestSettings,
     default_settings_with_shortcuts,
 )
 from tests.cdm_data_loaders.conftest import (
@@ -23,6 +27,8 @@ from tests.cdm_data_loaders.conftest import (
     cts_expected,
     local_io_expected,
 )
+from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
+from tests.conftest import LOCAL_FS
 
 TEST_CLASS_NAME: Final[str] = "FruitSettings"
 
@@ -182,8 +188,9 @@ def test_cts_settings_pass_cli_shortcuts(input_dir: Path, output_dir: Path) -> N
 )
 def test_cts_settings_fail_unrecognised_cli_args(input_dir: Path, output_dir: Path, extra_args: list[str]) -> None:
     """Raise SettingsError, not SystemExit, for CLI args that are not registered."""
+    base = CtsSettings(input_dir=input_dir, output_dir=output_dir, use_destination=LOCAL_FS)
     with pytest.raises(SettingsError, match="unrecognized arguments"):
-        CliApp.run(CtsSettings, cli_args=["-i", str(input_dir), "-o", str(output_dir), *extra_args])
+        CliApp.run(CtsSettings, cli_args=[*settings_to_argv(base), *extra_args])
 
 
 @pytest.mark.parametrize(
@@ -212,3 +219,76 @@ def test_settings_fail_missing_dirs(
     with pytest.raises(ValidationError) as exc_info:
         CliApp.run(settings_cls, cli_args=[])
     assert {(err["loc"], err["type"]) for err in exc_info.value.errors()} == expected
+
+
+def test_file_format_ingest_settings_pass_cli_shortcuts(input_dir: Path, output_dir: Path) -> None:
+    """FileFormatIngestSettings supports FILE_FORMAT_CLI_SHORTCUTS (-f) in addition to CtsSettings shortcuts."""
+    assert FILE_FORMAT_CLI_SHORTCUTS["loader_file_format"] == "f"
+    settings = CliApp.run(
+        FileFormatIngestSettings,
+        cli_args=[
+            "-i",
+            str(input_dir),
+            "-o",
+            str(output_dir),
+            "-d",
+            LOCAL_FS,
+            "--dataset-name",
+            "my_dataset",
+            "-f",
+            "jsonl",
+        ],
+    )
+    check_settings(
+        settings,
+        {
+            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="my_dataset"),
+            "loader_file_format": "jsonl",
+        },
+    )
+
+
+@pytest.mark.parametrize("source", SETTINGS_SOURCES)
+def test_xml_ingest_settings_pass_defaults_and_cli_shortcuts(
+    make_settings: SettingsFactory, source: str, input_dir: Path, output_dir: Path
+) -> None:
+    """XmlIngestSettings defaults file_glob to '*.xml*' across sources and supports XML_CLI_SHORTCUTS (-f, -g)."""
+    assert XML_CLI_SHORTCUTS["loader_file_format"] == "f"
+    assert XML_CLI_SHORTCUTS["file_glob"] == "g"
+    default_glob_settings = make_settings(
+        XmlIngestSettings,
+        source,
+        {
+            "input_dir": str(input_dir),
+            "output_dir": str(output_dir),
+            "use_destination": LOCAL_FS,
+            "dataset_name": "xml_dataset",
+        },
+    )
+    check_settings(
+        default_glob_settings,
+        {
+            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="xml_dataset"),
+            "loader_file_format": "parquet",
+            "file_glob": "*.xml*",
+        },
+    )
+    cli_settings = CliApp.run(
+        XmlIngestSettings,
+        cli_args=[
+            *settings_to_argv(default_glob_settings, exclude=["loader_file_format", "file_glob"]),
+            "-f",
+            "jsonl",
+            "-g",
+            "*.xml.gz",
+        ],
+    )
+    check_settings(
+        cli_settings,
+        {
+            **cts_expected(input_dir, output_dir, use_destination=LOCAL_FS, dataset_name="xml_dataset"),
+            "loader_file_format": "jsonl",
+            "file_glob": "*.xml.gz",
+        },
+    )
+

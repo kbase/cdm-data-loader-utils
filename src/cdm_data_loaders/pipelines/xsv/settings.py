@@ -11,7 +11,11 @@ from cdm_data_loaders.core.fields import (
     FileGlob,
     TableName,
 )
-from cdm_data_loaders.core.settings import CLI_SHORTCUTS, FileFormatIngestSettings, default_settings_with_shortcuts
+from cdm_data_loaders.core.settings import (
+    FILE_FORMAT_CLI_SHORTCUTS,
+    FileFormatIngestSettings,
+    default_settings_with_shortcuts,
+)
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_reader import resolve_xsv_parsing_config
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.schema_utils import (
     ValidatedSchema,
@@ -25,9 +29,8 @@ logger: Logger = getLogger(__name__)
 
 
 SHORTCUTS: Final[dict[str, str]] = {
-    **CLI_SHORTCUTS,
+    **FILE_FORMAT_CLI_SHORTCUTS,
     "file_glob": "g",
-    "loader_file_format": "f",
     "schema_file": "s",
     "table_name": "t",
 }

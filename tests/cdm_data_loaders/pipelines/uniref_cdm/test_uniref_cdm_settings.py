@@ -7,12 +7,14 @@ from frozendict import frozendict
 from pydantic import ValidationError
 from pydantic_settings import CliApp
 
+from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.uniref_cdm import (
     UNIREF_VARIANTS,
     VARIANT,
     UnirefSettings,
 )
 from tests.cdm_data_loaders.conftest import check_settings
+from tests.cdm_data_loaders.pipelines.helpers import settings_to_argv
 from tests.cdm_data_loaders.pipelines.uniref_cdm.conftest import (
     UNIREF_VARIANT_ALIASES,
 )
@@ -63,10 +65,10 @@ def test_settings_valid_variants_accepted(uniref_variant_value: str, test_defaul
 @pytest.mark.parametrize(VARIANT, UNIREF_VARIANT_ALIASES)
 def test_cli_valid_variants_accepted(uniref_variant_value: str, variant: str, test_defaults: dict[str, Any]) -> None:
     """Ensure that each valid uniref variant value is accepted without error when passed via CLI."""
-    default_args = [arg for k, v in test_defaults.items() for arg in (make_cli_arg(k), str(v))]
+    base_settings = CtsSettings(**test_defaults)
     s = CliApp.run(
         UnirefSettings,
-        cli_args=[*default_args, make_cli_arg(variant), uniref_variant_value],
+        cli_args=[*settings_to_argv(base_settings), make_cli_arg(variant), uniref_variant_value],
     )
     assert isinstance(s, UnirefSettings)
     assert s.variant == uniref_variant_value
@@ -90,9 +92,9 @@ def test_cli_invalid_variant_via_cli_raises(
     test_defaults: dict[str, Any],
 ) -> None:
     """Ensure that an invalid uniref variant passed via CLI raises an error."""
-    default_args = [arg for k, v in test_defaults.items() for arg in (make_cli_arg(k), str(v))]
+    base_settings = CtsSettings(**test_defaults)
     with pytest.raises(ValidationError, match="1 validation error for UnirefSettings") as exc_info:
-        CliApp.run(UnirefSettings, cli_args=[*default_args, make_cli_arg(variant), value])
+        CliApp.run(UnirefSettings, cli_args=[*settings_to_argv(base_settings), make_cli_arg(variant), value])
 
     exc_message = str(exc_info.value)
     assert "Input should be '50', '90' or '100'" in exc_message
@@ -109,9 +111,9 @@ def test_missing_required_uniref_variant_raises(test_defaults: dict[str, Any]) -
 
 def test_cli_missing_required_uniref_variant_raises(test_defaults: dict[str, Any]) -> None:
     """Ensure that omitting the required uniref variant argument raises an error."""
-    default_args = [arg for k, v in test_defaults.items() for arg in (make_cli_arg(k), str(v))]
+    base_settings = CtsSettings(**test_defaults)
     with pytest.raises(ValidationError, match="1 validation error for UnirefSettings") as exc_info:
-        CliApp.run(UnirefSettings, cli_args=default_args)
+        CliApp.run(UnirefSettings, cli_args=settings_to_argv(base_settings))
 
     exc_message = str(exc_info.value)
     assert "Field required" in exc_message
@@ -126,14 +128,12 @@ def test_cli_invalid_variant_and_destination_via_cli_raises(
 
     N.b. Pydantic only reports the first error!!!
     """
-    default_args = [
-        arg for k, v in test_defaults.items() if k != "use_destination" for arg in (make_cli_arg(k), str(v))
-    ]
+    base_settings = CtsSettings(**test_defaults)
     with pytest.raises(ValidationError, match="1 validation error for UnirefSettings") as exc_info:
         CliApp.run(
             UnirefSettings,
             cli_args=[
-                *default_args,
+                *settings_to_argv(base_settings, exclude=["use_destination"]),
                 make_cli_arg(variant),
                 value,
                 "--use-destination",

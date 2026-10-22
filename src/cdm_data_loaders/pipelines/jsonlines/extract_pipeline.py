@@ -15,9 +15,13 @@ import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.common.storages.fsspec_filesystem import FileItemDict
 from dlt.common.typing import TDataItems
-from dlt.sources.filesystem import filesystem
 
-from cdm_data_loaders.pipelines.core import PipelineCli, run_pipeline
+from cdm_data_loaders.pipelines.core import (
+    PipelineCli,
+    build_file_ingest_kwargs,
+    build_filesystem_resource,
+    run_pipeline,
+)
 from cdm_data_loaders.pipelines.jsonlines.settings import (
     EXTRACT_PIPELINE_NAME,
     JsonlExtractSettings,
@@ -47,20 +51,12 @@ def run_jsonlines_pipeline(settings: JsonlExtractSettings) -> LoadInfo | None:
     :return: load information for the pipeline
     :rtype: LoadInfo | None
     """
-    files = filesystem(bucket_url=str(settings.input_dir), file_glob=settings.file_glob)
-
-    jsonl_resource = files | jsonl_reader(settings)
+    jsonl_resource = build_filesystem_resource(settings, jsonl_reader, settings, name="jsonl_reader")
 
     return run_pipeline(
         settings=settings,
         resource=jsonl_resource,
-        pipeline_kwargs={
-            "pipeline_name": EXTRACT_PIPELINE_NAME,
-            "dataset_name": settings.dataset_name or EXTRACT_PIPELINE_NAME,
-        },
-        pipeline_run_kwargs={
-            "loader_file_format": str(settings.loader_file_format),
-        },
+        **build_file_ingest_kwargs(settings, EXTRACT_PIPELINE_NAME, fallback_dataset_name=True),
     )
 
 

@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pyarrow as pa
@@ -15,10 +15,13 @@ import cdm_data_loaders.pipelines.xmltopyarrow.settings as xmltopyarrow_settings
 from cdm_data_loaders.core.fields import DEFAULTS
 from cdm_data_loaders.core.settings import CtsSettings
 from cdm_data_loaders.pipelines.xmltopyarrow.settings import (
+    ENTRY_TABLE_NAME,
+    ENTRY_XML_TAG,
     UNIPROT_PIPELINE_NAME,
     UNIPROT_XSD_FILE,
     UNIREF_PIPELINE_NAME,
     UNIREF_XSD_FILE,
+    PresetXmlToPyArrowSettings,
     UniProtXmlToPyArrowSettings,
     UniRefXmlToPyArrowSettings,
     XmlToPyArrowSettings,
@@ -257,3 +260,34 @@ def test_subclass_xmltopyarrow_settings_pass_cli_defaults(
     assert settings.xml_tag == "entry"
     assert settings.xsd_file == expected_xsd_file
     assert settings.pyarrow_schema is expected_schema
+
+
+def test_preset_xmltopyarrow_settings_pass_base_defaults(
+    settings_factory: Callable[..., Any],
+    copy_xsd_fixture: Callable[[str], str],
+) -> None:
+    """PresetXmlToPyArrowSettings subclasses inherit default table_name and xml_tag as 'entry' and use _PRECOMPUTED_SCHEMA."""
+
+    class CustomPresetSettings(PresetXmlToPyArrowSettings):
+        _PRECOMPUTED_SCHEMA: ClassVar[pa.Schema] = UNIREF_SCHEMA
+
+    xsd_path = copy_xsd_fixture(UNIREF_LIKE_XSD)
+    settings = settings_factory(
+        CustomPresetSettings,
+        dataset_name="preset_ds",
+        xsd_file=xsd_path,
+    )
+    assert ENTRY_TABLE_NAME == "entry"
+    assert ENTRY_XML_TAG == "entry"
+    assert settings.table_name == ENTRY_TABLE_NAME
+    assert settings.xml_tag == ENTRY_XML_TAG
+    assert settings.pyarrow_schema is UNIREF_SCHEMA
+    assert isinstance(settings.xsd_schema, xmlschema.XMLSchema)
+
+    with pytest.raises(ValidationError, match="_PRECOMPUTED_SCHEMA"):
+        settings_factory(
+            PresetXmlToPyArrowSettings,
+            dataset_name="preset_ds",
+            xsd_file=xsd_path,
+        )
+
