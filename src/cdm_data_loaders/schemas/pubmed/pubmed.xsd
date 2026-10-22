@@ -1,0 +1,1473 @@
+<schema
+  xmlns='http://www.w3.org/2001/XMLSchema'
+  targetNamespace='http://www.w3.org/namespace/'
+  xmlns:t='http://www.w3.org/namespace/'>
+  <element name='PubmedArticleSet'>
+    <complexType>
+      <sequence>
+        <choice maxOccurs='unbounded'>
+          <element ref='t:PubmedArticle'/>
+          <element ref='t:PubmedBookArticle'/>
+        </choice>
+        <element ref='t:DeleteCitation' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='BookDocumentSet'>
+    <complexType>
+      <sequence>
+        <element ref='t:BookDocument' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:DeleteDocument' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubmedBookArticleSet'>
+    <complexType>
+      <sequence>
+        <element ref='t:PubmedBookArticle' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubmedArticle'>
+    <complexType>
+      <sequence>
+        <element ref='t:MedlineCitation'/>
+        <element ref='t:PubmedData' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubmedBookArticle'>
+    <complexType>
+      <sequence>
+        <element ref='t:BookDocument'/>
+        <element ref='t:PubmedBookData' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='BookDocument'>
+    <complexType>
+      <sequence>
+        <element ref='t:PMID'/>
+        <element ref='t:ArticleIdList'/>
+        <element ref='t:Book'/>
+        <element ref='t:LocationLabel' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:ArticleTitle' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:VernacularTitle' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Pagination' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Language' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:AuthorList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:InvestigatorList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PublicationType' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:Abstract' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Sections' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:KeywordList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:ContributionDate' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:DateRevised' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:GrantList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ItemList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:ReferenceList' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='DeleteCitation'>
+    <complexType>
+      <sequence>
+        <element ref='t:PMID' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='DeleteDocument'>
+    <complexType>
+      <sequence>
+        <element ref='t:PMID' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='MedlineCitation'>
+    <complexType>
+      <sequence>
+        <element ref='t:PMID'/>
+        <element ref='t:DateCompleted' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:DateRevised' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Article'/>
+        <element ref='t:MedlineJournalInfo'/>
+        <element ref='t:ChemicalList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:SupplMeshList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:CitationSubset' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:CommentsCorrectionsList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:GeneSymbolList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:MeshHeadingList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:NumberOfReferences' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PersonalNameSubjectList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:OtherID' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:OtherAbstract' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:KeywordList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:CoiStatement' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:SpaceFlightMission' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:InvestigatorList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:GeneralNote' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='Owner' default='NLM'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='NLM'/>
+            <enumeration value='NASA'/>
+            <enumeration value='PIP'/>
+            <enumeration value='KIE'/>
+            <enumeration value='HSR'/>
+            <enumeration value='HMD'/>
+            <enumeration value='NOTNLM'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='Status' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Completed'/>
+            <enumeration value='In-Process'/>
+            <enumeration value='PubMed-not-MEDLINE'/>
+            <enumeration value='In-Data-Review'/>
+            <enumeration value='Publisher'/>
+            <enumeration value='MEDLINE'/>
+            <enumeration value='OLDMEDLINE'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='VersionID' type='string' use='optional'/>
+      <attribute name='VersionDate' type='string' use='optional'/>
+      <attribute name='IndexingMethod' type='string' use='optional'/>
+    </complexType>
+  </element>
+  <element name='PubmedData'>
+    <complexType>
+      <sequence>
+        <element ref='t:History' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PublicationStatus'/>
+        <element ref='t:ArticleIdList'/>
+        <element ref='t:ObjectList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ReferenceList' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubmedBookData'>
+    <complexType>
+      <sequence>
+        <element ref='t:History' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PublicationStatus'/>
+        <element ref='t:ArticleIdList'/>
+        <element ref='t:ObjectList' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Article'>
+    <complexType>
+      <sequence>
+        <element ref='t:Journal'/>
+        <element ref='t:ArticleTitle'/>
+        <choice>
+          <sequence>
+            <element ref='t:Pagination'/>
+            <element ref='t:ELocationID' minOccurs='0' maxOccurs='unbounded'/>
+          </sequence>
+          <element ref='t:ELocationID' maxOccurs='unbounded'/>
+        </choice>
+        <element ref='t:Abstract' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:AuthorList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Language' maxOccurs='unbounded'/>
+        <element ref='t:DataBankList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:GrantList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PublicationTypeList'/>
+        <element ref='t:VernacularTitle' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ArticleDate' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='PubModel' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Print'/>
+            <enumeration value='Print-Electronic'/>
+            <enumeration value='Electronic'/>
+            <enumeration value='Electronic-Print'/>
+            <enumeration value='Electronic-eCollection'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Abstract'>
+    <complexType>
+      <sequence>
+        <element ref='t:AbstractText' maxOccurs='unbounded'/>
+        <element ref='t:CopyrightInformation' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='AbstractText'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+        <element ref='t:DispFormula'/>
+      </choice>
+      <attribute name='Label' type='string' use='optional'/>
+      <attribute name='NlmCategory' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='BACKGROUND'/>
+            <enumeration value='OBJECTIVE'/>
+            <enumeration value='METHODS'/>
+            <enumeration value='RESULTS'/>
+            <enumeration value='CONCLUSIONS'/>
+            <enumeration value='UNASSIGNED'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='AccessionNumber'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='AccessionNumberList'>
+    <complexType>
+      <sequence>
+        <element ref='t:AccessionNumber' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Acronym'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Affiliation'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='AffiliationInfo'>
+    <complexType>
+      <sequence>
+        <element ref='t:Affiliation'/>
+        <element ref='t:Identifier' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Agency'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ArticleDate'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <element ref='t:Month'/>
+        <element ref='t:Day'/>
+      </sequence>
+      <attribute name='DateType' type='string' fixed='Electronic'/>
+    </complexType>
+  </element>
+  <element name='ArticleId'>
+    <complexType mixed='true'>
+      <attribute name='IdType' default='pubmed'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='doi'/>
+            <enumeration value='pii'/>
+            <enumeration value='pmcpid'/>
+            <enumeration value='pmpid'/>
+            <enumeration value='pmc'/>
+            <enumeration value='mid'/>
+            <enumeration value='sici'/>
+            <enumeration value='pubmed'/>
+            <enumeration value='medline'/>
+            <enumeration value='pmcid'/>
+            <enumeration value='pmcbook'/>
+            <enumeration value='bookaccession'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='ArticleIdList'>
+    <complexType>
+      <sequence>
+        <element ref='t:ArticleId' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='ArticleTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='book' type='string' use='optional'/>
+      <attribute name='part' type='string' use='optional'/>
+      <attribute name='sec' type='string' use='optional'/>
+    </complexType>
+  </element>
+  <element name='Author'>
+    <complexType>
+      <sequence>
+        <choice>
+          <sequence>
+            <element ref='t:LastName'/>
+            <element ref='t:ForeName' minOccurs='0' maxOccurs='1'/>
+            <element ref='t:Initials' minOccurs='0' maxOccurs='1'/>
+            <element ref='t:Suffix' minOccurs='0' maxOccurs='1'/>
+          </sequence>
+          <element ref='t:CollectiveName'/>
+        </choice>
+        <element ref='t:Identifier' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:AffiliationInfo' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='ValidYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='EqualContrib' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='AuthorList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Author' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='CompleteYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='Type' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='authors'/>
+            <enumeration value='editors'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='b'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='BeginningDate'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <choice minOccurs='0' maxOccurs='1'>
+          <sequence>
+            <element ref='t:Month'/>
+            <element ref='t:Day' minOccurs='0' maxOccurs='1'/>
+          </sequence>
+          <element ref='t:Season'/>
+        </choice>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Book'>
+    <complexType>
+      <sequence>
+        <element ref='t:Publisher'/>
+        <element ref='t:BookTitle'/>
+        <element ref='t:PubDate'/>
+        <element ref='t:BeginningDate' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:EndingDate' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:AuthorList' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:InvestigatorList' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Volume' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:VolumeTitle' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Edition' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:CollectionTitle' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Isbn' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:ELocationID' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:Medium' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ReportNumber' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='BookTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='book' type='string' use='optional'/>
+      <attribute name='part' type='string' use='optional'/>
+      <attribute name='sec' type='string' use='optional'/>
+    </complexType>
+  </element>
+  <element name='Chemical'>
+    <complexType>
+      <sequence>
+        <element ref='t:RegistryNumber'/>
+        <element ref='t:NameOfSubstance'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='ChemicalList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Chemical' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Citation'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='CitationSubset'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='CoiStatement'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='CollectionTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='book' type='string' use='optional'/>
+      <attribute name='part' type='string' use='optional'/>
+      <attribute name='sec' type='string' use='optional'/>
+    </complexType>
+  </element>
+  <element name='CollectiveName'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='Investigators' type='IDREF' use='optional'/>
+    </complexType>
+  </element>
+  <element name='CommentsCorrections'>
+    <complexType>
+      <sequence>
+        <element ref='t:RefSource'/>
+        <element ref='t:PMID' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Note' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+      <attribute name='RefType' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='AssociatedDataset'/>
+            <enumeration value='AssociatedPublication'/>
+            <enumeration value='CommentIn'/>
+            <enumeration value='CommentOn'/>
+            <enumeration value='CorrectedandRepublishedIn'/>
+            <enumeration value='CorrectedandRepublishedFrom'/>
+            <enumeration value='ErratumIn'/>
+            <enumeration value='ErratumFor'/>
+            <enumeration value='ExpressionOfConcernIn'/>
+            <enumeration value='ExpressionOfConcernFor'/>
+            <enumeration value='RepublishedIn'/>
+            <enumeration value='RepublishedFrom'/>
+            <enumeration value='RetractedandRepublishedIn'/>
+            <enumeration value='RetractedandRepublishedFrom'/>
+            <enumeration value='RetractionIn'/>
+            <enumeration value='RetractionOf'/>
+            <enumeration value='UpdateIn'/>
+            <enumeration value='UpdateOf'/>
+            <enumeration value='SummaryForPatientsIn'/>
+            <enumeration value='OriginalReportIn'/>
+            <enumeration value='ReprintIn'/>
+            <enumeration value='ReprintOf'/>
+            <enumeration value='Cites'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='CommentsCorrectionsList'>
+    <complexType>
+      <sequence>
+        <element ref='t:CommentsCorrections' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='ContractNumber'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ContributionDate'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <choice minOccurs='0' maxOccurs='1'>
+          <sequence>
+            <element ref='t:Month'/>
+            <element ref='t:Day' minOccurs='0' maxOccurs='1'/>
+          </sequence>
+          <element ref='t:Season'/>
+        </choice>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='CopyrightInformation'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Country'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='DataBank'>
+    <complexType>
+      <sequence>
+        <element ref='t:DataBankName'/>
+        <element ref='t:AccessionNumberList' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='DataBankList'>
+    <complexType>
+      <sequence>
+        <element ref='t:DataBank' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='CompleteYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='DataBankName'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='DateCompleted'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <element ref='t:Month'/>
+        <element ref='t:Day'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='DateRevised'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <element ref='t:Month'/>
+        <element ref='t:Day'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Day'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='DescriptorName'>
+    <complexType mixed='true'>
+      <attribute name='MajorTopicYN' default='N'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='AutoHM' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='Type' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Geographic'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='UI' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='DispFormula'>
+    <complexType>
+      <sequence/>
+    </complexType>
+  </element>
+  <element name='Edition'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ELocationID'>
+    <complexType mixed='true'>
+      <attribute name='EIdType' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='doi'/>
+            <enumeration value='pii'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='ValidYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='EndingDate'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <choice minOccurs='0' maxOccurs='1'>
+          <sequence>
+            <element ref='t:Month'/>
+            <element ref='t:Day' minOccurs='0' maxOccurs='1'/>
+          </sequence>
+          <element ref='t:Season'/>
+        </choice>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='EndPage'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ForeName'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='GeneSymbol'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='GeneSymbolList'>
+    <complexType>
+      <sequence>
+        <element ref='t:GeneSymbol' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='GeneralNote'>
+    <complexType mixed='true'>
+      <attribute name='Owner' default='NLM'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='NLM'/>
+            <enumeration value='NASA'/>
+            <enumeration value='PIP'/>
+            <enumeration value='KIE'/>
+            <enumeration value='HSR'/>
+            <enumeration value='HMD'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Grant'>
+    <complexType>
+      <sequence>
+        <element ref='t:GrantID' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Acronym' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Agency'/>
+        <element ref='t:Country' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='GrantID'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='GrantList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Grant' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='CompleteYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='History'>
+    <complexType>
+      <sequence>
+        <element ref='t:PubMedPubDate' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Hour'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='i'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='Identifier'>
+    <complexType mixed='true'>
+      <attribute name='Source' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='Initials'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Investigator'>
+    <complexType>
+      <sequence>
+        <element ref='t:LastName'/>
+        <element ref='t:ForeName' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Initials' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Suffix' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Identifier' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:AffiliationInfo' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='ValidYN' default='Y'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='InvestigatorList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Investigator' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='ID' type='ID' use='optional'/>
+    </complexType>
+  </element>
+  <element name='Isbn'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ISOAbbreviation'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ISSN'>
+    <complexType mixed='true'>
+      <attribute name='IssnType' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Electronic'/>
+            <enumeration value='Print'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='ISSNLinking'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Issue'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Item'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ItemList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Item' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='ListType' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='Journal'>
+    <complexType>
+      <sequence>
+        <element ref='t:ISSN' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:JournalIssue'/>
+        <element ref='t:Title' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ISOAbbreviation' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='JournalIssue'>
+    <complexType>
+      <sequence>
+        <element ref='t:Volume' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Issue' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:PubDate'/>
+      </sequence>
+      <attribute name='CitedMedium' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Internet'/>
+            <enumeration value='Print'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Keyword'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='MajorTopicYN' default='N'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='KeywordList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Keyword' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='Owner' default='NLM'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='NLM'/>
+            <enumeration value='NLM-AUTO'/>
+            <enumeration value='NASA'/>
+            <enumeration value='PIP'/>
+            <enumeration value='KIE'/>
+            <enumeration value='NOTNLM'/>
+            <enumeration value='HHS'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Language'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='LastName'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='LocationLabel'>
+    <complexType mixed='true'>
+      <attribute name='Type' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='part'/>
+            <enumeration value='chapter'/>
+            <enumeration value='section'/>
+            <enumeration value='appendix'/>
+            <enumeration value='figure'/>
+            <enumeration value='table'/>
+            <enumeration value='box'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Medium'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='MedlineDate'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='MedlineJournalInfo'>
+    <complexType>
+      <sequence>
+        <element ref='t:Country' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:MedlineTA'/>
+        <element ref='t:NlmUniqueID' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:ISSNLinking' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='MedlinePgn'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='MedlineTA'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='MeshHeading'>
+    <complexType>
+      <sequence>
+        <element ref='t:DescriptorName'/>
+        <element ref='t:QualifierName' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='MeshHeadingList'>
+    <complexType>
+      <sequence>
+        <element ref='t:MeshHeading' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Minute'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Month'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='NameOfSubstance'>
+    <complexType mixed='true'>
+      <attribute name='UI' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='NlmUniqueID'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Note'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='NumberOfReferences'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Object'>
+    <complexType>
+      <sequence>
+        <element ref='t:Param' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+      <attribute name='Type' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='ObjectList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Object' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='OtherAbstract'>
+    <complexType>
+      <sequence>
+        <element ref='t:AbstractText' maxOccurs='unbounded'/>
+        <element ref='t:CopyrightInformation' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+      <attribute name='Type' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='AAMC'/>
+            <enumeration value='AIDS'/>
+            <enumeration value='KIE'/>
+            <enumeration value='PIP'/>
+            <enumeration value='NASA'/>
+            <enumeration value='Publisher'/>
+            <enumeration value='plain-language-summary'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='Language' type='string' default='eng'/>
+    </complexType>
+  </element>
+  <element name='OtherID'>
+    <complexType mixed='true'>
+      <attribute name='Source' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='NASA'/>
+            <enumeration value='KIE'/>
+            <enumeration value='PIP'/>
+            <enumeration value='POP'/>
+            <enumeration value='ARPL'/>
+            <enumeration value='CPC'/>
+            <enumeration value='IND'/>
+            <enumeration value='CPFH'/>
+            <enumeration value='CLML'/>
+            <enumeration value='NRCBL'/>
+            <enumeration value='NLM'/>
+            <enumeration value='QCIM'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='PMID'>
+    <complexType mixed='true'>
+      <attribute name='Version' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='Pagination'>
+    <complexType>
+      <choice>
+        <sequence>
+          <element ref='t:StartPage'/>
+          <element ref='t:EndPage' minOccurs='0' maxOccurs='1'/>
+          <element ref='t:MedlinePgn' minOccurs='0' maxOccurs='1'/>
+        </sequence>
+        <element ref='t:MedlinePgn'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='Param'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='Name' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='PersonalNameSubject'>
+    <complexType>
+      <sequence>
+        <element ref='t:LastName'/>
+        <element ref='t:ForeName' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Initials' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Suffix' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PersonalNameSubjectList'>
+    <complexType>
+      <sequence>
+        <element ref='t:PersonalNameSubject' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubDate'>
+    <complexType>
+      <choice>
+        <sequence>
+          <element ref='t:Year'/>
+          <choice minOccurs='0' maxOccurs='1'>
+            <sequence>
+              <element ref='t:Month'/>
+              <element ref='t:Day' minOccurs='0' maxOccurs='1'/>
+            </sequence>
+            <element ref='t:Season'/>
+          </choice>
+        </sequence>
+        <element ref='t:MedlineDate'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='PublicationStatus'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='PublicationType'>
+    <complexType mixed='true'>
+      <attribute name='UI' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='PublicationTypeList'>
+    <complexType>
+      <sequence>
+        <element ref='t:PublicationType' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PubMedPubDate'>
+    <complexType>
+      <sequence>
+        <element ref='t:Year'/>
+        <element ref='t:Month'/>
+        <element ref='t:Day'/>
+        <sequence minOccurs='0' maxOccurs='1'>
+          <element ref='t:Hour'/>
+          <sequence minOccurs='0' maxOccurs='1'>
+            <element ref='t:Minute'/>
+            <element ref='t:Second' minOccurs='0' maxOccurs='1'/>
+          </sequence>
+        </sequence>
+      </sequence>
+      <attribute name='PubStatus' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='received'/>
+            <enumeration value='accepted'/>
+            <enumeration value='epublish'/>
+            <enumeration value='ppublish'/>
+            <enumeration value='revised'/>
+            <enumeration value='aheadofprint'/>
+            <enumeration value='retracted'/>
+            <enumeration value='ecollection'/>
+            <enumeration value='pmc'/>
+            <enumeration value='pmcr'/>
+            <enumeration value='pubmed'/>
+            <enumeration value='pubmedr'/>
+            <enumeration value='premedline'/>
+            <enumeration value='medline'/>
+            <enumeration value='medliner'/>
+            <enumeration value='entrez'/>
+            <enumeration value='pmc-release'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='Publisher'>
+    <complexType>
+      <sequence>
+        <element ref='t:PublisherName'/>
+        <element ref='t:PublisherLocation' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='PublisherLocation'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='PublisherName'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='QualifierName'>
+    <complexType mixed='true'>
+      <attribute name='AutoHM' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='MajorTopicYN' default='N'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Y'/>
+            <enumeration value='N'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='UI' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='Reference'>
+    <complexType>
+      <sequence>
+        <element ref='t:Citation'/>
+        <element ref='t:ArticleIdList' minOccurs='0' maxOccurs='1'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='ReferenceList'>
+    <complexType>
+      <sequence>
+        <element ref='t:Title' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:Reference' minOccurs='0' maxOccurs='unbounded'/>
+        <element ref='t:ReferenceList' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='RefSource'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='RegistryNumber'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='ReportNumber'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Season'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Second'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='Section'>
+    <complexType>
+      <sequence>
+        <element ref='t:LocationLabel' minOccurs='0' maxOccurs='1'/>
+        <element ref='t:SectionTitle'/>
+        <element ref='t:Section' minOccurs='0' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='Sections'>
+    <complexType>
+      <sequence>
+        <element ref='t:Section' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='SectionTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+      <attribute name='book' type='string' use='optional'/>
+      <attribute name='part' type='string' use='optional'/>
+      <attribute name='sec' type='string' use='optional'/>
+    </complexType>
+  </element>
+  <element name='SpaceFlightMission'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='StartPage'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='sub'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='Suffix'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='sup'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='SupplMeshList'>
+    <complexType>
+      <sequence>
+        <element ref='t:SupplMeshName' maxOccurs='unbounded'/>
+      </sequence>
+    </complexType>
+  </element>
+  <element name='SupplMeshName'>
+    <complexType mixed='true'>
+      <attribute name='Type' use='required'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='Disease'/>
+            <enumeration value='Protocol'/>
+            <enumeration value='Organism'/>
+            <enumeration value='Anatomy'/>
+            <enumeration value='Population'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='UI' type='string' use='required'/>
+    </complexType>
+  </element>
+  <element name='Title'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='u'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='URL'>
+    <complexType mixed='true'>
+      <attribute name='lang' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='AF'/>
+            <enumeration value='AR'/>
+            <enumeration value='AZ'/>
+            <enumeration value='BG'/>
+            <enumeration value='CS'/>
+            <enumeration value='DA'/>
+            <enumeration value='DE'/>
+            <enumeration value='EN'/>
+            <enumeration value='EL'/>
+            <enumeration value='ES'/>
+            <enumeration value='FA'/>
+            <enumeration value='FI'/>
+            <enumeration value='FR'/>
+            <enumeration value='HE'/>
+            <enumeration value='HU'/>
+            <enumeration value='HY'/>
+            <enumeration value='IN'/>
+            <enumeration value='IS'/>
+            <enumeration value='IT'/>
+            <enumeration value='IW'/>
+            <enumeration value='JA'/>
+            <enumeration value='KA'/>
+            <enumeration value='KO'/>
+            <enumeration value='LT'/>
+            <enumeration value='MK'/>
+            <enumeration value='ML'/>
+            <enumeration value='NL'/>
+            <enumeration value='NO'/>
+            <enumeration value='PL'/>
+            <enumeration value='PT'/>
+            <enumeration value='PS'/>
+            <enumeration value='RO'/>
+            <enumeration value='RU'/>
+            <enumeration value='SL'/>
+            <enumeration value='SK'/>
+            <enumeration value='SQ'/>
+            <enumeration value='SR'/>
+            <enumeration value='SV'/>
+            <enumeration value='SW'/>
+            <enumeration value='TH'/>
+            <enumeration value='TR'/>
+            <enumeration value='UK'/>
+            <enumeration value='VI'/>
+            <enumeration value='ZH'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+      <attribute name='Type' use='optional'>
+        <simpleType>
+          <restriction base='string'>
+            <enumeration value='FullText'/>
+            <enumeration value='Summary'/>
+            <enumeration value='fulltext'/>
+            <enumeration value='summary'/>
+          </restriction>
+        </simpleType>
+      </attribute>
+    </complexType>
+  </element>
+  <element name='VernacularTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='Volume'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+  <element name='VolumeTitle'>
+    <complexType mixed='true'>
+      <choice minOccurs='0' maxOccurs='unbounded'>
+        <element ref='t:b'/>
+        <element ref='t:i'/>
+        <element ref='t:sup'/>
+        <element ref='t:sub'/>
+        <element ref='t:u'/>
+      </choice>
+    </complexType>
+  </element>
+  <element name='Year'>
+    <complexType mixed='true'>
+  </complexType>
+  </element>
+</schema>

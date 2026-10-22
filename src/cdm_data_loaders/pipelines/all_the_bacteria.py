@@ -16,16 +16,16 @@ from collections.abc import Generator
 from functools import cached_property
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Annotated, Any, Final, Self
+from typing import Any, Final, Self
 
 import dlt
-import dlt.sources.helpers.requests
 from dlt.common.pipeline import LoadInfo
 from dlt.extract.items import DataItemWithMeta
 from dlt.sources.helpers.rest_client.client import RESTClient
-from pydantic import Field, StringConstraints, computed_field, model_validator
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import SettingsConfigDict
 
+from cdm_data_loaders.core.fields import NonEmptyStr
 from cdm_data_loaders.core.settings import (
     CLI_SHORTCUTS,
     CtsSettings,
@@ -38,8 +38,6 @@ from cdm_data_loaders.pipelines.core import (
 from cdm_data_loaders.utils.file_transfer.sync_client import FileDownloader
 
 logger: Logger = getLogger(__name__)
-
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
 
 
 DATASET_NAME = "all_the_bacteria"

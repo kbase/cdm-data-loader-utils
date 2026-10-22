@@ -3,7 +3,7 @@
 import json
 from logging import Logger, getLogger
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 import jsonschema
 import jsonschema.exceptions
@@ -12,21 +12,18 @@ from jsonschema import Draft202012Validator, validators
 from pydantic import (
     BaseModel,
     DirectoryPath,
-    StringConstraints,
     computed_field,
     field_validator,
     validate_call,
 )
 from referencing import Registry, Resource
 
+from cdm_data_loaders.core.fields import CharStr, NonEmptyStr
 from cdm_data_loaders.readers.jsonschema_xsv.xsv_validator.custom_metaschema import (
     CUSTOM_META_SCHEMA,
     CUSTOM_META_SCHEMA_URI,
     X_XSV_CONFIG_KEY,
 )
-
-NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
-CharStr = Annotated[str, StringConstraints(min_length=1, max_length=1)]
 
 logger: Logger = getLogger(__name__)
 

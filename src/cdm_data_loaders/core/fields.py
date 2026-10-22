@@ -69,6 +69,7 @@ DEFAULTS = frozendict(
     }
 )
 
+CharStr = Annotated[str, StringConstraints(min_length=1, max_length=1)]
 NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
 
 BatchSize = Annotated[

@@ -184,7 +184,19 @@ def save_pipeline_metadata(
         try:
             # save the load info as JSONL in the same destination as the ingested data
             load_info_resource: DltResource = dlt.resource(
-                [load_info.asdict()], name=LOAD_INFO_TABLE_NAME, max_table_nesting=0
+                [load_info.asdict()],
+                name=LOAD_INFO_TABLE_NAME,
+                max_table_nesting=0,
+                columns={
+                    k: {"data_type": "text"}
+                    for k in [
+                        "environment",
+                        "staging_type",
+                        "staging_name",
+                        "staging_display_credentials",
+                        "dataset_name",
+                    ]
+                },
             )
             load_info_save_info: LoadInfo = pipeline.run(load_info_resource, loader_file_format=str(JSONL))
             if load_info_save_info.has_failed_jobs:
