@@ -1,0 +1,59 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON Schema for the All The Bacteria file index TSV.",
+    "properties": {
+        "project": {
+            "description": "the name of the project/component, plus its parents, with the names separated by /. For example the Metadata component sits directly under the main AllTheBacteria project, and is called AlTheBacteria/Metadata.",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        },
+        "project_id": {
+            "description": "the project identifier. This is useful if you want to make your own file list (see below)",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        },
+        "filename": {
+            "description": "the name of the file",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        },
+        "url": {
+            "description": "the URL of the file on the osf server",
+            "minLength": 1,
+            "type": [
+                "string"
+            ]
+        },
+        "md5": {
+            "description": "the MD5 sum of the file",
+            "minLength": 32,
+            "maxLength": 32,
+            "type": [
+                "string"
+            ]
+        },
+        "size(MB)": {
+            "description": "size of the file in MB",
+            "minimum": 0,
+            "type": [
+                "number"
+            ]
+        }
+    },
+    "required": [
+        "project",
+        "project_id",
+        "filename",
+        "url",
+        "md5",
+        "size(MB)"
+    ],
+    "title": "JSON Schema for the All The Bacteria index file.",
+    "type": "object"
+}

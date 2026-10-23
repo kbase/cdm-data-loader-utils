@@ -1,0 +1,30 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON schema for the ftp mod times file from https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/ftp_mod_times.txt.gz. From the file README (https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/README_ftp_mod_times.txt):\nftp_mod_times.txt.gz provides information about the last date on which any file for the indicated assembly was touched. It is provided for users interested in mirroring whole assembly directories. This file is updated daily.",
+    "properties": {
+        "assembly_dir": {
+            "description": "The assembly directory path, represented as a concatenation of assembly accession and name.",
+            "type": [
+                "string"
+            ],
+            "pattern": "^GC[AF]_\\d{9}\\.\\d+_.+"
+        },
+        "modification_date": {
+            "description": "The modification date of the most recently changed file in the assembly path.",
+            "type": [
+                "string"
+            ],
+            "pattern": "^[12][0-9]{3}/[01][0-9]/[0-3][0-9]$"
+        }
+    },
+    "required": [
+        "assembly_dir",
+        "modification_date"
+    ],
+    "title": "JSON Schema for the ftp_mod_times file from NCBI Genomes.",
+    "type": "object",
+    "x-xsv-config": {
+        "x-has-header": false,
+        "x-delimiter": "\t"
+    }
+}
