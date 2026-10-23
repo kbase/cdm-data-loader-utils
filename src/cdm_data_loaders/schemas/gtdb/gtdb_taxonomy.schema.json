@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JSON Schema for ar53_taxonomy.tsv",
+  "description": "Inferred JSON Schema with `qsv schema /Users/gwg/code/kbase/cdm-data-loaders/src/cdm_data_loaders/parsers/gtdb/files/ar53_taxonomy.tsv`",
+  "type": "object",
+  "properties": {
+    "ncbi_id": {
+      "description": "ncbi_id column from ar53_taxonomy.tsv",
+      "minLength": 18,
+      "maxLength": 19,
+      "type": [
+        "string"
+      ],
+      "pattern": "^(GB_GCA|RS_GCF)_[0-9]+\\.[0-9]+$"
+    },
+    "gtdb_id": {
+      "description": "gtdb_id column from ar53_taxonomy.tsv",
+      "minLength": 27,
+      "type": [
+        "string"
+      ],
+      "pattern": "^d__.*?;p__.*?;c__.*?;o__.*?;f__.*?;g__.*?;s__.+$"
+    }
+  },
+  "required": [
+    "ncbi_id",
+    "gtdb_id"
+  ]
+}

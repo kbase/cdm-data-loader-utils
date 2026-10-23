@@ -1,0 +1,47 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "JSON Schema for the All The Bacteria assembly index file.",
+    "properties": {
+        "sample": {
+            "type": "string",
+            "description": "the INSDC sample accession"
+        },
+        "sylph_species": {
+            "type": "string",
+            "description": "inferred species call from running sylph on the reads. This is using the “post-202505” method on all of the samples. Meaning that species calls in files from 202505 onwards are not the same as in files before 202505. See the species calls page for more details"
+        },
+        "filename_in_tar_xz": {
+            "type": "string",
+            "description": "the FASTA filename for this sample inside the tar.xz file"
+        },
+        "tar_xz": {
+            "type": "string",
+            "description": "the name of the tar.xz file where this sample's FASTA lives"
+        },
+        "tar_xz_url": {
+            "type": "string",
+            "description": "URL of tar_xz"
+        },
+        "tar_xz_md5": {
+            "type": "string",
+            "description": "MD5 sum of tar_xz",
+            "minLength": 32,
+            "maxLength": 32
+        },
+        "tar_xz_size_MB": {
+            "type": "number",
+            "description": "size of the tar_xz file in MB"
+        }
+    },
+    "required": [
+        "sample",
+        "sylph_species",
+        "filename_in_tar_xz",
+        "tar_xz",
+        "tar_xz_url",
+        "tar_xz_md5",
+        "tar_xz_size_MB"
+    ],
+    "title": "All the Bacteria assembly index file schema",
+    "type": "object"
+}

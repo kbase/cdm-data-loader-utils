@@ -1,0 +1,191 @@
+{
+    "db": {
+        "title": "DB",
+        "type": [
+            "string"
+        ],
+        "description": "Refers to the database from which the identifier of the biological entity described in DB object ID (column 2) is drawn. For example, if a UniProtKB ID is the DB object ID (column 2), DB (column 1) should be UniProtKB.\n\nMust be one of the values from GO database cross-references.",
+        "examples": [
+            "UniProtKB"
+        ]
+    },
+    "db_object_id": {
+        "title": "DB Object ID",
+        "type": [
+            "string"
+        ],
+        "description": "A unique identifier from the database in DB (column 1) describing the biological entity annotated.\n\nNote that the identifier must reference a top-level primary gene or gene product identifier: either a gene, or a protein that has a 1: 1 correspondence to a gene. Identifiers referring to particular protein isoforms or post-translationally cleaved or modified proteins are not allowed in this field of the GAF file; such identifiers are captured in the Gene Product Form ID.",
+        "examples": [
+            "P12345"
+        ]
+    },
+    "db_object_symbol": {
+        "title": "DB Object Symbol",
+        "type": [
+            "string"
+        ],
+        "description": "A name for the entity represented by the DB object ID. The DB Object Symbol field should be text that means something to a biologist wherever possible (a gene symbol, for example). If the entity has no name, the DB object ID can be used as a DB Object Symbol.",
+        "examples": [
+            "GOT2"
+        ]
+    },
+    "relation": {
+        "title": "Relation",
+        "type": [
+            "string"
+        ],
+        "description": "This column is populated with relations from the Relation Ontology that describe how the annotated biological entity relates to the GO term with which it is associated. For negation, a pipe must be used to separate the “NOT” from the relation (e.g. “NOT|contributes_to” or “NOT|enables”).",
+        "examples": [
+            "involved_in",
+            "NOT|involved_in",
+            "contributes_to",
+            "NOT|contributes_to",
+            "enables",
+            "NOT|enables"
+        ]
+    },
+    "go_id": {
+        "title": "GO ID",
+        "type": [
+            "string"
+        ],
+        "description": "The GO identifier for the term associated with the DB object ID.",
+        "examples": [
+            "GO:0006457"
+        ]
+    },
+    "reference": {
+        "title": "Reference",
+        "type": [
+            "string"
+        ],
+        "cardinality": "1 or greater",
+        "description": "One or more unique identifiers for a single reference cited as the source experiment or method for atributing the GO ID to the DB Object ID. This may be a literature reference (PMID or DOI), a GOREF internal reference record or a Model Organism Database (MOD) internal reference. The syntax is DB:accession_number.\n\nNote that only one unique reference can be cited on a single line in the GAF. If a reference has identifiers in more than one database, multiple identifiers for that reference can be included on a single line, separated by a pipe. For example, if a reference has a PMID and a model organism database reference, the PMID must be included but the model orgainsm database identifier may be included, as well. Note that if a model organism database has an identifier for the reference, that identifier should always be included, even if a PubMed ID is also used.\n\nFor cardinality >1, values must be pipe-separated (e.g. PMID:2676709|SGD_REF:S000047763).",
+        "examples": [
+            "PMID:9683573",
+            "PMID:2676709|SGD_REF:S000047763"
+        ]
+    },
+    "evidence_code": {
+        "title": "Evidence Code",
+        "type": [
+            "string"
+        ],
+        "description": "See GO-ECO mapping file and the GO Evidence code guide for the list of valid evidence codes for GO annotations.",
+        "examples": [
+            "TAS"
+        ]
+    },
+    "with_or_from": {
+        "title": "With (or) From",
+        "type": [
+            "string",
+            "null"
+        ],
+        "cardinality": "0+",
+        "description": "This field is used with specific ECO codes to capture an additional identifier supporting the evidence for the annotation. For example, it can identify another gene product to which the annotated gene product is similar (ISS) or interacts with (IPI). Population of the With/From is mandatory for certain evidence codes, see the documentation for the individual evidence codes for more information.\n\nCardinality must be 0 for evidence codes IDA, TAS, NAS, or ND.\nCardinality must be 1, >1 for IEA, IC, IGI, IPI, ISS & child terms of ISS.\nFor cardinality >1 pipes or commas may be used. A pipe is used to separate independent evidence (e.g. FB:FBgn1111111|FB:FBgn2222222). A comma indicates grouped evidence, e.g. two of three genes in a triply mutant organism.",
+        "examples": [
+            "GO:0000346|UniProtKB:P00508",
+            "FB:FBgn1111111|FB:FBgn2222222"
+        ]
+    },
+    "aspect": {
+        "title": "Aspect",
+        "type": [
+            "string"
+        ],
+        "description": "Refers to the specific branch of the GO to which the GO ID (column 5) belongs: P (biological process), F (molecular function) or C (cellular component).",
+        "examples": [
+            "P"
+        ]
+    },
+    "db_object_name": {
+        "title": "DB Object Name",
+        "type": [
+            "string",
+            "null"
+        ],
+        "description": "Name of the annotated gene or gene product.\nWhite space is allowed.",
+        "examples": [
+            "Aspartate aminotransferase, mitochondrial"
+        ]
+    },
+    "db_object_synonym": {
+        "title": "DB Object Synonym",
+        "type": [
+            "string",
+            "null"
+        ],
+        "cardinality": "0+",
+        "description": "A gene symbol (or other text) that denotes another name by which the annotated gene or gene product might be known.\nFor cardinality >1 use a pipe to separate entries (e.g. YFL039C|ABY1|END7|actin gene).\nWhite space is allowed.",
+        "examples": [
+            "mAspAT",
+            "YFL039C|ABY1|END7|actin gene"
+        ]
+    },
+    "db_object_type": {
+        "title": "DB Object Type",
+        "type": [
+            "string"
+        ],
+        "description": "A label corresponding to the ontology identifier describing the class of biological entity of the DB Object_ID in Column 2. The values used are shown below. The full list of entity types and their corresponding identitiers can be found in the biological_entity_mapping.yaml.\n\nprotein (PR: 000000001)\nprotein-containing complex (GO: 0032991)\nncRNA or any SO child term (SO: 0000655)",
+        "examples": [
+            "protein"
+        ]
+    },
+    "taxon": {
+        "title": "Taxon",
+        "type": [
+            "string"
+        ],
+        "cardinality": "1-2",
+        "description": "The NCBI taxonomic identifier(s) of the annotated entity (column 1). Identifiers must come from NCBI Taxonomy database and have the taxon: prefix (e.g. taxon: 1|taxon: 1000). It is also possible to capture a second taxonomic identifier for an interacting organism, in conjunction with terms that have the biological process term ‘GO: 0044419 biological process involved in interspecies interaction between organisms’or the cellular component term ‘GO: 0018995 host cellular component’ as an ancestor.\nFor cardinality 2, values must be pipe-separated.",
+        "examples": [
+            "taxon:9986",
+            "taxon:9986|taxon:652611"
+        ]
+    },
+    "date": {
+        "title": "Date",
+        "type": [
+            "integer"
+        ],
+        "description": "Date on which the annotation was made; format is YYYYMMDD.",
+        "examples": [
+            "20111018"
+        ]
+    },
+    "assigned_by": {
+        "title": "Assigned By",
+        "type": [
+            "string"
+        ],
+        "description": "The database that made the annotation. The value of this column is used for tracking the source of an individual annotation, but will differ from the value in column 1 for any annotation that is made by one database and incorporated into another.\n\nThis column must use one of the values from the set of GO database cross-references.",
+        "examples": [
+            "HGNC"
+        ]
+    },
+    "annotation_extension": {
+        "title": "Annotation Extension",
+        "type": [
+            "string",
+            "null"
+        ],
+        "cardinality": "0+",
+        "description": "Annotation extensions allow GO terms in standard annotations to be further specified, using gene products, chemicals, cell types, anatomical structures, to provide additional biological context. The cross-reference is prefaced by an appropriate relationship from the Relation Ontology. Multiple extensions may be entered.\n\nFor cardinality > 1, use of a pipe (|) specifies an independent statement (OR) and is equivalent to making separate annotations, i.e. not all conditions are required to infer the annotated GO term. Use of a comma (,) specifies a connected statement (AND) and indicates that all conditions are required to infer the annotated GO term. In this case, ‘OR’ is a weaker statement than ‘AND’, therefore will be correct in all cases. Pipe and comma separators may be used together in the same annotation extension field.",
+        "examples": [
+            "part_of(CL: 0000576)"
+        ]
+    },
+    "gene_product_form_id": {
+        "title": "Gene Product Form ID",
+        "type": [
+            "string",
+            "null"
+        ],
+        "description": "This column captures specific isoforms or post-translationally processed forms of a gene or gene product that are associated with the annotation. As the DB Object ID (column 2) must be a canonical entity, i.e. a gene OR a representative protein that has a 1: 1 correspondence to a gene, this column allows for capturing greater specificity about the annotated entity. Content may include identifiers for distinct proteins produced by differential splicing, alternative translationalal starts, post-translational cleavage or post-translational modification. Identifiers for functional RNAs can also be included in this column.\n\nThe identifier used must be a standard 2-part global identifier, e.g. UniProtKB:OK0206-2\n\nWhen the Gene Product Form ID is filled with a protein identifier, the value in DB Object Type (column 12) must be protein. Protein identifiers can include UniProtKB accessions or Protein Ontology (PRO) identifiers.\n\nWhen the Gene Product Form ID is filled with a functional RNA identifier, the DB Object Type (column 12) must be either ncRNA, rRNA, tRNA, snRNA, or snoRNA.",
+        "examples": [
+            "UniProtKB:P12345-2"
+        ]
+    }
+}
